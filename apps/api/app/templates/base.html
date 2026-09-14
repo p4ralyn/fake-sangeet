@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}unigate{% endblock %}</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg:      #f3f2ef;
+      --card-bg: #ffffff;
+      --ink:     #1c1a17;
+      --muted:   #726c61;
+      --line:    #dcd8cd;
+      --accent:  #b1560f;
+      --accent-ink: #ffffff;
+      --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+      --sans:  ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono:  ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "Courier New", monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #151310;
+        --card-bg: #1c1912;
+        --ink:     #f2ede2;
+        --muted:   #9c9384;
+        --line:    #2d2820;
+        --accent:  #ffb54a;
+        --accent-ink: #1c1204;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      font: 16px/1.55 var(--sans);
+    }
+    main { width: min(26rem, 100%); }
+
+    .mark {
+      display: inline-block;
+      font-family: var(--serif);
+      font-variant-caps: all-small-caps;
+      letter-spacing: .06em;
+      font-size: 1.05rem;
+      color: var(--accent);
+      margin: 0 0 1.25rem;
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-size: 1.85rem;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      margin: 0 0 .4rem;
+    }
+    p.sub {
+      color: var(--muted);
+      margin: 0 0 0;
+      max-width: 34ch;
+    }
+
+    .stub {
+      background: var(--card-bg);
+      border: 1px solid var(--line);
+      border-radius: 16px 16px 6px 6px;
+      padding: 1.75rem;
+      animation: settle .35s ease-out;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .stub { animation: none; }
+    }
+    @keyframes settle {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .perforation {
+      position: relative;
+      height: 0;
+      margin: 1.5rem -1.75rem;
+      border-top: 2px dashed var(--line);
+    }
+    .perforation::before, .perforation::after {
+      content: "";
+      position: absolute;
+      top: -9px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--bg);
+    }
+    .perforation::before { left: -9px; }
+    .perforation::after { right: -9px; }
+
+    button, .btn {
+      display: block;
+      width: 100%;
+      padding: .8rem 1.1rem;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: inherit;
+      font: 1rem/1.3 var(--sans);
+      text-align: left;
+      cursor: pointer;
+      transition: background-color .15s ease, border-color .15s ease, transform .1s ease;
+    }
+    button:hover, .btn:hover { border-color: var(--muted); }
+    button:active, .btn:active { transform: translateY(1px); }
+    button:focus-visible, .btn:focus-visible, input:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-ink);
+      text-align: center;
+      font-weight: 600;
+    }
+    button.primary:hover { filter: brightness(1.06); }
+
+    input[type="text"], input:not([type]) {
+      width: 100%;
+      padding: .7rem .9rem;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: inherit;
+      font: .95rem/1.3 var(--mono);
+    }
+    input::placeholder { color: var(--muted); }
+
+    .code { font-family: var(--mono); }
+
+    .tag {
+      display: inline-block;
+      font: .72rem/1 var(--mono);
+      text-transform: lowercase;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: .32em .6em;
+    }
+
+    ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+
+    .note {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--line);
+      font-size: .85rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

@@ -1,11 +1,13 @@
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
 
-from app.api.v1.routes import health
+from app.api.v1.routes import auth, health
 from app.core.deps import get_redis_client
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
@@ -47,7 +49,9 @@ def create_app() -> FastAPI:
         return response
 
     register_error_handlers(app)
+    app.state.templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
     app.include_router(health.router)
+    app.include_router(auth.router)
     return app
 
 

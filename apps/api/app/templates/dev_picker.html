@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Choose an identity · unigate{% endblock %}
+{% block content %}
+  <span class="mark">unigate</span>
+  <div class="stub">
+    <h1>Choose an identity</h1>
+    <p class="sub">Development sign-in. Pick a seeded NetID to sign in with its
+    role, or enter any other NetID to continue as a visitor.</p>
+    <div class="perforation"></div>
+    <ul>
+      {% for net_id, role in staff %}
+      <li>
+        <form action="/auth/callback" method="post">
+          <input type="hidden" name="state" value="{{ state }}">
+          <input type="hidden" name="net_id" value="{{ net_id }}">
+          <button type="submit" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem;">
+            <span class="code">{{ net_id }}</span>
+            <span class="tag">{{ role }}</span>
+          </button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="perforation"></div>
+    <form action="/auth/callback" method="post">
+      <input type="hidden" name="state" value="{{ state }}">
+      <input type="text" name="net_id" placeholder="any.other.netid" required
+             style="margin-bottom:.6rem">
+      <button type="submit">Continue as a visitor</button>
+    </form>
+  </div>
+{% endblock %}
