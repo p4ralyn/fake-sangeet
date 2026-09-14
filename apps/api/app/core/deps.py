@@ -73,10 +73,18 @@ async def require_csrf(
 
     presented = request.headers.get("x-csrf-token")
     if not presented:
-        content_type = request.headers.get("content-type", "")
+        content_type = request.headers.get("content-type", "").lower()
         if any(content_type.startswith(ct) for ct in FORM_CONTENT_TYPES):
-            form = await request.form()
-            value = form.get("csrf_token")
+            # A malformed body must not escape as Starlette's own HTTPException
+            # (which would bypass our error envelope) or as an unread stream
+            # that surfaces as a 500 later. A body that fails to parse has not
+            # proven it carries the token either way, so treat it as absent
+            # and fail closed into the normal 403 CSRF_INVALID path below.
+            try:
+                form = await request.form()
+            except Exception:
+                form = None
+            value = form.get("csrf_token") if form is not None else None
             presented = value if isinstance(value, str) else None
 
     if not presented or not constant_time_equals(presented, session.csrf_token):

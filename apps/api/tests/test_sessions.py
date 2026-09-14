@@ -117,6 +117,45 @@ async def test_user_index_is_pruned_on_single_destroy(redis):
     assert await redis.smembers(f"sess:user:{user_id}") == set()
 
 
+async def test_shorter_second_session_does_not_shrink_the_user_index_ttl(redis, settings):
+    """Pins the fix for F-A: Redis EXPIRE *replaces* a TTL, it does not extend
+    it. If the per-user index's TTL were derived from whichever session is
+    being created right now, a staff member (12h TTL) who is later resolved
+    as a plain VISITOR (8h TTL) on a second sign-in -- exactly what happens
+    when their `event_staff` row is deactivated mid-event and they log back
+    in -- would shrink `sess:user:<id>`'s expiry down from 12h+ to 8h+, and
+    the still-live 12h staff session would fall out of the index while it is
+    still live. `destroy_user_sessions` walks the index, so it would silently
+    find nothing and report 0 kills for a session that is very much still
+    valid: exactly the "stolen scanner phone" / "staff removed mid-event"
+    scenario CLAUDE.md names as the whole reason these sessions are opaque.
+    """
+    from app.services.identity.sessions import (
+        create_session,
+        destroy_user_sessions,
+        load_session,
+    )
+
+    user_id = uuid4()
+    staff = await create_session(
+        redis, user_id=user_id, net_id="staff.test", display_name="S",
+        email=None, roles=["SECURITY"], is_staff=True,
+    )
+    # Second sign-in, same identity, now resolved with a shorter TTL.
+    participant = await create_session(
+        redis, user_id=user_id, net_id="staff.test", display_name="S",
+        email=None, roles=["VISITOR"], is_staff=False,
+    )
+
+    index_ttl = await redis.ttl(f"sess:user:{user_id}")
+    assert index_ttl >= settings.session_ttl_staff_seconds
+
+    killed = await destroy_user_sessions(redis, user_id)
+    assert killed == 2
+    assert await load_session(redis, staff.sid) is None
+    assert await load_session(redis, participant.sid) is None
+
+
 # ── CSRF ─────────────────────────────────────────────────────────────────
 #
 # `require_csrf` must be double-submit in the real sense: the token has to
@@ -208,6 +247,26 @@ async def test_csrf_wrong_or_missing_token_is_rejected(csrf_client):
     missing = await client.post("/protected")
     assert missing.status_code == 403
     assert missing.json()["error"]["code"] == "CSRF_INVALID"
+
+
+async def test_csrf_malformed_multipart_body_is_rejected_with_envelope(csrf_client):
+    """Pins the fix for F-B: a body that fails to parse (here, a
+    multipart/form-data content-type with no boundary, so python-multipart's
+    parser raises) must fall through to the normal 403 CSRF_INVALID path in
+    the project's own error envelope -- not escape as Starlette's built-in
+    HTTPException (400, `{"detail": ...}`) which bypasses our error handlers.
+    """
+    client, _session = csrf_client
+    response = await client.post(
+        "/protected",
+        content=b"not a valid multipart body",
+        headers={"content-type": "multipart/form-data"},  # missing boundary
+    )
+
+    assert response.status_code == 403
+    body = response.json()
+    assert body["error"]["code"] == "CSRF_INVALID"
+    assert "detail" not in body
 
 
 async def test_csrf_get_with_no_token_passes(csrf_client):

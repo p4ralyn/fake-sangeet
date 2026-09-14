@@ -39,6 +39,28 @@ def _ttl_for(is_staff: bool) -> int:
     )
 
 
+def _user_index_ttl() -> int:
+    """Fixed TTL for the per-user session index — independent of which session is
+    being created.
+
+    Redis EXPIRE *replaces* a key's TTL, it does not extend it. If this were
+    derived from the TTL of the session currently being created, a later
+    session with a shorter TTL (e.g. a staff member re-signing in and being
+    resolved as a plain VISITOR after their `event_staff` row is deactivated)
+    would shorten the index's expiry below that of an older, still-live
+    session -- silently expiring `sess:user:<id>` while a live sid it should
+    still track is sitting untouched in `sess:<sid>`. `destroy_user_sessions`
+    would then find nothing and report 0 kills, i.e. it would silently fail to
+    revoke a still-live session. Using the max of every possible session TTL
+    makes that shrink unrepresentable rather than merely unlikely.
+    """
+    settings = get_settings()
+    return (
+        max(settings.session_ttl_staff_seconds, settings.session_ttl_participant_seconds)
+        + 3600
+    )
+
+
 async def create_session(
     redis: Redis,
     *,
@@ -68,8 +90,8 @@ async def create_session(
     async with redis.pipeline(transaction=True) as pipe:
         pipe.set(f"{SESSION_PREFIX}{session.sid}", session.model_dump_json(), ex=ttl)
         pipe.sadd(f"{USER_INDEX_PREFIX}{user_id}", session.sid)
-        # Index outlives the longest possible session so it never orphans a live sid.
-        pipe.expire(f"{USER_INDEX_PREFIX}{user_id}", ttl + 3600)
+        # Fixed TTL, NOT derived from this session's own ttl -- see _user_index_ttl.
+        pipe.expire(f"{USER_INDEX_PREFIX}{user_id}", _user_index_ttl())
         await pipe.execute()
     return session
 
