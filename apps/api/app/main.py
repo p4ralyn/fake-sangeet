@@ -6,9 +6,11 @@ import structlog
 from fastapi import FastAPI, Request
 
 from app.api.v1.routes import health
+from app.core.deps import get_redis_client
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
+from app.db.session import engine
 
 log = structlog.get_logger()
 
@@ -17,6 +19,8 @@ log = structlog.get_logger()
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     log.info("startup", env=get_settings().app_env.value)
     yield
+    await engine.dispose()
+    await get_redis_client().aclose()
     log.info("shutdown")
 
 

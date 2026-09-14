@@ -31,6 +31,11 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# session-scoped so the session-scoped db_engine fixture's asyncpg pool stays
+# bound to one loop across the whole test run; otherwise later tests hit
+# "attached to a different loop" against connections opened by test 1.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = ["."]
 
@@ -42,6 +47,11 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B", "S", "ASYNC"]
 # S608 = hardcoded SQL expression. CLAUDE.md: never f-string SQL.
 ignore = ["S101"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's Depends()/Query()/etc. as argument defaults is the idiomatic,
+# required pattern -- not the mutable-default footgun B008 exists to catch.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Security"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106"]
