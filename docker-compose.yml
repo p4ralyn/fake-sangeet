@@ -1,0 +1,58 @@
+name: unigate
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: unigate
+      POSTGRES_PASSWORD: unigate
+      POSTGRES_DB: unigate
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unigate"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no"]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Local stand-in for Workspace SMTP. Web UI at http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025", "1025:1025"]
+
+  # Local stand-in for GCS. Same JSON API, no credentials.
+  fake-gcs:
+    image: fsouza/fake-gcs-server:latest
+    command: ["-scheme", "http", "-port", "4443", "-public-host", "localhost:4443"]
+    ports: ["4443:4443"]
+    volumes:
+      - gcsdata:/data
+
+  api:
+    build: ./apps/api
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://unigate:unigate@postgres:5432/unigate
+      REDIS_URL: redis://redis:6379/0
+    ports: ["8000:8000"]
+    volumes:
+      - ./apps/api:/srv/app
+      - ./scripts:/srv/scripts
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+volumes:
+  pgdata:
+  gcsdata:
