@@ -21,6 +21,12 @@ PII_KEYS = frozenset(
 
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 
+# Suffixes/substrings that make a key sensitive regardless of exact spelling,
+# so a new field (e.g. `entra_client_secret`, `smtp_password`) is caught without
+# needing a matching entry appended to PII_KEYS by hand.
+_SENSITIVE_SUBSTRINGS = ("secret", "password")
+_SENSITIVE_SUFFIXES = ("_email", "_net_id", "_netid", "_token")
+
 
 def hash_pii(value: object) -> str:
     """Stable, non-reversible, log-safe rendering of a PII value."""
@@ -28,15 +34,36 @@ def hash_pii(value: object) -> str:
     return f"sha256:{digest[:16]}"
 
 
+def _is_sensitive_key(key: str) -> bool:
+    k = key.lower()
+    if k in PII_KEYS:
+        return True
+    if any(s in k for s in _SENSITIVE_SUBSTRINGS):
+        return True
+    return k.endswith(_SENSITIVE_SUFFIXES)
+
+
+def _redact_value(key: str | None, value: Any) -> Any:
+    if value is None:
+        return None
+    if key is not None and _is_sensitive_key(key):
+        return hash_pii(value)
+    if isinstance(value, dict):
+        return {k: _redact_value(k, v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        redacted = [_redact_value(None, v) for v in value]
+        return redacted if isinstance(value, list) else tuple(redacted)
+    if isinstance(value, str) and _EMAIL_RE.search(value):
+        return _EMAIL_RE.sub(lambda m: hash_pii(m.group()), value)
+    return value
+
+
 def redact_pii(_logger: Any, _method: str, event_dict: dict) -> dict:
-    """structlog processor. Hashes known PII keys and any inline email address."""
+    """structlog processor. Hashes sensitive keys and any inline email address,
+    recursing into nested dicts, lists and tuples so PII cannot hide a level down.
+    """
     for key, value in list(event_dict.items()):
-        if value is None:
-            continue
-        if key.lower() in PII_KEYS:
-            event_dict[key] = hash_pii(value)
-        elif isinstance(value, str) and _EMAIL_RE.search(value):
-            event_dict[key] = _EMAIL_RE.sub(lambda m: hash_pii(m.group()), value)
+        event_dict[key] = _redact_value(key, value)
     return event_dict
 
 

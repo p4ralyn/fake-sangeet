@@ -44,35 +44,41 @@ class AppError(Exception):
 
 
 def _envelope(
-    code: str, message: str, request: Request, details: dict | None = None
+    code: str,
+    message: str,
+    request: Request,
+    status_code: int,
+    details: dict | None = None,
 ) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None)
     body = ErrorEnvelope(
         error=ErrorDetail(code=code, message=message, details=details, request_id=request_id)
     )
-    status_code = getattr(request.state, "_error_status", status.HTTP_400_BAD_REQUEST)
     return JSONResponse(status_code=status_code, content=body.model_dump())
 
 
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(request: Request, exc: AppError) -> JSONResponse:
-        request.state._error_status = exc.http_status
-        log.warning("app_error", code=exc.code.value, path=request.url.path)
-        return _envelope(exc.code.value, exc.message, request, exc.details)
+        log.warning("app_error", error_code=exc.code.value, path=request.url.path)
+        return _envelope(exc.code.value, exc.message, request, exc.http_status, exc.details)
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
-        request.state._error_status = status.HTTP_422_UNPROCESSABLE_ENTITY
         return _envelope(
             ErrorCode.VALIDATION_ERROR.value,
             "Request validation failed.",
             request,
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
             {"errors": exc.errors()},
         )
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
-        request.state._error_status = status.HTTP_500_INTERNAL_SERVER_ERROR
         log.exception("unhandled_error", path=request.url.path)
-        return _envelope(ErrorCode.INTERNAL.value, "Something went wrong.", request)
+        return _envelope(
+            ErrorCode.INTERNAL.value,
+            "Something went wrong.",
+            request,
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
