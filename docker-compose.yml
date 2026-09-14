@@ -45,6 +45,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://unigate:unigate@postgres:5432/unigate
       REDIS_URL: redis://redis:6379/0
+      PYTHONPATH: /srv/app
     ports: ["8000:8000"]
     volumes:
       - ./apps/api:/srv/app
