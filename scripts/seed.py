@@ -48,11 +48,16 @@ class SeedConfig(BaseSettings):
         }
 
     def staff_grants(self) -> list[tuple[str, StaffRole]]:
-        return [
+        grants = [
             *[(n, StaffRole.OWNER) for n in self.seed_owner_net_ids],
             *[(n, StaffRole.ADMIN) for n in self.seed_admin_net_ids],
             *[(n, StaffRole.SECURITY) for n in self.seed_security_net_ids],
         ]
+        # Idempotency by construction, not by session autoflush behaviour: collapse
+        # exact (net_id, role) duplicates here so the caller's loop never sees the
+        # same pair twice. A NetID repeated across *different* role lists is a
+        # legitimate distinct grant and must survive this dedupe.
+        return list(dict.fromkeys(grants))
 
 
 async def seed(session: AsyncSession, config: SeedConfig) -> dict[str, int]:
@@ -105,7 +110,7 @@ async def seed(session: AsyncSession, config: SeedConfig) -> dict[str, int]:
         if existing is None:
             session.add(EventStaff(event_id=event.id, net_id=net_id, role=role))
             created["staff"] += 1
-        else:
+        elif not existing.is_active:
             existing.is_active = True
 
     await session.flush()
