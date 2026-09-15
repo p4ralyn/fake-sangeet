@@ -43,7 +43,10 @@ async def test_dev_login_as_owner_sets_a_session_with_owner_role(client, seeded_
     sid = response.cookies[settings.session_cookie_name]
     session = await load_session(get_redis_client(), sid)
     assert session is not None
-    assert session.roles == ["OWNER"]
+    # Staff carry VISITOR alongside their staff role, so an OWNER can also buy a
+    # ticket. is_staff is derived from STAFF_ROLE_NAMES, not from the list being
+    # exactly one entry, so the extra member must not change the session TTL.
+    assert session.roles == ["OWNER", "VISITOR"]
     assert session.is_staff is True
     assert session.net_id == "owner.test"
 
@@ -51,9 +54,9 @@ async def test_dev_login_as_owner_sets_a_session_with_owner_role(client, seeded_
 @pytest.mark.parametrize(
     ("net_id", "expected"),
     [
-        ("owner.test", ["OWNER"]),
-        ("admin.test", ["ADMIN"]),
-        ("security.test", ["SECURITY"]),
+        ("owner.test", ["OWNER", "VISITOR"]),
+        ("admin.test", ["ADMIN", "VISITOR"]),
+        ("security.test", ["SECURITY", "VISITOR"]),
         ("random.student", ["VISITOR"]),
     ],
 )
@@ -215,10 +218,13 @@ async def test_deactivated_staff_row_does_not_grant_a_role(client, db_session, e
     inactive_session = await load_session(
         get_redis_client(), inactive.cookies[settings.session_cookie_name]
     )
+    # Deactivated: VISITOR only. The staff role is genuinely gone, not merely
+    # accompanied by VISITOR -- that distinction is the point of this test.
     assert inactive_session.roles == ["VISITOR"]
+    assert "OWNER" not in inactive_session.roles
 
     active = await _dev_login(client, "active.owner")
     active_session = await load_session(
         get_redis_client(), active.cookies[settings.session_cookie_name]
     )
-    assert active_session.roles == ["OWNER"]
+    assert active_session.roles == ["OWNER", "VISITOR"]

@@ -59,10 +59,21 @@ async def get_current_event(db: AsyncSession) -> Event:
 
 
 async def resolve_roles(db: AsyncSession, event_id, user: User) -> list[Role]:
-    """Staff roles come from `event_staff`. Everyone else is a VISITOR.
+    """Staff roles from `event_staff`, plus the one participant-side role.
 
-    PARTICIPANT is added at M2, when `tickets` exists and an approved ticket can
-    be looked up. Until then a ticket cannot exist, so nobody can be one.
+    Everyone carries exactly one of VISITOR or PARTICIPANT: they are mutually
+    exclusive by definition (LLD-v2 §2 -- VISITOR is authenticated with no
+    ticket, PARTICIPANT holds an approved one). Staff carry theirs *alongside*
+    their staff roles, so an OWNER can also buy a ticket and walk the
+    participant flow. This amends §2's matrix, which read the staff and
+    participant columns as exclusive.
+
+    Granting VISITOR to staff escalates nothing -- it is the least-privileged
+    role in the system. `is_staff` is derived from STAFF_ROLE_NAMES, so session
+    TTL and audit attribution are unaffected by the extra member.
+
+    PARTICIPANT lands at M2, when `tickets` exists and an approved ticket can be
+    looked up. Until then a ticket cannot exist, so the answer is always VISITOR.
     """
     rows = await db.execute(
         select(EventStaff.role).where(
@@ -71,11 +82,10 @@ async def resolve_roles(db: AsyncSession, event_id, user: User) -> list[Role]:
             EventStaff.is_active.is_(True),
         )
     )
-    staff_roles = [Role(row[0].value) for row in rows]
-    if staff_roles:
-        order = list(Role)
-        return sorted(set(staff_roles), key=order.index)
-    return [Role.VISITOR]
+    staff_roles = {Role(row[0].value) for row in rows}
+    # M2: swap VISITOR for PARTICIPANT when this identity holds an approved ticket.
+    order = list(Role)
+    return sorted(staff_roles | {Role.VISITOR}, key=order.index)
 
 
 async def list_active_staff(db: AsyncSession, event_id) -> list[tuple[str, str]]:

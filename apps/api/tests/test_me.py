@@ -36,7 +36,7 @@ async def test_me_returns_the_owner_payload(client, seeded_staff):
     assert response.status_code == 200
     body = response.json()
     assert body["net_id"] == "owner.test"
-    assert body["roles"] == ["OWNER"]
+    assert body["roles"] == ["OWNER", "VISITOR"]
     assert body["display_name"] == "Owner Test"
     assert body["event"]["slug"] == "dryrun"
     assert body["csrf_token"]
@@ -135,3 +135,49 @@ async def test_require_role_denies_an_unrecognised_role_string_instead_of_500ing
     me_response = await client.get("/api/v1/me")
     assert me_response.status_code == 200
     assert me_response.json()["roles"] == []
+
+
+async def test_staff_reach_visitor_gated_routes(db_session, event_id, seeded_staff):
+    """Staff carry VISITOR, so an OWNER can walk the participant purchase flow.
+
+    Amends LLD-v2 §2's matrix, which read the staff and participant columns as
+    exclusive. Pins the behaviour at the dependency, not just at /me, because a
+    VISITOR-gated route is what the buy flow actually uses.
+    """
+    from app.core.deps import require_role
+    from app.services.identity.roles import Role, resolve_roles
+    from app.services.identity.users import upsert_user
+    from app.services.identity.provider import IdentityClaims
+    from app.services.identity.sessions import SessionData
+    from datetime import UTC, datetime
+
+    claims = IdentityClaims(
+        subject="dev:owner.test",
+        net_id="owner.test",
+        email="owner.test@university.edu",
+        display_name="Owner Test",
+        auth_method="DEV",
+    )
+    user = await upsert_user(db_session, claims)
+    roles = await resolve_roles(db_session, event_id, user)
+
+    assert Role.OWNER in roles
+    assert Role.VISITOR in roles
+
+    session = SessionData(
+        sid="x",
+        user_id=user.id,
+        net_id=user.net_id,
+        display_name="Owner Test",
+        email=None,
+        roles=[role.value for role in roles],
+        csrf_token="t",
+        is_staff=True,
+        created_at=datetime.now(UTC),
+    )
+
+    visitor_gate = require_role(Role.VISITOR)
+    assert await visitor_gate(session=session) is session
+
+    owner_gate = require_role(Role.OWNER)
+    assert await owner_gate(session=session) is session
