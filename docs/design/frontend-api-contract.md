@@ -25,8 +25,18 @@ When a mocked endpoint lands for real, delete its mock — nothing else changes.
 | `GET /healthz`, `GET /readyz` | Ops only. |
 
 `roles[]` is one or more of `OWNER`, `ADMIN`, `SECURITY`, `PARTICIPANT`, `VISITOR`.
-In M1 a non-staff user is always `VISITOR`; `PARTICIPANT` appears at M2 once a
-ticket can exist. Gate routes on roles, never on a client-side flag.
+
+**Everyone carries exactly one of `VISITOR` or `PARTICIPANT`** — they are mutually
+exclusive by definition (§2: VISITOR is authenticated with no ticket, PARTICIPANT
+holds an approved one). **Staff carry theirs alongside their staff roles**, so an
+OWNER arrives as `["OWNER", "VISITOR"]` and can walk the purchase flow. This
+amends LLD-v2 §2's matrix, which read the two columns as exclusive.
+
+In M1 the participant-side role is always `VISITOR`, since no ticket can exist yet;
+`PARTICIPANT` replaces it at M2.
+
+Gate routes on the roles array, never on a client-side flag, and gate the buy flow
+on `VISITOR` rather than on "is not staff" — the latter would now be wrong.
 
 ## Mocked until M5 — build against these exactly
 
