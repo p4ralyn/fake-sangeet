@@ -51,7 +51,12 @@ ignore = ["S101"]
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's Depends()/Query()/etc. as argument defaults is the idiomatic,
 # required pattern -- not the mutable-default footgun B008 exists to catch.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Security"]
+# `require_role` is a dependency *factory* (Depends(require_role(Role.OWNER))) --
+# same idiom, evaluated once at route-declaration time, same as Depends itself.
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Security",
+    "app.core.deps.require_role",
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106"]

@@ -8,6 +8,7 @@ from app.core.deps import current_session, get_db, get_redis, optional_session, 
 from app.core.errors import AppError, ErrorCode
 from app.core.security import client_ip_prefix, hash_value
 from app.core.settings import AuthProviderName, get_settings
+from app.services.audit import record_login
 from app.services.identity.oidc_state import DEFAULT_NEXT, consume_state, safe_next, start_state
 from app.services.identity.provider import get_auth_provider
 from app.services.identity.roles import (
@@ -104,9 +105,18 @@ async def auth_callback(
     user = await upsert_user(db, claims)
     await bind_staff_rows(db, event.id, user)
     roles = await resolve_roles(db, event.id, user)
-    await db.commit()
 
     client_host = request.client.host if request.client else ""
+    await record_login(
+        db,
+        event=event,
+        user=user,
+        roles=roles,
+        ip_hash=hash_value(client_ip_prefix(client_host)) if client_host else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    await db.commit()
+
     session = await create_session(
         redis,
         user_id=user.id,

@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from fastapi import Depends, Request, status
 from redis.asyncio import Redis
@@ -8,6 +8,7 @@ from app.core.errors import AppError, ErrorCode
 from app.core.security import constant_time_equals
 from app.core.settings import get_settings
 from app.db.session import session_factory
+from app.services.identity.roles import Role
 from app.services.identity.sessions import SessionData, load_session
 
 _redis: Redis | None = None
@@ -93,3 +94,19 @@ async def require_csrf(
             "Your session token did not match. Reload the page and try again.",
             http_status=status.HTTP_403_FORBIDDEN,
         )
+
+
+def require_role(*allowed: Role) -> Callable:
+    """Deny by default. Every protected route declares its roles explicitly."""
+
+    async def _dependency(session: SessionData = Depends(current_session)) -> SessionData:
+        held = {Role(role) for role in session.roles}
+        if not held & set(allowed):
+            raise AppError(
+                ErrorCode.FORBIDDEN,
+                "You do not have access to this.",
+                http_status=status.HTTP_403_FORBIDDEN,
+            )
+        return session
+
+    return _dependency
