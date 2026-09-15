@@ -2,17 +2,20 @@ import structlog
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from redis.asyncio import Redis
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import current_session, get_db, get_redis, optional_session, require_csrf
 from app.core.errors import AppError, ErrorCode
 from app.core.security import client_ip_prefix, hash_value
 from app.core.settings import AuthProviderName, get_settings
-from app.models import EventStaff
-from app.services.identity.oidc_state import consume_state, start_state
+from app.services.identity.oidc_state import DEFAULT_NEXT, consume_state, safe_next, start_state
 from app.services.identity.provider import get_auth_provider
-from app.services.identity.roles import get_current_event, resolve_roles
+from app.services.identity.roles import (
+    STAFF_ROLE_NAMES,
+    get_current_event,
+    list_active_staff,
+    resolve_roles,
+)
 from app.services.identity.sessions import SessionData, create_session, destroy_session
 from app.services.identity.users import bind_staff_rows, enforce_allowed_domain, upsert_user
 
@@ -36,7 +39,7 @@ def _set_auth_cookies(response: Response, session: SessionData) -> None:
 @router.get("/", response_class=HTMLResponse)
 async def login_page(request: Request, session=Depends(optional_session)) -> Response:
     if session is not None:
-        return RedirectResponse("/api/v1/me", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(DEFAULT_NEXT, status_code=status.HTTP_303_SEE_OTHER)
     settings = get_settings()
     return request.app.state.templates.TemplateResponse(
         request=request,
@@ -47,12 +50,12 @@ async def login_page(request: Request, session=Depends(optional_session)) -> Res
 
 @router.get("/auth/start")
 async def auth_start(
-    next: str = "/api/v1/me",
+    next: str = DEFAULT_NEXT,
     redis: Redis = Depends(get_redis),
 ) -> RedirectResponse:
     provider = get_auth_provider()
     stored = {
-        "next": next if next.startswith("/") else "/api/v1/me",
+        "next": safe_next(next),
         **(await provider.state_payload()),
     }
     state = await start_state(redis, stored, ttl_seconds=get_settings().oidc_state_ttl_seconds)
@@ -67,13 +70,11 @@ async def dev_picker(request: Request, state: str, db: AsyncSession = Depends(ge
     if get_settings().auth_provider is not AuthProviderName.DEV:
         raise AppError(ErrorCode.NOT_FOUND, "Not found.", http_status=status.HTTP_404_NOT_FOUND)
     event = await get_current_event(db)
-    rows = await db.execute(
-        select(EventStaff.net_id, EventStaff.role).where(EventStaff.event_id == event.id)
-    )
+    staff = await list_active_staff(db, event.id)
     return request.app.state.templates.TemplateResponse(
         request=request,
         name="dev_picker.html",
-        context={"state": state, "staff": [(r[0], r[1].value) for r in rows]},
+        context={"state": state, "staff": staff},
     )
 
 
@@ -113,7 +114,7 @@ async def auth_callback(
         display_name=user.display_name or claims.display_name,
         email=user.email,
         roles=[role.value for role in roles],
-        is_staff=any(role.value in {"OWNER", "ADMIN", "SECURITY"} for role in roles),
+        is_staff=any(role.value in STAFF_ROLE_NAMES for role in roles),
         ip_hash=hash_value(client_ip_prefix(client_host)) if client_host else None,
         ua_hash=hash_value(request.headers.get("user-agent", "")),
     )
@@ -122,7 +123,7 @@ async def auth_callback(
     )
 
     response = RedirectResponse(
-        stored.get("next", "/api/v1/me"), status_code=status.HTTP_303_SEE_OTHER
+        safe_next(stored.get("next")), status_code=status.HTTP_303_SEE_OTHER
     )
     _set_auth_cookies(response, session)
     return response

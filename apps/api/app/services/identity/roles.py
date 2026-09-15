@@ -54,3 +54,15 @@ async def resolve_roles(db: AsyncSession, event_id, user: User) -> list[Role]:
         order = list(Role)
         return sorted(set(staff_roles), key=order.index)
     return [Role.VISITOR]
+
+
+async def list_active_staff(db: AsyncSession, event_id) -> list[tuple[str, str]]:
+    """Active staff for the dev picker. A deactivated staff member should not
+    be offered as a sign-in option."""
+    rows = await db.execute(
+        select(EventStaff.net_id, EventStaff.role).where(
+            EventStaff.event_id == event_id,
+            EventStaff.is_active.is_(True),
+        )
+    )
+    return [(net_id, role.value) for net_id, role in rows]

@@ -24,7 +24,8 @@
     <div class="perforation"></div>
     <form action="/auth/callback" method="post">
       <input type="hidden" name="state" value="{{ state }}">
-      <input type="text" name="net_id" placeholder="any.other.netid" required
+      <label class="sr-only" for="net_id_manual">NetID</label>
+      <input type="text" id="net_id_manual" name="net_id" placeholder="any.other.netid" required
              style="margin-bottom:.6rem">
       <button type="submit">Continue as a visitor</button>
     </form>

@@ -158,3 +158,67 @@ async def test_logout_destroys_the_session(client, seeded_staff, settings):
 
     assert response.status_code == 303
     assert await load_session(get_redis_client(), sid) is None
+
+
+@pytest.mark.parametrize(
+    "malicious_next",
+    ["//evil.example", "/\\evil.example", "https://evil.example"],
+)
+async def test_open_redirect_next_values_fall_back_to_the_default(client, event_id, malicious_next):
+    start = await client.get(
+        "/auth/start", params={"next": malicious_next}, follow_redirects=False
+    )
+    assert start.status_code == 307
+    state = start.headers["location"].split("state=")[1].split("&")[0]
+
+    response = await client.post(
+        "/auth/callback",
+        data={"state": state, "net_id": "owner.test"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/api/v1/me"
+
+
+async def test_ordinary_next_value_is_honoured(client, event_id):
+    start = await client.get(
+        "/auth/start", params={"next": "/api/v1/me"}, follow_redirects=False
+    )
+    state = start.headers["location"].split("state=")[1].split("&")[0]
+
+    response = await client.post(
+        "/auth/callback",
+        data={"state": state, "net_id": "owner.test"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/api/v1/me"
+
+
+async def test_deactivated_staff_row_does_not_grant_a_role(client, db_session, event_id, settings):
+    from app.core.deps import get_redis_client
+    from app.services.identity.sessions import load_session
+
+    await db_session.execute(
+        text(
+            "INSERT INTO event_staff (id, event_id, net_id, role, is_active) VALUES "
+            "(gen_random_uuid(), :e, 'inactive.owner', 'OWNER', false), "
+            "(gen_random_uuid(), :e, 'active.owner', 'OWNER', true)"
+        ),
+        {"e": event_id},
+    )
+    await db_session.flush()
+
+    inactive = await _dev_login(client, "inactive.owner")
+    inactive_session = await load_session(
+        get_redis_client(), inactive.cookies[settings.session_cookie_name]
+    )
+    assert inactive_session.roles == ["VISITOR"]
+
+    active = await _dev_login(client, "active.owner")
+    active_session = await load_session(
+        get_redis_client(), active.cookies[settings.session_cookie_name]
+    )
+    assert active_session.roles == ["OWNER"]
