@@ -8,7 +8,7 @@ from app.core.errors import AppError, ErrorCode
 from app.core.security import constant_time_equals
 from app.core.settings import get_settings
 from app.db.session import session_factory
-from app.services.identity.roles import Role
+from app.services.identity.roles import Role, parse_roles
 from app.services.identity.sessions import SessionData, load_session
 
 _redis: Redis | None = None
@@ -100,7 +100,7 @@ def require_role(*allowed: Role) -> Callable:
     """Deny by default. Every protected route declares its roles explicitly."""
 
     async def _dependency(session: SessionData = Depends(current_session)) -> SessionData:
-        held = {Role(role) for role in session.roles}
+        held = set(parse_roles(session.roles))
         if not held & set(allowed):
             raise AppError(
                 ErrorCode.FORBIDDEN,

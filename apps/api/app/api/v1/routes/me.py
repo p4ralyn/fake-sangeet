@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import current_session, get_db, require_role
 from app.schemas.me import EventSummary, MeResponse
-from app.services.identity.roles import Role, get_current_event
+from app.services.identity.roles import Role, get_current_event, parse_roles
 from app.services.identity.sessions import SessionData
 
 router = APIRouter(prefix="/api/v1", tags=["me"])
@@ -20,7 +20,7 @@ async def me(
         net_id=session.net_id,
         display_name=session.display_name,
         email=session.email,
-        roles=[Role(role) for role in session.roles],
+        roles=parse_roles(session.roles),
         event=EventSummary(id=event.id, slug=event.slug, name=event.name),
         csrf_token=session.csrf_token,
     )

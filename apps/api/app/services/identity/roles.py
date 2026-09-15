@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from enum import StrEnum
 
 from sqlalchemy import select
@@ -21,6 +22,27 @@ class Role(StrEnum):
 
 # Fail loudly at import if the two enums ever drift apart.
 assert STAFF_ROLE_NAMES <= {role.value for role in Role}
+
+
+def parse_roles(values: Iterable[str]) -> list[Role]:
+    """Best-effort parse of role strings carried in a session cookie.
+
+    A session can outlive a deploy: staff sessions live 12h, so if a `Role`
+    member is ever renamed or removed, a still-live session's cookie can carry
+    a string that no longer matches any member. Raising there would turn every
+    request on that session into a 500 until it expires. Skipping an
+    unrecognised value instead grants it nothing -- consistent with
+    deny-by-default, since "holds an unknown role" and "holds no role" must
+    both fail the same `require_role` check. Single source of truth so
+    `require_role` and `/api/v1/me` cannot drift on how they handle this.
+    """
+    parsed = []
+    for value in values:
+        try:
+            parsed.append(Role(value))
+        except ValueError:
+            continue
+    return parsed
 
 
 async def get_current_event(db: AsyncSession) -> Event:

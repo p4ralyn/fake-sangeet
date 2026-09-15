@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuditLog, Event, FunnelEvent, User
-from app.services.identity.roles import Role
+from app.services.identity.roles import STAFF_ROLE_NAMES, Role
 
 
 async def write_audit(
@@ -57,18 +57,17 @@ async def record_login(
 ) -> None:
     """Both rows a login writes, in one call so `auth_callback` stays thin.
 
-    `actor_role` is the `staff_role` PG enum column — only OWNER/ADMIN/SECURITY
-    (or NULL) are valid values there, so a VISITOR login must write NULL, never
-    the string "VISITOR".
+    `actor_role` is the `staff_role` PG enum column — only `STAFF_ROLE_NAMES`
+    (derived from that same enum at import time, never hardcoded here) or NULL
+    are valid values there, so a VISITOR login must write NULL, never the
+    string "VISITOR".
     """
     await write_audit(
         db,
         event_id=event.id,
         actor_user_id=user.id,
         actor_net_id=user.net_id,
-        actor_role=next(
-            (r.value for r in roles if r.value in {"OWNER", "ADMIN", "SECURITY"}), None
-        ),
+        actor_role=next((r.value for r in roles if r.value in STAFF_ROLE_NAMES), None),
         action="LOGIN",
         object_type="user",
         object_id=user.id,

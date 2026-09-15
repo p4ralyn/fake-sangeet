@@ -89,11 +89,49 @@ async def test_login_writes_an_audit_row_and_a_funnel_row(client, db_session, se
 
 
 async def test_audit_row_stores_no_raw_email(client, db_session, seeded_staff):
-    from app.models import AuditLog
+    from app.models import AuditLog, User
 
     await _dev_login(client, "owner.test")
+    user = (
+        await db_session.execute(select(User).where(User.net_id == "owner.test"))
+    ).scalar_one()
     result = await db_session.execute(select(AuditLog).where(AuditLog.action == "LOGIN"))
     row = result.scalar_one()
 
+    assert user.email  # sanity: the dev provider actually issued one
     assert row.ip_hash is None or "@" not in row.ip_hash
-    assert row.after is None or "owner@" not in str(row.after)
+    assert row.after is None or user.email not in str(row.after)
+    assert row.after is None or "owner.test" not in str(row.after)
+
+
+async def test_require_role_denies_an_unrecognised_role_string_instead_of_500ing(
+    client, settings, event_id
+):
+    """A session can outlive a deploy (staff sessions live 12h). If a `Role`
+    member is ever renamed or removed, a still-live session's cookie can carry
+    a string `Role(...)` no longer accepts. That must deny cleanly, not 500 --
+    constructed directly via `create_session`, since the login flow can only
+    ever mint valid roles."""
+    from uuid import uuid4
+
+    from app.core.deps import get_redis_client
+    from app.services.identity.sessions import create_session
+
+    session = await create_session(
+        get_redis_client(),
+        user_id=uuid4(),
+        net_id="odd.staff",
+        display_name="Odd Staff",
+        email=None,
+        roles=["RETIRED_ROLE"],
+        is_staff=True,
+    )
+    client.cookies.set(settings.session_cookie_name, session.sid)
+
+    owner_only = await client.get("/api/v1/me/owner-only")
+    assert owner_only.status_code == 403
+    assert owner_only.json()["error"]["code"] == "FORBIDDEN"
+
+    me_response = await client.get("/api/v1/me")
+    assert me_response.status_code == 200
+    assert me_response.json()["roles"] == []
