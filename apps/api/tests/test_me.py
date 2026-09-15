@@ -144,12 +144,13 @@ async def test_staff_reach_visitor_gated_routes(db_session, event_id, seeded_sta
     exclusive. Pins the behaviour at the dependency, not just at /me, because a
     VISITOR-gated route is what the buy flow actually uses.
     """
-    from app.core.deps import require_role
-    from app.services.identity.roles import Role, resolve_roles
-    from app.services.identity.users import upsert_user
-    from app.services.identity.provider import IdentityClaims
-    from app.services.identity.sessions import SessionData
     from datetime import UTC, datetime
+
+    from app.core.deps import require_role
+    from app.services.identity.provider import IdentityClaims
+    from app.services.identity.roles import Role, resolve_roles
+    from app.services.identity.sessions import SessionData
+    from app.services.identity.users import upsert_user
 
     claims = IdentityClaims(
         subject="dev:owner.test",
