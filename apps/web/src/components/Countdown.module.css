@@ -1,0 +1,13 @@
+.countdown {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-md);
+}
+
+.urgent {
+  color: var(--haldi);
+}
+
+.expired {
+  color: var(--kumkum);
+}

@@ -1,0 +1,113 @@
+/* Base stylesheet — resets and global rules.
+   Binding rule from docs/design/frontend-design-spec.md:
+   NO GRADIENTS AND NO BOX-SHADOWS ANYWHERE IN THE ENTIRE APP.
+   The zari hairline (see ZariRule) is the only elevation device.
+   Do not add `box-shadow` or any `gradient(...)` to any stylesheet in this app. */
+
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Nothing in the app scrolls horizontally except the admin table, which
+   scrolls inside its own container (see AdminTable / .table-scroll). */
+#root {
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+  margin: 0 0 0.75em;
+}
+
+h1 {
+  font-size: var(--text-3xl);
+}
+h2 {
+  font-size: var(--text-2xl);
+}
+h3 {
+  font-size: var(--text-xl);
+}
+h4 {
+  font-size: var(--text-lg);
+}
+
+p {
+  max-width: 66ch;
+  margin: 0 0 1em;
+}
+
+a {
+  color: var(--kumkum);
+}
+
+img,
+svg {
+  max-width: 100%;
+  display: block;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Sentence case everywhere, including buttons. No all-caps transform lives
+   anywhere in this codebase — do not add one. */
+
+/* Visible keyboard focus, globally. Never remove this without an equally
+   visible replacement. */
+:focus-visible {
+  outline: 2px solid var(--kumkum);
+  outline-offset: 2px;
+}
+
+/* Tabular numerals utility — countdowns, amounts, seat counts, short codes. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -54,6 +54,20 @@ services:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
 
+  web:
+    image: node:20-alpine
+    working_dir: /srv/web
+    command: ["sh", "-c", "npm install && npm run dev -- --host"]
+    environment:
+      API_PROXY_TARGET: http://api:8000
+    ports: ["5173:5173"]
+    volumes:
+      - ./apps/web:/srv/web
+      - web_node_modules:/srv/web/node_modules
+    depends_on:
+      - api
+
 volumes:
   pgdata:
   gcsdata:
+  web_node_modules:

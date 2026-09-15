@@ -1,0 +1,42 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.625rem 1.25rem;
+  border-radius: 2px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+  /* No gradient, no box-shadow. Flat fills and hairlines only. */
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.primary {
+  background: var(--kumkum);
+  color: var(--paper);
+  border: 1px solid var(--kumkum);
+}
+
+.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--kumkum) 88%, var(--ink));
+}
+
+.quiet {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--zari);
+}
+
+.quiet:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--zari) 12%, transparent);
+}

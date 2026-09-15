@@ -1,0 +1,48 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--zari);
+  flex-wrap: wrap;
+}
+
+.eventName {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  letter-spacing: 0.01em;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--text-xs);
+}
+
+.role {
+  color: var(--mehendi);
+  font-weight: 600;
+  border: 1px solid var(--zari);
+  border-radius: 2px;
+  padding: 0.15rem 0.5rem;
+}
+
+.mainNarrow {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.mainWide {
+  max-width: none;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+@media (min-width: 60rem) {
+  .mainWide {
+    max-width: 90rem;
+  }
+}

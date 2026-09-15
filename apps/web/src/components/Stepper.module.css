@@ -1,0 +1,38 @@
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.step {
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.current {
+  color: var(--kumkum);
+  font-weight: 600;
+  border-bottom: 1px solid var(--kumkum);
+  padding-bottom: 0.125rem;
+}
+
+.done {
+  color: var(--ink);
+}
+
+.mark {
+  margin-right: 0.3em;
+}
+
+.tick {
+  color: var(--zari);
+  margin: 0 0.35rem;
+}

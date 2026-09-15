@@ -1,0 +1,57 @@
+/* Design tokens — see docs/design/frontend-design-spec.md.
+   Six colour tokens, two type families, a minor-third scale.
+   Light is the primary mode (an invitation is printed on paper);
+   dark mode is an evening mandap, not an inverted UI. */
+
+:root {
+  /* colour — light palette (bare :root, always defined) */
+  --paper: #fbf6ee; /* warm ivory cardstock */
+  --ink: #2e1a18; /* deep brown-black, letterpress not tinted black */
+  --kumkum: #a31621; /* deep sindoor red — the primary */
+  --zari: #b08733; /* antique gold — hairlines, rules, borders ONLY, never a fill */
+  --haldi: #e4a700; /* turmeric — the single urgency accent */
+  --mehendi: #5b6b3a; /* olive — verified, approved, checked-in */
+
+  /* type */
+  --font-display: "Marcellus", "Cormorant Garamond", Georgia, serif;
+  --font-body: "Mukta", ui-sans-serif, system-ui, sans-serif;
+
+  /* type scale — 1.25 minor third, 16px base */
+  --text-xs: 0.8rem;
+  --text-sm: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.563rem;
+  --text-xl: 1.953rem;
+  --text-2xl: 2.441rem;
+  --text-3xl: 3.052rem;
+
+  /* layout */
+  --content-max: 34rem;
+  --admin-min: 60rem;
+
+  /* motion */
+  --motion-fast: 150ms;
+  --motion-slow: 600ms;
+}
+
+/* dark palette — system preference, unless an explicit light choice overrides it */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1a0c0e; /* deep maroon ground */
+    --ink: #f2e6d8;
+    --kumkum: #e0555f; /* lifted for contrast on the dark ground */
+    --zari: #c9a24b;
+    --haldi: #f0be3a;
+    --mehendi: #9bb06a;
+  }
+}
+
+/* dark palette — explicit toggle, wins in both directions */
+:root[data-theme="dark"] {
+  --paper: #1a0c0e;
+  --ink: #f2e6d8;
+  --kumkum: #e0555f;
+  --zari: #c9a24b;
+  --haldi: #f0be3a;
+  --mehendi: #9bb06a;
+}
