@@ -11,6 +11,7 @@ from app.api.v1.routes import auth, health
 from app.api.v1.routes import me as me_routes
 from app.core.deps import get_redis_client
 from app.core.errors import register_error_handlers
+from app.core.http import aclose_http_client
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
 from app.db.session import engine
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
     await engine.dispose()
     await get_redis_client().aclose()
+    await aclose_http_client()
     log.info("shutdown")
 
 

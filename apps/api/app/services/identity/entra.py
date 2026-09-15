@@ -9,11 +9,11 @@ import time
 from collections.abc import Mapping
 from urllib.parse import urlencode
 
-import httpx
 import jwt
 import structlog
 
 from app.core.errors import AppError, ErrorCode
+from app.core.http import get_http_client
 from app.core.security import new_token
 from app.core.settings import get_settings
 from app.services.identity.provider import IdentityClaims
@@ -40,10 +40,10 @@ class JwksCache:
         )
 
     async def _refresh(self) -> None:
-        async with httpx.AsyncClient(timeout=10) as client:
-            response = await client.get(self._url)
-            response.raise_for_status()
-            document = response.json()
+        client = get_http_client()
+        response = await client.get(self._url, timeout=10)
+        response.raise_for_status()
+        document = response.json()
         self._keys = {
             key["kid"]: jwt.PyJWK(key).key for key in document.get("keys", []) if "kid" in key
         }
@@ -114,8 +114,10 @@ class EntraAuthProvider:
             "code_verifier": verifier,
             "scope": "openid profile email",
         }
-        async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.post(f"{self._authority}/oauth2/v2.0/token", data=payload)
+        client = get_http_client()
+        response = await client.post(
+            f"{self._authority}/oauth2/v2.0/token", data=payload, timeout=15
+        )
         if response.status_code != 200:
             log.warning("entra_token_exchange_failed", status_code=response.status_code)
             raise AppError(
@@ -154,7 +156,7 @@ class EntraAuthProvider:
                 audience=settings.entra_client_id,
                 issuer=f"{self._authority}/v2.0",
                 leeway=CLOCK_SKEW_SECONDS,
-                options={"require": ["exp", "nbf", "iat", "aud", "iss"]},
+                options={"require": ["exp", "nbf", "iat", "aud", "iss", "oid"]},
             )
         except AppError:
             raise
@@ -179,11 +181,18 @@ class EntraAuthProvider:
                 http_status=HTTP_401,
             )
 
+        oid = payload.get("oid")
         net_id = (
             payload.get("preferred_username") or payload.get("upn") or payload.get("email") or ""
         ).strip().lower()
+        if not oid or not net_id:
+            raise AppError(
+                ErrorCode.OIDC_TOKEN_INVALID,
+                "We could not verify that sign-in. Try again.",
+                http_status=HTTP_401,
+            )
         return IdentityClaims(
-            subject=payload["oid"],
+            subject=oid,
             net_id=net_id,
             email=(payload.get("email") or net_id) or None,
             display_name=payload.get("name") or net_id,
