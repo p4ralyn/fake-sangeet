@@ -85,23 +85,32 @@ OWNER login shows `["OWNER"]` → owner-only route 200 → unseeded NetID shows
 Design spec: `docs/design/frontend-design-spec.md`
 API contract: `docs/design/frontend-api-contract.md`
 
-- [x] Design system defined: invitation vernacular, zari-rule structure,
+- [x] Design system shipped: invitation vernacular, zari-rule structure,
       kumkum/zari/haldi/mehendi palette, Marcellus + Mukta, no gradients,
       no shadows anywhere
-- [~] Vite + React + TypeScript foundation, dev-proxied same-origin so the
-      session cookie works without CORS
-- [~] Typed API client, CSRF handling, error-envelope parsing
-- [~] Mock adapter with a per-endpoint real/mock switch, exercising the hard
-      paths (sold out, one seat left, hold expiring, duplicate UTR)
-- [~] Role-gated routing, deny by default
-- [ ] Invitation landing with live seat availability
-- [ ] Ticket type selection — COUPLE disables at 1 seat left (addendum §A1.1)
-- [ ] Details form, then hold, then payment — the binding §A2 order
-- [ ] Payment page: hold countdown, UPI QR, copyable amount, deep link,
-      per-intent reference code
-- [ ] Proof submission (UTR + screenshot)
-- [ ] Status screen
-- [ ] The pass — card with a perforated stub, QR on the stub
+- [x] Vite + React + TypeScript foundation, dev-proxied same-origin so the
+      session cookie works without CORS. 4 runtime deps, no CSS framework,
+      no state library, 68 kB gzipped
+- [x] Typed API client, CSRF header handling, error-envelope parsing
+- [x] Mock adapter with a per-endpoint real/mock switch, exercising the hard
+      paths; state persists across reloads; dead-code-eliminated from prod
+- [x] Role-gated routing, deny by default, `next` preserved through sign-in
+- [x] Invitation landing with live seat availability, three states
+- [x] Ticket type selection — COUPLE disables in place at 1 seat left (§A1.1)
+- [x] Details form, then hold, then payment — the binding §A2 order, with a
+      403 on the payment page bouncing silently back to step 1
+- [x] Payment page: hold countdown in tabular numerals turning haldi at 5
+      minutes, UPI QR, copyable VPA and amount, `upi://` deep link carrying
+      amount + reference code, per-intent reference code
+- [x] Client-side self-expiry into the two-path recovery, so a late payer can
+      still submit proof (`LATE_NO_SEAT`) instead of vanishing
+- [x] Proof submission (UTR + screenshot with type/size guard and preview)
+- [x] Status screen — one honest sentence per state, no fake progress bar
+- [x] The pass — card with a real perforation, QR on the stub, short code;
+      a couple renders two independent cards (§A3)
+- [x] Waitlist
+- [x] Verified in-browser end to end: couple purchase through to two pass
+      cards, zero horizontal overflow at 360px on every screen
 - [ ] Admin review queue, keyboard-first
 - [ ] ID verification flow (needs M4)
 - [ ] Scanner PWA (M6)
