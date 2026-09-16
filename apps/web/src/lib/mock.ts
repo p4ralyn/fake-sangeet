@@ -93,6 +93,36 @@ export function getMockScenario(): MockScenario {
 
 export function setMockScenario(scenario: MockScenario): void {
   window.sessionStorage.setItem(SCENARIO_STORAGE_KEY, scenario);
+  // A scenario switch starts a fresh demo: drop any purchase carried over from
+  // the previous one, or the new scenario inherits a stale hold.
+  window.sessionStorage.removeItem(STATE_STORAGE_KEY);
+}
+
+// ---------------------------------------------------------------------------
+// Purchase state persistence.
+//
+// The engine's intents live in memory, so a full page load (a refresh, or any
+// navigation that is not client-side routing) used to wipe an in-flight or
+// approved purchase -- a demo would reach "Approved. Your pass is ready." and
+// then show "No pass yet" on /pass. Production is unaffected because the real
+// API reads from Postgres, but a demo that breaks on refresh looks like a
+// product bug. MockIntent is all primitives, so sessionStorage round-trips it.
+// ---------------------------------------------------------------------------
+
+const STATE_STORAGE_KEY = "unigate_mock_state";
+
+interface PersistedMockState {
+  intents: [string, MockIntent][];
+  approvedIntentId: string | null;
+}
+
+function loadPersistedState(): PersistedMockState | null {
+  try {
+    const raw = window.sessionStorage.getItem(STATE_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as PersistedMockState) : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -145,8 +175,20 @@ function referenceCode(): string {
 function buildEngine(): MockEngine | null {
   if (!import.meta.env.DEV) return null;
 
-  const intents = new Map<string, MockIntent>();
-  let approvedIntentId: string | null = null;
+  const restored = loadPersistedState();
+  const intents = new Map<string, MockIntent>(restored?.intents ?? []);
+  let approvedIntentId: string | null = restored?.approvedIntentId ?? null;
+
+  function persist(): void {
+    try {
+      window.sessionStorage.setItem(
+        STATE_STORAGE_KEY,
+        JSON.stringify({ intents: [...intents.entries()], approvedIntentId }),
+      );
+    } catch {
+      // Demo convenience only -- a storage failure must never break the app.
+    }
+  }
 
   const seededQueue: AdminPaymentListItem[] = [
     {
@@ -190,7 +232,7 @@ function buildEngine(): MockEngine | null {
     return intent;
   }
 
-  return {
+  const api: MockEngine = {
     async availability() {
       const scenario = getMockScenario();
       if (scenario === "sold_out") {
@@ -404,6 +446,20 @@ function buildEngine(): MockEngine | null {
       adminQueue = adminQueue.filter((item) => item.id !== id);
     },
   };
+
+  // Persist after any engine call rather than at each mutation site, so a new
+  // method cannot silently forget to save.
+  return new Proxy(api, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (typeof value !== "function") return value;
+      return async (...args: unknown[]) => {
+        const result = await (value as (...a: unknown[]) => unknown)(...args);
+        persist();
+        return result;
+      };
+    },
+  });
 }
 
 const engine = buildEngine();
