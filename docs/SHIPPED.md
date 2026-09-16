@@ -1,7 +1,7 @@
 # unigate — shipped checkpoint
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
-Last updated: M1 complete + frontend foundation in progress.
+Last updated: M1 complete + participant frontend complete.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -51,6 +51,8 @@ Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 - [x] Double-submit CSRF: header or form field, **never** the cookie
 - [x] `GET /api/v1/me` returning the locked 7-field payload
 - [x] `require_role` — deny by default, explicit role list per route
+- [x] Staff carry VISITOR alongside their staff roles, so an OWNER can walk the
+      participant purchase flow (amends LLD-v2 §2's matrix)
 - [x] Login writes an audit row and a funnel row
 
 ### Seams (local substitute + cloud implementation, chosen by settings)
@@ -71,12 +73,13 @@ Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 - [x] Thin routes, fat services — verified: no service imports FastAPI
 - [x] Role sets derived from the enum at import time, never hardcoded
 - [x] Seed is idempotent, proven twice against the live database
-- [x] **90 tests passing**, `ruff check` clean
+- [x] **91 tests passing**, `ruff check` clean
 
 ### Verification record
 `docker compose down -v` → rebuild → migrate → seed → full suite →
-OWNER login shows `["OWNER"]` → owner-only route 200 → unseeded NetID shows
-`["VISITOR"]` → same route 403 with the `FORBIDDEN` envelope → zero PII in logs.
+OWNER login shows `["OWNER", "VISITOR"]` → owner-only route 200 → unseeded NetID
+shows `["VISITOR"]` → same route 403 with the `FORBIDDEN` envelope → zero PII in
+logs.
 
 ---
 
