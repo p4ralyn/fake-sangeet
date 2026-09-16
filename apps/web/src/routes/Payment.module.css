@@ -1,0 +1,97 @@
+.countdownBlock {
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.countdownBlock span[role="timer"] {
+  font-size: var(--text-2xl);
+  display: block;
+}
+
+.countdownNote {
+  font-size: var(--text-xs);
+  margin: 0.5rem 0 0;
+}
+
+.amountBlock {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 1rem 0;
+}
+
+.amountLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.amount {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+}
+
+.qrBlock {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--zari);
+  border-radius: 2px;
+}
+
+.copyRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.copyLabel {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  min-width: 6rem;
+}
+
+.copyValue {
+  flex: 1;
+  font-size: var(--text-sm);
+  word-break: break-all;
+}
+
+.deepLinkButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  width: 100%;
+  margin: 1rem 0;
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--zari);
+  border-radius: 2px;
+  font-weight: 600;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.deepLinkButton:hover {
+  background: color-mix(in srgb, var(--zari) 12%, transparent);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  margin: 0 0 1.25rem;
+}
+
+.recovery {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recoveryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

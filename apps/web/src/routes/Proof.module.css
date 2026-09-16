@@ -1,0 +1,37 @@
+.fileField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+}
+
+.fileLabel {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.fileInput {
+  font-size: var(--text-sm);
+}
+
+.fileError {
+  font-size: var(--text-xs);
+  color: var(--kumkum);
+  font-weight: 600;
+}
+
+.preview {
+  max-width: 100%;
+  max-height: 220px;
+  width: auto;
+  border: 1px solid var(--zari);
+  border-radius: 2px;
+  margin-top: 0.5rem;
+}
+
+.error {
+  color: var(--kumkum);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  margin: 0 0 1rem;
+}

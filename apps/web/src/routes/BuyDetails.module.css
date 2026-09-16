@@ -1,0 +1,35 @@
+.partnerNote {
+  font-size: var(--text-xs);
+  margin: 0 0 1rem;
+}
+
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: var(--text-xs);
+  margin: 0 0 1.5rem;
+  cursor: pointer;
+}
+
+.consent input {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  margin-top: 0.1rem;
+  accent-color: var(--kumkum);
+}
+
+.error {
+  color: var(--kumkum);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  margin: 0 0 1rem;
+}
+
+.soldOut {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}

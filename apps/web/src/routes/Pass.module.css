@@ -1,0 +1,208 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.passCard {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--zari);
+  border-radius: 2px;
+  padding: 1.5rem 1.5rem 1.75rem;
+}
+
+/* While revealing, the resting border is invisible and four animated edges
+   draw it clockwise from the top-left corner instead. */
+.passCard.revealing {
+  border-color: transparent;
+}
+
+.edgeTop,
+.edgeRight,
+.edgeBottom,
+.edgeLeft {
+  position: absolute;
+  background: var(--zari);
+}
+
+.edgeTop {
+  top: -1px;
+  left: -1px;
+  width: calc(100% + 2px);
+  height: 2px;
+  transform-origin: left;
+  animation: growX var(--motion-slow) ease-out forwards;
+}
+
+.edgeRight {
+  top: -1px;
+  right: -1px;
+  width: 2px;
+  height: calc(100% + 2px);
+  transform-origin: top;
+  animation: growY var(--motion-slow) ease-out forwards;
+  animation-delay: calc(var(--motion-slow) * 0.25);
+}
+
+.edgeBottom {
+  bottom: -1px;
+  right: -1px;
+  width: calc(100% + 2px);
+  height: 2px;
+  transform-origin: right;
+  animation: growX var(--motion-slow) ease-out forwards;
+  animation-delay: calc(var(--motion-slow) * 0.5);
+}
+
+.edgeLeft {
+  bottom: -1px;
+  left: -1px;
+  width: 2px;
+  height: calc(100% + 2px);
+  transform-origin: bottom;
+  animation: growY var(--motion-slow) ease-out forwards;
+  animation-delay: calc(var(--motion-slow) * 0.75);
+}
+
+@keyframes growX {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes growY {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.passTop {
+  text-align: center;
+}
+
+.holderName {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  margin: 0 0 0.25rem;
+}
+
+.ticketType {
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.seatOf {
+  font-size: var(--text-xs);
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+  margin: 0.25rem 0 0;
+}
+
+.perforation {
+  position: relative;
+  height: 0;
+  border-top: 2px dashed var(--zari);
+  margin: 1.5rem -1.5rem;
+}
+
+.perforation::before,
+.perforation::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--zari);
+}
+
+.perforation::before {
+  left: -6px;
+}
+
+.perforation::after {
+  right: -6px;
+}
+
+.passStub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qrWrap {
+  padding: 0.5rem;
+  border: 1px solid var(--zari);
+  border-radius: 2px;
+}
+
+.qrWrap.qrResolving {
+  opacity: 0;
+  transform: scale(0.85);
+  animation: qrResolve calc(var(--motion-slow) * 0.65) ease-out forwards;
+  animation-delay: var(--motion-slow);
+}
+
+@keyframes qrResolve {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.shortCode {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  letter-spacing: 0.04em;
+}
+
+.stateLine {
+  text-align: center;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  margin: 0;
+}
+
+.stateNeutral {
+  color: var(--ink);
+}
+
+.stateGood {
+  color: var(--mehendi);
+}
+
+.stateWarn {
+  color: var(--haldi);
+}
+
+.stateBad {
+  color: var(--kumkum);
+}
+
+.addToHomeCard {
+  text-align: left;
+}
+
+.addToHomeTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  margin: 0 0 0.5rem;
+}
