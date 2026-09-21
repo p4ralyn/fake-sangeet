@@ -1,25 +1,55 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "../components/Button";
 import { useSession } from "../lib/session";
 import styles from "./AppShell.module.css";
 
 /**
- * The app shell: event name, signed-in identity, sign-out control. Content
- * is centred at 34rem on participant screens and goes wide under /admin,
- * per the design spec's layout rule.
+ * The SNUPHORIA mark, inlined (not an <img src>) so its `currentColor`
+ * fills actually pick up the CSS `color` set on it — an externally
+ * referenced SVG cannot inherit page colour, only an inline one can.
+ * Decorative: the brand link next to it carries the accessible name.
+ */
+function SnuphoriaMark() {
+  return (
+    <svg className={styles.logo} viewBox="0 0 307 297" fill="none" aria-hidden="true" focusable="false">
+      <rect x="62" y="42" width="15" height="244" rx="7.5" fill="currentColor" />
+      <rect x="29" y="93" width="15" height="154" rx="7.5" fill="currentColor" />
+      <rect y="140" width="11" height="47" rx="5.5" fill="currentColor" />
+      <rect width="15" height="244" rx="7.5" transform="matrix(-1 0 0 1 245 42)" fill="currentColor" />
+      <rect width="15" height="154" rx="7.5" transform="matrix(-1 0 0 1 278 93)" fill="currentColor" />
+      <rect width="11" height="47" rx="5.5" transform="matrix(-1 0 0 1 307 140)" fill="currentColor" />
+      <path
+        d="M197.15 127.517H166.218V100.451C166.218 84.9846 164.837 82.499 152.685 82.499C140.533 82.499 139.152 84.9846 139.152 100.451V121.993C139.152 130.831 140.256 133.869 147.437 138.288C153.513 142.155 164.837 147.126 177.265 154.859C196.046 166.459 198.255 172.259 198.255 196.563V231.639C198.255 271.962 190.522 277.762 152.961 277.762C117.057 277.762 108.495 272.514 108.495 231.639V188.278H139.428V231.639C139.428 246.829 141.085 249.591 152.685 249.591C164.561 249.591 166.218 246.829 166.218 231.639V198.773C166.218 187.173 165.665 183.307 158.761 178.611C151.304 173.364 135.285 165.631 124.79 158.726C109.324 148.507 107.39 141.879 107.39 121.441V100.451C107.39 59.8518 114.847 54.0519 152.132 54.0519C189.417 54.0519 197.15 59.8518 197.15 100.451V127.517Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+/**
+ * The app shell: brand mark, event name, signed-in identity, sign-out
+ * control. Content is centred at 34rem on participant screens and goes wide
+ * under /admin, per the design spec's layout rule. A small secondary mark
+ * (Inferno) sits in the footer credit line.
  */
 export function AppShell() {
   const { user, signOut } = useSession();
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const eventName = user?.event.name ?? "SNUPHORIA";
 
   return (
     <>
       <header className={styles.header}>
-        <span className={styles.eventName}>{user?.event.name ?? "unigate"}</span>
+        <Link to="/" className={styles.brand} aria-label={`${eventName} — home`}>
+          <SnuphoriaMark />
+          <span className={styles.eventName} aria-hidden="true">
+            {eventName}
+          </span>
+        </Link>
         {user && (
           <div className={styles.identity}>
-            <span>{user.display_name}</span>
+            <span className={styles.name}>{user.display_name}</span>
             <span className={styles.role}>{user.roles.join(", ")}</span>
             <Button variant="quiet" onClick={() => void signOut()}>
               Sign out
@@ -30,6 +60,9 @@ export function AppShell() {
       <main className={isAdmin ? styles.mainWide : styles.mainNarrow}>
         <Outlet />
       </main>
+      <footer className={styles.footer}>
+        <img className={styles.infernoLogo} src="/logo/inferno.png" alt="Inferno" />
+      </footer>
     </>
   );
 }

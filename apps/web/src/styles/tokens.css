@@ -1,16 +1,17 @@
 /* Design tokens — see docs/design/frontend-design-spec.md.
    Six colour tokens, two type families, a minor-third scale.
-   Light is the primary mode (an invitation is printed on paper);
-   dark mode is an evening mandap, not an inverted UI. */
+   Light-only: this is one bright identity, the same for every viewer
+   regardless of OS colour scheme. No dark-mode overrides in this file. */
 
 :root {
-  /* colour — light palette (bare :root, always defined) */
-  --paper: #fbf6ee; /* warm ivory cardstock */
-  --ink: #2e1a18; /* deep brown-black, letterpress not tinted black */
-  --kumkum: #a31621; /* deep sindoor red — the primary */
-  --zari: #b08733; /* antique gold — hairlines, rules, borders ONLY, never a fill */
-  --haldi: #e4a700; /* turmeric — the single urgency accent */
-  --mehendi: #5b6b3a; /* olive — verified, approved, checked-in */
+  /* colour — the only palette. Verified against WCAG contrast: see
+     docs/design/frontend-design-spec.md and the reskin report for ratios. */
+  --paper: #fff8ed; /* near-white warm ivory ground */
+  --ink: #241009; /* deep brown-black, letterpress not tinted black */
+  --kumkum: #d6002a; /* vivid celebratory red — the primary */
+  --zari: #b8862a; /* foil gold — hairlines, rules, borders ONLY, never a fill */
+  --haldi: #946600; /* turmeric — the single urgency accent */
+  --mehendi: #4c6b1f; /* olive — verified, approved, checked-in */
 
   /* type */
   --font-display: "Marcellus", "Cormorant Garamond", Georgia, serif;
@@ -32,26 +33,4 @@
   /* motion */
   --motion-fast: 150ms;
   --motion-slow: 600ms;
-}
-
-/* dark palette — system preference, unless an explicit light choice overrides it */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #1a0c0e; /* deep maroon ground */
-    --ink: #f2e6d8;
-    --kumkum: #e0555f; /* lifted for contrast on the dark ground */
-    --zari: #c9a24b;
-    --haldi: #f0be3a;
-    --mehendi: #9bb06a;
-  }
-}
-
-/* dark palette — explicit toggle, wins in both directions */
-:root[data-theme="dark"] {
-  --paper: #1a0c0e;
-  --ink: #f2e6d8;
-  --kumkum: #e0555f;
-  --zari: #c9a24b;
-  --haldi: #f0be3a;
-  --mehendi: #9bb06a;
 }

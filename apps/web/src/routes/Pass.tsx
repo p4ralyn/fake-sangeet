@@ -49,7 +49,7 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
 
         <div className={styles.passStub}>
           <div className={`${styles.qrWrap} ${animate ? styles.qrResolving : ""}`}>
-            <QRCodeSVG value={ticket.qr_url} size={140} bgColor="#FBF6EE" fgColor="#2E1A18" level="M" />
+            <QRCodeSVG value={ticket.qr_url} size={140} bgColor="#FFF8ED" fgColor="#241009" level="M" />
           </div>
           <p className={`${styles.shortCode} tabular-nums`}>{ticket.short_code}</p>
         </div>

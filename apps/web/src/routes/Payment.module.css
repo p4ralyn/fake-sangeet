@@ -58,6 +58,46 @@
   word-break: break-all;
 }
 
+/* The VPA rotates between real accounts, so it must be verified at a
+   glance against the buyer's bank app — not read as just another
+   copyable row. Bordered in kumkum, set larger, laid out as its own
+   two-row grid (label + copy on top, the full VPA below) so the value
+   always has the whole box width to wrap in, even at 360px. */
+.copyRowHighlight {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "label button" "value value";
+  column-gap: 0.75rem;
+  row-gap: 0.35rem;
+  border: 1px solid var(--kumkum);
+  border-radius: 2px;
+  padding: 0.85rem 1rem;
+  margin: 1rem 0;
+}
+
+.copyLabelHighlight {
+  grid-area: label;
+  min-width: 0;
+  align-self: center;
+  color: var(--kumkum);
+}
+
+.copyValueHighlight {
+  grid-area: value;
+  /* Body font, not display: a VPA mixes letters and digits, and the
+     display serif renders 0 and O almost identically — exactly what a
+     buyer must be able to tell apart to verify the account at a glance. */
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.copyButtonHighlight {
+  grid-area: button;
+  justify-self: end;
+}
+
 .deepLinkButton {
   display: flex;
   align-items: center;

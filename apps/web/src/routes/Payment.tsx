@@ -14,7 +14,15 @@ import styles from "./Payment.module.css";
 
 const STEPS = ["Choose", "Details", "Payment"];
 
-function CopyableRow({ label, value }: { label: string; value: string }) {
+function CopyableRow({
+  label,
+  value,
+  variant = "default",
+}: {
+  label: string;
+  value: string;
+  variant?: "default" | "highlight";
+}) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -28,11 +36,20 @@ function CopyableRow({ label, value }: { label: string; value: string }) {
     }
   }
 
+  const isHighlight = variant === "highlight";
+
   return (
-    <div className={styles.copyRow}>
-      <span className={styles.copyLabel}>{label}</span>
-      <span className={`${styles.copyValue} tabular-nums`}>{value}</span>
-      <Button type="button" variant="quiet" onClick={handleCopy}>
+    <div className={isHighlight ? `${styles.copyRow} ${styles.copyRowHighlight}` : styles.copyRow}>
+      <span className={isHighlight ? `${styles.copyLabel} ${styles.copyLabelHighlight}` : styles.copyLabel}>
+        {label}
+      </span>
+      <span className={`${isHighlight ? styles.copyValueHighlight : styles.copyValue} tabular-nums`}>{value}</span>
+      <Button
+        type="button"
+        variant="quiet"
+        className={isHighlight ? styles.copyButtonHighlight : undefined}
+        onClick={handleCopy}
+      >
         {copied ? "Copied" : "Copy"}
       </Button>
     </div>
@@ -133,10 +150,10 @@ export function Payment() {
           </div>
 
           <div className={styles.qrBlock}>
-            <QRCodeSVG value={page.upi_deep_link} size={200} bgColor="#FBF6EE" fgColor="#2E1A18" level="M" />
+            <QRCodeSVG value={page.upi_deep_link} size={200} bgColor="#FFF8ED" fgColor="#241009" level="M" />
           </div>
 
-          <CopyableRow label="UPI ID" value={page.upi_vpa} />
+          <CopyableRow label="UPI ID" value={page.upi_vpa} variant="highlight" />
 
           <a className={styles.deepLinkButton} href={page.upi_deep_link}>
             Open your UPI app

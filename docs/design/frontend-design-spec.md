@@ -48,36 +48,40 @@ These are the clichés and the generated-design tells. Do not ship them.
 
 ## Colour
 
-Six tokens. Light is the primary mode (an invitation is printed on paper);
-dark mode is an evening mandap, not an inverted UI.
+Six tokens. **Light-only** (amended — see below): the app commits to one
+bright identity regardless of OS colour scheme. A festival ticket page looks
+the same for everyone, including a buyer whose phone is in dark mode.
 
 ```css
 :root {
-  --paper:   #FBF6EE;  /* warm ivory cardstock — pinker and warmer than the AI cream */
-  --ink:     #2E1A18;  /* deep brown-black, reads as letterpress, not tinted black */
-  --kumkum:  #A31621;  /* deep sindoor red — the primary. NOT orange, NOT terracotta */
-  --zari:    #B08733;  /* antique gold — hairlines, rules and borders ONLY, never a fill */
-  --haldi:   #E4A700;  /* turmeric — the single urgency accent (countdown, low stock) */
-  --mehendi: #5B6B3A;  /* olive — verified, approved, checked-in */
-}
-
-:root:not([data-theme="light"]) { /* under prefers-color-scheme: dark */
-  --paper:   #1A0C0E;  /* deep maroon ground */
-  --ink:     #F2E6D8;
-  --kumkum:  #E0555F;  /* lifted for contrast on the dark ground */
-  --zari:    #C9A24B;
-  --haldi:   #F0BE3A;
-  --mehendi: #9BB06A;
+  --paper:   #FFF8ED;  /* near-white warm ivory ground */
+  --ink:     #241009;  /* deep brown-black, reads as letterpress, not tinted black */
+  --kumkum:  #D6002A;  /* vivid celebratory red — the primary. NOT orange, NOT terracotta */
+  --zari:    #B8862A;  /* foil gold — hairlines, rules and borders ONLY, never a fill */
+  --haldi:   #946600;  /* turmeric — the single urgency accent (countdown, low stock) */
+  --mehendi: #4C6B1F;  /* olive — verified, approved, checked-in */
 }
 ```
 
-Define the full light palette on bare `:root`. Redefine only what changes under
-`@media (prefers-color-scheme: dark)` guarded as `:root:not([data-theme="light"])`,
-and again under `:root[data-theme="dark"]` so an explicit toggle wins both ways.
-`body` gets an explicit `background: var(--paper)`.
+> **Amendment (bright re-skin):** the original spec defined a muted light
+> palette plus a dark-mode override (`@media (prefers-color-scheme: dark)`
+> and `:root[data-theme="dark"]`). Both are deleted. There is no dark mode
+> and no theme toggle — `:root` is the only palette definition, ever.
+> `body` still gets an explicit `background: var(--paper)`.
 
-Contrast floor: body text ≥ 4.5:1, large display ≥ 3:1. Check `--zari` on
-`--paper` — it is a *line* colour and must never carry body text.
+Contrast floor: body text ≥ 4.5:1, large display ≥ 3:1, verified by
+computing WCAG 2.1 ratios (not eyeballed):
+
+| Token      | Hex       | On `--paper` | Use                                   |
+|------------|-----------|--------------|----------------------------------------|
+| `--ink`    | `#241009` | 17.26:1      | body text                              |
+| `--kumkum` | `#D6002A` | 5.11:1       | links, errors, primary button (as bg, with `--paper` text also 5.11:1) |
+| `--haldi`  | `#946600` | 4.78:1       | urgency text (countdown, state labels) |
+| `--mehendi`| `#4C6B1F` | 5.80:1       | approved/checked-in text               |
+| `--zari`   | `#B8862A` | 3.07:1       | borders/hairlines only — never text    |
+
+`--zari` stays a *line* colour and must never carry body text — its ratio is
+reported for border legibility only, not as a text-contrast pass.
 
 ## Type
 
