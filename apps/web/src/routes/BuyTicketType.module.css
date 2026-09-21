@@ -19,9 +19,9 @@
   width: 100%;
   min-height: 44px;
   padding: 0.9rem 1.1rem;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px solid var(--zari);
+  background: var(--cream);
+  color: var(--maroon);
+  border: 2px solid var(--maroon);
   border-radius: 2px;
   cursor: pointer;
   text-align: left;
@@ -29,7 +29,7 @@
 }
 
 .optionButton:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--zari) 12%, transparent);
+  background: color-mix(in srgb, var(--maroon) 12%, transparent);
 }
 
 .optionButton:disabled {
@@ -50,20 +50,21 @@
 
 .optionSeats {
   font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--ink) 70%, transparent);
+  color: var(--muted);
   min-width: 5.5rem;
   text-align: right;
 }
 
 .consequence {
   font-size: var(--text-xs);
+  color: var(--muted);
   margin: 0;
   padding-left: 0.1rem;
 }
 
 .disabledReason {
   font-size: var(--text-xs);
-  color: var(--kumkum);
+  color: var(--scarlet);
   font-weight: 600;
   margin: 0;
   padding-left: 0.1rem;

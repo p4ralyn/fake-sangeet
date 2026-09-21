@@ -14,18 +14,18 @@
 }
 
 .step {
-  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  color: var(--muted);
 }
 
 .current {
-  color: var(--kumkum);
+  color: var(--scarlet);
   font-weight: 600;
-  border-bottom: 1px solid var(--kumkum);
+  border-bottom: 2px solid var(--scarlet);
   padding-bottom: 0.125rem;
 }
 
 .done {
-  color: var(--ink);
+  color: var(--maroon);
 }
 
 .mark {
@@ -33,6 +33,6 @@
 }
 
 .tick {
-  color: var(--zari);
+  color: var(--magenta);
   margin: 0 0.35rem;
 }

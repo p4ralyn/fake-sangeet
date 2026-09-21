@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "../components/Button";
+import { MandalaCorner } from "../components/MandalaCorner";
 import { useSession } from "../lib/session";
 import styles from "./AppShell.module.css";
 
@@ -7,11 +8,13 @@ import styles from "./AppShell.module.css";
  * The SNUPHORIA mark, inlined (not an <img src>) so its `currentColor`
  * fills actually pick up the CSS `color` set on it — an externally
  * referenced SVG cannot inherit page colour, only an inline one can.
- * Decorative: the brand link next to it carries the accessible name.
+ * Carries its own accessible name (a real <title> + role="img") per the
+ * design spec's "both logos need real alt text naming the society".
  */
 function SnuphoriaMark() {
   return (
-    <svg className={styles.logo} viewBox="0 0 307 297" fill="none" aria-hidden="true" focusable="false">
+    <svg className={styles.logo} viewBox="0 0 307 297" fill="none" role="img" aria-label="Snuphoria" focusable="false">
+      <title>Snuphoria, SNU&rsquo;s music society</title>
       <rect x="62" y="42" width="15" height="244" rx="7.5" fill="currentColor" />
       <rect x="29" y="93" width="15" height="154" rx="7.5" fill="currentColor" />
       <rect y="140" width="11" height="47" rx="5.5" fill="currentColor" />
@@ -27,26 +30,42 @@ function SnuphoriaMark() {
 }
 
 /**
- * The app shell: brand mark, event name, signed-in identity, sign-out
- * control. Content is centred at 34rem on participant screens and goes wide
- * under /admin, per the design spec's layout rule. A small secondary mark
- * (Inferno) sits in the footer credit line.
+ * The app shell: the collab lockup (Snuphoria x Inferno), the event
+ * wordmark, the signed-in identity, and the four mandala corner rosettes
+ * that anchor every screen (docs/design/frontend-design-spec.md, "Header"
+ * and "Ornament"). Content is centred at 34rem on participant screens and
+ * goes wide under /admin, per the design spec's layout rule.
  */
 export function AppShell() {
   const { user, signOut } = useSession();
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
-  const eventName = user?.event.name ?? "SNUPHORIA";
 
   return (
     <>
+      <MandalaCorner corner="top-left" />
+      <MandalaCorner corner="top-right" />
+      <MandalaCorner corner="bottom-left" />
+      <MandalaCorner corner="bottom-right" />
+
       <header className={styles.header}>
-        <Link to="/" className={styles.brand} aria-label={`${eventName} — home`}>
+        <Link to="/" className={styles.brand} aria-label="Fake Sangeet — home">
           <SnuphoriaMark />
-          <span className={styles.eventName} aria-hidden="true">
-            {eventName}
+          <span className={styles.collabX} aria-hidden="true">
+            &times;
           </span>
+          <img
+            className={styles.infernoLogo}
+            src="/logo/inferno.png"
+            alt="Inferno, SNU's dance society"
+          />
         </Link>
+
+        <div className={styles.wordmarkBlock}>
+          <p className={styles.wordmark}>FAKE SANGEET</p>
+          <p className={styles.tagline}>band baaja no baarat</p>
+        </div>
+
         {user && (
           <div className={styles.identity}>
             <span className={styles.name}>{user.display_name}</span>
@@ -60,9 +79,6 @@ export function AppShell() {
       <main className={isAdmin ? styles.mainWide : styles.mainNarrow}>
         <Outlet />
       </main>
-      <footer className={styles.footer}>
-        <img className={styles.infernoLogo} src="/logo/inferno.png" alt="Inferno" />
-      </footer>
     </>
   );
 }

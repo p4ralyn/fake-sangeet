@@ -3,6 +3,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { Sparkle } from "../components/Sparkle";
+import { ZariRule } from "../components/ZariRule";
 import { hasSeenPassReveal, markPassRevealSeen } from "../lib/holdStore";
 import { getMyPass } from "../lib/mock";
 import type { PassTicket, TicketState } from "../lib/types";
@@ -26,6 +28,9 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
   return (
     <div className={styles.wrapper}>
       <div className={`${styles.passCard} ${animate ? styles.revealing : ""}`}>
+        <ZariRule orientation="vertical" thin className={styles.railLeft} />
+        <ZariRule orientation="vertical" thin className={styles.railRight} />
+
         {animate && (
           <>
             <span className={styles.edgeTop} aria-hidden="true" />
@@ -45,11 +50,11 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
           )}
         </div>
 
-        <div className={styles.perforation} aria-hidden="true" />
+        <ZariRule thin />
 
         <div className={styles.passStub}>
           <div className={`${styles.qrWrap} ${animate ? styles.qrResolving : ""}`}>
-            <QRCodeSVG value={ticket.qr_url} size={140} bgColor="#FFF8ED" fgColor="#241009" level="M" />
+            <QRCodeSVG value={ticket.qr_url} size={140} bgColor="#FFF3DC" fgColor="#5E0C18" level="M" />
           </div>
           <p className={`${styles.shortCode} tabular-nums`}>{ticket.short_code}</p>
         </div>
@@ -111,7 +116,10 @@ export function Pass() {
 
   return (
     <div className={styles.page}>
-      <h1>Your pass</h1>
+      <h1 className={styles.pageTitle}>
+        <Sparkle />
+        Your pass
+      </h1>
       {tickets.map((ticket) => (
         <PassCard key={ticket.short_code} ticket={ticket} animate={animate} />
       ))}

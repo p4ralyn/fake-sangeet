@@ -1,20 +1,35 @@
 /* Design tokens — see docs/design/frontend-design-spec.md.
-   Six colour tokens, two type families, a minor-third scale.
-   Light-only: this is one bright identity, the same for every viewer
-   regardless of OS colour scheme. No dark-mode overrides in this file. */
+   Palette sampled from docs/design/reference/poster-1.jpg. Light-only: this
+   is one loud identity, the same for every viewer regardless of OS colour
+   scheme. No dark-mode overrides in this file, or anywhere in the app. */
 
 :root {
-  /* colour — the only palette. Verified against WCAG contrast: see
-     docs/design/frontend-design-spec.md and the reskin report for ratios. */
-  --paper: #fff8ed; /* near-white warm ivory ground */
-  --ink: #241009; /* deep brown-black, letterpress not tinted black */
-  --kumkum: #d6002a; /* vivid celebratory red — the primary */
-  --zari: #b8862a; /* foil gold — hairlines, rules, borders ONLY, never a fill */
-  --haldi: #946600; /* turmeric — the single urgency accent */
-  --mehendi: #4c6b1f; /* olive — verified, approved, checked-in */
+  /* colour — the poster's own six. Saffron is a GROUND, never a text
+     background; reading text always lives on a cream card. See the reskin
+     report for every pairing's computed contrast ratio. */
+  --saffron: #e9a93c; /* page ground — golden ochre, the poster's field */
+  --marigold: #ffc61a; /* display lettering fill, on scarlet/maroon grounds only */
+  --scarlet: #c8102e; /* primary actions, the film-strip band */
+  --magenta: #d6006e; /* mandala borders, secondary accent, urgency */
+  --maroon: #5e0c18; /* all body text, all borders, the extrusion shadow */
+  --cream: #fff3dc; /* card surfaces — reading text sits here */
+
+  /* Status-only utility colour. NOT part of the six-colour poster identity
+     — it never appears in ornament, headers or brand chrome. It exists
+     because the pass's "checked in" state needs to read as unambiguously
+     positive to gate staff at a glance, and none of the six brand hues
+     clears 4.5:1 on cream while also being distinct from --scarlet (already
+     used for "revoked"/errors) and --magenta (already used for "warn").
+     Colour is still never the only signal: a glyph and a word carry the
+     state too. */
+  --state-good: #2f5d1e;
+
+  /* Muted/secondary text. Cream-context only (never sit this over bare
+     saffron — verify contrast per-context, see the reskin report). */
+  --muted: color-mix(in srgb, var(--maroon) 65%, transparent);
 
   /* type */
-  --font-display: "Marcellus", "Cormorant Garamond", Georgia, serif;
+  --font-display: "Baloo Bhai 2", "Baloo 2", Impact, sans-serif;
   --font-body: "Mukta", ui-sans-serif, system-ui, sans-serif;
 
   /* type scale — 1.25 minor third, 16px base */

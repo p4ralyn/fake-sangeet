@@ -22,21 +22,21 @@
 }
 
 .primary {
-  background: var(--kumkum);
-  color: var(--paper);
-  border: 1px solid var(--kumkum);
+  background: var(--scarlet);
+  color: var(--cream);
+  border: 2px solid var(--maroon);
 }
 
 .primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--kumkum) 88%, var(--ink));
+  background: color-mix(in srgb, var(--scarlet) 85%, var(--maroon));
 }
 
 .quiet {
   background: transparent;
-  color: var(--ink);
-  border: 1px solid var(--zari);
+  color: var(--maroon);
+  border: 2px solid var(--maroon);
 }
 
 .quiet:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--zari) 12%, transparent);
+  background: color-mix(in srgb, var(--maroon) 12%, transparent);
 }

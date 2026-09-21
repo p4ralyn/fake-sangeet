@@ -5,9 +5,9 @@
 }
 
 .urgent {
-  color: var(--haldi);
+  color: var(--magenta);
 }
 
 .expired {
-  color: var(--kumkum);
+  color: var(--scarlet);
 }

@@ -19,7 +19,7 @@ function formatRemaining(ms: number): string {
 }
 
 /**
- * Renders mm:ss in tabular numerals, turns --haldi at 5 minutes remaining,
+ * Renders mm:ss in tabular numerals, turns --magenta at 5 minutes remaining,
  * and fires onExpire the moment it reaches zero. Self-expires client-side
  * rather than sitting there looking valid — a stale hold must never read as
  * a live one.

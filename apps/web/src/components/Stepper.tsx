@@ -8,7 +8,7 @@ export interface StepperProps {
 
 /**
  * The purchase sequence indicator. The flow genuinely IS a sequence, so this
- * is justified — but it is set as invitation rules (small names, a zari tick
+ * is justified — but it is set as invitation rules (small names, a magenta tick
  * between them, the current step underlined), never as `01 / 02 / 03` chips.
  * Completed/current state never relies on colour alone: a "done" mark and an
  * underline carry the meaning too.

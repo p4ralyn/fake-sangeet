@@ -6,7 +6,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * Primary (kumkum ground) and quiet variants. Sentence case labels, no `→`.
+ * Primary (scarlet ground) and quiet variants. Sentence case labels, no `→`.
  * 44px minimum touch target on both axes.
  */
 export function Button({ variant = "primary", className, ...rest }: ButtonProps) {

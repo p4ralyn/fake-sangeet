@@ -8,8 +8,8 @@
  * copy here rather than plumbed through a new endpoint. If `events.config`
  * ever grows a date/venue field, replace these with values from `/me`.
  */
-export const EVENT_DATE_LABEL = "Friday, 14 November";
-export const EVENT_VENUE = "Main Auditorium";
+export const EVENT_DATE_LABEL = "Thursday, 15 October";
+export const EVENT_VENUE = "UAC Terrace, 6pm";
 
 /** Matches the fallback already used in AppShell for a signed-out visitor. */
-export const EVENT_NAME_FALLBACK = "unigate";
+export const EVENT_NAME_FALLBACK = "Fake Sangeet";

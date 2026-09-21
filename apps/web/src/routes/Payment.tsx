@@ -150,7 +150,7 @@ export function Payment() {
           </div>
 
           <div className={styles.qrBlock}>
-            <QRCodeSVG value={page.upi_deep_link} size={200} bgColor="#FFF8ED" fgColor="#241009" level="M" />
+            <QRCodeSVG value={page.upi_deep_link} size={200} bgColor="#FFF3DC" fgColor="#5E0C18" level="M" />
           </div>
 
           <CopyableRow label="UPI ID" value={page.upi_vpa} variant="highlight" />

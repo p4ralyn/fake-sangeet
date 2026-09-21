@@ -1,0 +1,53 @@
+/* Fixed at a viewport corner, deliberately mostly off-screen — only the
+   quarter nearest the corner shows. This is what makes it a "quarter
+   rosette" without any clip-path: the browser's own viewport edge does the
+   clipping, so the visible slice is always crisp. */
+.corner {
+  position: fixed;
+  width: 220px;
+  height: 220px;
+  z-index: 0;
+}
+
+.topLeft {
+  top: -110px;
+  left: -110px;
+}
+
+.topRight {
+  top: -110px;
+  right: -110px;
+}
+
+.bottomLeft {
+  bottom: -110px;
+  left: -110px;
+}
+
+.bottomRight {
+  bottom: -110px;
+  right: -110px;
+}
+
+@media (max-width: 480px) {
+  .corner {
+    width: 150px;
+    height: 150px;
+  }
+  .topLeft,
+  .bottomLeft {
+    left: -75px;
+  }
+  .topRight,
+  .bottomRight {
+    right: -75px;
+  }
+  .topLeft,
+  .topRight {
+    top: -75px;
+  }
+  .bottomLeft,
+  .bottomRight {
+    bottom: -75px;
+  }
+}

@@ -144,9 +144,9 @@ function loadPersistedState(): PersistedMockState | null {
 // follows the early return.
 // ---------------------------------------------------------------------------
 
-const SINGLE_PRICE = 599;
-const COUPLE_PRICE = 999;
-const SEATS_TOTAL = 150;
+const SINGLE_PRICE = 299;   // phase 3
+const COUPLE_PRICE = 519;   // phase 3 -- NOT 2x single, never derive it
+const SEATS_TOTAL = 600;    // real venue cap; ~550 sold offline, ~50 left
 const HOLD_MINUTES = 20;
 
 interface MockIntent {
@@ -295,9 +295,12 @@ function buildEngine(): MockEngine | null {
           ],
         };
       }
+      // ~550 of the 600 were sold offline and arrive via sheet ingestion, so
+      // phase 3 opens with roughly 50 on sale. seats_available is what is
+      // still buyable; seats_total stays the venue cap.
       return {
         seats_total: SEATS_TOTAL,
-        seats_available: 42,
+        seats_available: 50,
         types: [
           { code: "SINGLE", label: "Single", price: SINGLE_PRICE, seats: 1, available: true },
           { code: "COUPLE", label: "Couple", price: COUPLE_PRICE, seats: 2, available: true },

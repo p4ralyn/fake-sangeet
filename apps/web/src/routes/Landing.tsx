@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { Sparkle } from "../components/Sparkle";
 import { ZariRule } from "../components/ZariRule";
 import { EVENT_DATE_LABEL, EVENT_NAME_FALLBACK, EVENT_VENUE } from "../lib/event";
 import { getAvailability } from "../lib/mock";
@@ -61,7 +62,11 @@ export function Landing() {
   return (
     <Card className={styles.hero}>
       <ZariRule />
-      <p className={styles.invitedTo}>You&rsquo;re invited</p>
+      <p className={styles.invitedTo}>
+        <Sparkle />
+        You&rsquo;re invited
+        <Sparkle />
+      </p>
       <h1 className={styles.eventName}>{user?.event.name ?? EVENT_NAME_FALLBACK}</h1>
       <p className={styles.dateVenue}>
         {EVENT_DATE_LABEL}

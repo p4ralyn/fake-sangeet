@@ -13,9 +13,9 @@
 .input {
   min-height: 44px;
   padding: 0.5rem 0.75rem;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px solid var(--zari);
+  background: var(--cream);
+  color: var(--maroon);
+  border: 2px solid var(--maroon);
   border-radius: 2px;
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -26,16 +26,16 @@
 }
 
 .invalid {
-  border-color: var(--kumkum);
+  border-color: var(--scarlet);
 }
 
 .hint {
   font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--ink) 70%, transparent);
+  color: var(--muted);
 }
 
 .error {
   font-size: var(--text-xs);
-  color: var(--kumkum);
+  color: var(--scarlet);
   font-weight: 600;
 }

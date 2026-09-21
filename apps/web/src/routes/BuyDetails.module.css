@@ -17,11 +17,11 @@
   height: 20px;
   min-width: 20px;
   margin-top: 0.1rem;
-  accent-color: var(--kumkum);
+  accent-color: var(--scarlet);
 }
 
 .error {
-  color: var(--kumkum);
+  color: var(--scarlet);
   font-weight: 600;
   font-size: var(--text-xs);
   margin: 0 0 1rem;

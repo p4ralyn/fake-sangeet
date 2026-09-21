@@ -1,5 +1,5 @@
 .ticketFieldset {
-  border: 1px solid var(--zari);
+  border: 2px solid var(--maroon);
   border-radius: 2px;
   padding: 0.75rem 1rem 1rem;
   margin: 0 0 1.5rem;
@@ -23,5 +23,5 @@
 .radioOption input {
   width: 20px;
   height: 20px;
-  accent-color: var(--kumkum);
+  accent-color: var(--scarlet);
 }
