@@ -1,10 +1,12 @@
 """The auth seam.
 
-Two implementations, chosen by `AUTH_PROVIDER`:
-  dev   — impersonate any NetID. Local only; `Settings` refuses it when APP_ENV=prod.
-  entra — real Microsoft Entra OIDC (Authorization Code + PKCE).
+Three implementations, chosen by `AUTH_PROVIDER`:
+  dev    — impersonate any NetID. Local only; `Settings` refuses it when APP_ENV=prod.
+  entra  — real Microsoft Entra OIDC (Authorization Code + PKCE).
+  google — real Google Workspace OIDC (Authorization Code + PKCE), restricted to
+           the `snu.edu.in` domain via the verified ID token's `hd` claim.
 
-A third (email OTP for non-university attendees, LLD-v2 §15 item 5) drops in here
+A fourth (email OTP for non-university attendees, LLD-v2 §15 item 5) drops in here
 without touching a route.
 """
 from collections.abc import Mapping
@@ -44,10 +46,12 @@ def get_auth_provider() -> AuthProvider:
     """Derived from the settings enum, not a hardcoded if/else chain."""
     from app.services.identity.dev import DevAuthProvider
     from app.services.identity.entra import EntraAuthProvider
+    from app.services.identity.google import GoogleAuthProvider
 
     registry: dict[AuthProviderName, type[AuthProvider]] = {
         AuthProviderName.DEV: DevAuthProvider,
         AuthProviderName.ENTRA: EntraAuthProvider,
+        AuthProviderName.GOOGLE: GoogleAuthProvider,
     }
     missing = set(AuthProviderName) - set(registry)
     if missing:

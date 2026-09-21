@@ -13,6 +13,7 @@ class AppEnv(StrEnum):
 class AuthProviderName(StrEnum):
     DEV = "dev"
     ENTRA = "entra"
+    GOOGLE = "google"
 
 
 class StorageBackend(StrEnum):
@@ -58,6 +59,10 @@ class Settings(BaseSettings):
     entra_client_id: str = ""
     entra_client_secret: str = ""
 
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_allowed_domain: str = "snu.edu.in"
+
     # ── object storage ───────────────────────────────────────────────────
     storage_backend: StorageBackend = StorageBackend.LOCAL
     storage_bucket: str = "unigate-local"
@@ -88,6 +93,12 @@ class Settings(BaseSettings):
             raise ValueError(
                 "AUTH_PROVIDER=entra requires ENTRA_TENANT_ID, ENTRA_CLIENT_ID "
                 "and ENTRA_CLIENT_SECRET."
+            )
+        if self.auth_provider is AuthProviderName.GOOGLE and not (
+            self.google_client_id and self.google_client_secret
+        ):
+            raise ValueError(
+                "AUTH_PROVIDER=google requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
             )
         return self
 

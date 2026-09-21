@@ -36,3 +36,18 @@ def test_entra_requires_credentials(monkeypatch):
     get_settings.cache_clear()
     with pytest.raises(ValidationError, match="requires ENTRA_"):
         get_settings()
+
+
+def test_google_requires_credentials(monkeypatch):
+    monkeypatch.setenv("AUTH_PROVIDER", "google")
+    get_settings.cache_clear()
+    with pytest.raises(ValidationError, match="requires GOOGLE_"):
+        get_settings()
+
+
+def test_google_defaults_allowed_domain_to_snu(monkeypatch):
+    monkeypatch.setenv("AUTH_PROVIDER", "google")
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "c")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "s")
+    get_settings.cache_clear()
+    assert get_settings().google_allowed_domain == "snu.edu.in"
