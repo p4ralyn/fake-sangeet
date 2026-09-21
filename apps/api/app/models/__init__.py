@@ -9,7 +9,22 @@ from app.models.access import (
     ScanResult,
 )
 from app.models.audit import AuditLog, FunnelEvent
-from app.models.event import Event, EventInventory, Gate, GateType
+from app.models.event import (
+    Event,
+    EventInventory,
+    Gate,
+    GateType,
+    InventoryLedger,
+    LedgerReason,
+)
+from app.models.ingestion import (
+    EMAIL_CLAIMABLE_STATUSES,
+    EMAIL_TERMINAL_STATUSES,
+    EmailOutbox,
+    EmailStatus,
+    IngestionError,
+    TicketSource,
+)
 from app.models.ticketing import (
     TICKET_DEAD_STATUSES,
     TICKET_LIVE_STATUSES,
@@ -21,8 +36,11 @@ from app.models.ticketing import (
 from app.models.user import EventStaff, StaffRole, User
 
 __all__ = [
+    "EMAIL_CLAIMABLE_STATUSES", "EMAIL_TERMINAL_STATUSES",
     "TERMINAL_PASS_STATES", "TICKET_DEAD_STATUSES", "TICKET_LIVE_STATUSES",
-    "AuditLog", "Event", "EventInventory", "EventStaff",
-    "FunnelEvent", "Gate", "GateType", "Order", "PartnerMode", "Pass", "PassState",
-    "Scan", "ScanAction", "ScanResult", "StaffRole", "Ticket", "TicketStatus", "User",
+    "AuditLog", "EmailOutbox", "EmailStatus", "Event", "EventInventory", "EventStaff",
+    "FunnelEvent", "Gate", "GateType", "IngestionError", "InventoryLedger",
+    "LedgerReason", "Order", "PartnerMode", "Pass", "PassState",
+    "Scan", "ScanAction", "ScanResult", "StaffRole", "Ticket", "TicketSource",
+    "TicketStatus", "User",
 ]

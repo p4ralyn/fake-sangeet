@@ -4,16 +4,20 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import CITEXT, ENUM, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, EventScoped, Timestamps, UUIDPk
@@ -76,4 +80,59 @@ class EventInventory(Base):
     seats_committed: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LedgerReason(StrEnum):
+    """Why seats moved (addendum §A1). INGEST is M3's addition: cohort A's
+    already-sold rows are the first seats this system ever commits."""
+
+    INGEST = "INGEST"
+    HOLD = "HOLD"
+    EXPIRE = "EXPIRE"
+    REJECT = "REJECT"
+    CANCEL = "CANCEL"
+    ADMIN_RELEASE = "ADMIN_RELEASE"
+    FORCE_APPROVE = "FORCE_APPROVE"
+
+
+# Rendered from the enum, never hand-typed into DDL.
+_LEDGER_REASON_SQL = ", ".join(f"'{reason.value}'" for reason in sorted(LedgerReason))
+LEDGER_REASON_CHECK = "reason IN (" + _LEDGER_REASON_SQL + ")"
+
+
+class InventoryLedger(Base):
+    """APPEND ONLY (addendum §A1). Every seat movement, so a drifting
+    `seats_committed` can be reconstructed and audited.
+
+    CLAUDE.md makes this non-negotiable, and M3 is where the first seat actually
+    moves — the M1 plan deferred the table to M5 on the assumption that nothing
+    before it would commit a seat. Sheet ingestion does.
+
+    `intent_id` has no FK: `payment_intents` is M5. Same deferral as
+    `passes.registration_id`. It gets its constraint when the table lands.
+    """
+
+    __tablename__ = "inventory_ledger"
+    __table_args__ = (
+        CheckConstraint(LEDGER_REASON_CHECK, name="inventory_ledger_reason_known"),
+        CheckConstraint("delta <> 0", name="inventory_ledger_delta_non_zero"),
+        CheckConstraint(
+            "seats_committed_after >= 0", name="inventory_ledger_after_non_negative"
+        ),
+        Index("ix_inventory_ledger_event_created", "event_id", text("created_at DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    event_id: Mapped[UUID] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE"), nullable=False
+    )
+    intent_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    order_id: Mapped[UUID | None] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"))
+    delta: Mapped[int] = mapped_column(Integer, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    seats_committed_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    actor_user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )

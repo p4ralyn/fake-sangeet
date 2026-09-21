@@ -62,6 +62,16 @@ TICKETS_ONE_PER_IDENTITY_WHERE = (
     "user_id IS NOT NULL AND status NOT IN (" + _DEAD_STATUS_SQL + ")"
 )
 
+# The same invariant one step earlier in the funnel. An ingested ticket has no
+# `user_id` yet -- the attendee has not signed in -- so `tickets_one_per_identity`
+# cannot see it, and a NetID repeated across two sheet rows would mint two live
+# tickets unchallenged. `bound_net_id` carries the identity the row is destined
+# for, and this index refuses the second one. Same predicate source, so the two
+# can never disagree about what "dead" means.
+TICKETS_ONE_PER_NET_ID_WHERE = (
+    "bound_net_id IS NOT NULL AND status NOT IN (" + _DEAD_STATUS_SQL + ")"
+)
+
 ticket_status_enum = ENUM(TicketStatus, name="ticket_status", create_type=False)
 partner_mode_enum = ENUM(PartnerMode, name="partner_mode", create_type=False)
 
@@ -76,6 +86,11 @@ class Order(UUIDPk, EventScoped, Base):
         CheckConstraint("quantity BETWEEN 1 AND 20", name="orders_quantity_range"),
     )
 
+    # Which adapter produced this order (LLD-v1 §12). Nullable: an order minted
+    # on-platform in M5 has no external source at all.
+    source_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("ticket_sources.id", ondelete="SET NULL")
+    )
     external_id: Mapped[str] = mapped_column(Text, nullable=False)
     purchaser_name: Mapped[str | None] = mapped_column(Text)
     purchaser_email: Mapped[str] = mapped_column(CITEXT, nullable=False)
@@ -114,6 +129,15 @@ class Ticket(UUIDPk, EventScoped, Timestamps, Base):
             "user_id",
             unique=True,
             postgresql_where=TICKETS_ONE_PER_IDENTITY_WHERE,
+        ),
+        # One NetID ↔ one live ticket per event, enforced from the moment the
+        # sheet names them rather than from first sign-in.
+        Index(
+            "tickets_one_per_net_id",
+            "event_id",
+            "bound_net_id",
+            unique=True,
+            postgresql_where=TICKETS_ONE_PER_NET_ID_WHERE,
         ),
         Index("ix_tickets_event_status", "event_id", "status"),
         Index("ix_tickets_order_id", "order_id"),
