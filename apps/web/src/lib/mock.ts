@@ -59,6 +59,8 @@ const ENDPOINT_MODE: Record<EndpointName, "real" | "mock"> = {
   adminRejectPayment: "mock",
 };
 
+import { accountForApprovedCount } from "./upi";
+
 // ---------------------------------------------------------------------------
 // Scenario selection — a query param (`?mock_scenario=sold_out`), sticky in
 // sessionStorage so client-side navigation keeps the demo state.
@@ -116,6 +118,8 @@ interface PersistedMockState {
   scenario: MockScenario;
   intents: [string, MockIntent][];
   approvedIntentId: string | null;
+  /** Drives UPI account rotation. Real implementation counts approved rows. */
+  approvedCount: number;
 }
 
 function loadPersistedState(): PersistedMockState | null {
@@ -185,6 +189,9 @@ function buildEngine(): MockEngine | null {
   const restored = loadPersistedState();
   const intents = new Map<string, MockIntent>(restored?.intents ?? []);
   let approvedIntentId: string | null = restored?.approvedIntentId ?? null;
+  // Successful payments so far. Rotation is a pure function of this number, so
+  // the account a buyer was shown is reproducible at reconciliation time.
+  let approvedCount = restored?.approvedCount ?? 0;
 
   // `has_pass` drops you straight into an approved COUPLE purchase, so /pass has
   // something to show without walking the six-step flow. COUPLE rather than
@@ -215,6 +222,7 @@ function buildEngine(): MockEngine | null {
           scenario: getMockScenario(),
           intents: [...intents.entries()],
           approvedIntentId,
+          approvedCount,
         }),
       );
     } catch {
@@ -352,10 +360,17 @@ function buildEngine(): MockEngine | null {
           null,
         );
       }
-      const upiDeepLink = `upi://pay?pa=unigate@upi&pn=Unigate&am=${intent.amount}&tn=${intent.referenceCode}`;
+      // Server picks the account; the client renders whatever it is handed.
+      const account = accountForApprovedCount(approvedCount);
+      // Amount and reference go INSIDE the QR payload, not just the button, so
+      // a buyer scanning from another device cannot mistype the amount.
+      const upiDeepLink =
+        `upi://pay?pa=${encodeURIComponent(account.vpa)}` +
+        `&pn=${encodeURIComponent("SNUPHORIA")}` +
+        `&am=${intent.amount}&cu=INR&tn=${encodeURIComponent(intent.referenceCode)}`;
       return {
         amount: intent.amount,
-        upi_vpa: "unigate@upi",
+        upi_vpa: account.vpa,
         upi_qr_url: upiDeepLink,
         upi_deep_link: upiDeepLink,
         reference_code: intent.referenceCode,
@@ -428,6 +443,7 @@ function buildEngine(): MockEngine | null {
         } else if (intent.statusPollCount >= 3) {
           intent.state = "APPROVED";
           approvedIntentId = intent.id;
+          approvedCount += 1;
         }
       }
 
@@ -471,6 +487,7 @@ function buildEngine(): MockEngine | null {
 
     async adminApprovePayment(id) {
       adminQueue = adminQueue.filter((item) => item.id !== id);
+      approvedCount += 1;
     },
 
     async adminRejectPayment(id, body) {
