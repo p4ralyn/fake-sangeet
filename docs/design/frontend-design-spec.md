@@ -1,184 +1,171 @@
-# unigate — frontend design spec
+# Fake Sangeet — frontend design spec
 
 Binding for every screen in `apps/web`. If a screen contradicts this file, the file wins.
 
-## Subject and job
+**Reference material** (render of the club's own creatives) lives in
+`docs/design/reference/`. Look at `poster-1.jpg` before writing any CSS. That
+poster is what students will already have seen on Instagram; the site has to
+feel like the same event.
 
-A single university collaboration event with a wedding-celebration character.
-~150 seats, sold as SINGLE (1 seat) or COUPLE (2 seats). Students buy on a phone,
-pay over UPI outside the platform, upload a screenshot, get approved by a human,
-verify a student ID, and arrive at a door where a volunteer scans a QR.
+## The event
 
-Three audiences, in order of traffic:
-1. **A student on a phone**, mid-WhatsApp-scroll, deciding in under a minute.
-2. **Two or three admins** grinding a review queue for an evening.
-3. **Gate volunteers** at 9pm, tired, one-handed, possibly offline (M6).
+**Fake Sangeet — "Band Baaja No Baarat."**
+A mock Indian wedding thrown by **Inferno** (SNU's dance society) and
+**Snuphoria** (SNU's music society), at **UAC Terrace, 15 October 2026**.
 
-The design's job: get a student from "I want to come" to "QR in hand" with no
-support message, and get an admin through hundreds of screenshots fast.
+Baarat procession with dhol, live performances, DJ night, mehendi and diya
+painting stalls, tambola and card games, a Sufi set to close, and a gorilla
+mascot. Bride side and groom side. Diwali is the core of the theme.
+
+This is not a wedding invitation. It is a **college festival poster**.
 
 ## The idea
 
-**The interface is an invitation, and the pass is a card with a tear-off stub.**
+**A retro Bollywood film poster you can buy a ticket from.**
 
-Indian wedding invitations are defined by their *borders and rules* — zari thread,
-foil edges, generous margins, centered classical setting — not by gradients or
-ornament washes. We take the structural vernacular, not the clip art.
+Their creative is saffron ground, marigold extruded lettering, hot magenta
+mandala borders, a scarlet film strip, and collage cutouts of hands, lotuses,
+diyas and jewellery. Loud, maximalist, hand-made. We build the same thing as an
+interface.
 
-Spend all boldness on the **pass card**: paper-coloured, zari-ruled, with a real
-perforation and the QR on the stub. Everything around it stays disciplined.
+The one bold element is still the **pass** — but it is now a **film-strip
+ticket**. The perforation becomes sprocket holes, tying it to the reel that
+runs through the poster. That is the screen everything else stays quieter than.
 
-## Explicitly rejected
+## Correction to the previous spec
 
-These are the clichés and the generated-design tells. Do not ship them.
+The earlier version of this file banned "marigold gradient washes" and "mandala
+watermarks" as generic-festival clichés, and built a restrained letterpress
+invitation in ivory and deep maroon.
 
-- Marigold/saffron gradient washes, mandala or paisley watermark SVGs, script
-  "wedding" typefaces, elephant or diya iconography.
-- `#F4F1EA`-family cream with a terracotta accent (`#D97757` and neighbours).
-- Identical rounded cards with the same soft grey shadow under each.
-- ALL-CAPS tracked eyebrow labels above headings.
-- Meta strings joined with middle dots (`A · B · C`).
-- `→` appended to button or link text.
-- Accenting one word of a headline in a different colour or italic.
-- `01 / 02 / 03` numbered chips — except in the purchase flow, which genuinely
-  *is* a sequence, and even there they are set as invitation rules, not chips.
-- **Any gradient, anywhere.** Real zari is thread. Gold is a flat line colour.
-- **Any box-shadow.** Paper sits, it does not float. The zari hairline is the
-  only elevation device in the system.
+That was wrong for this client. Those motifs are not a cliché here — they are
+literally the society's own brand language, drawn by hand for this event. The
+restrained treatment read as a wedding stationer, not a student festival.
+
+What survives from that spec: **no drop shadows for depth**, crisp edges,
+sentence case, honest copy, tabular numerals, the accessibility floor. What is
+deliberately reversed: the palette, the display typography, and the ban on
+ornament.
 
 ## Colour
 
-Six tokens. **Light-only** (amended — see below): the app commits to one
-bright identity regardless of OS colour scheme. A festival ticket page looks
-the same for everyone, including a buyer whose phone is in dark mode.
+Sampled from `reference/poster-1.jpg`. Light-only — there is no dark mode and no
+theme toggle. `:root` is the only palette definition.
 
 ```css
 :root {
-  --paper:   #FFF8ED;  /* near-white warm ivory ground */
-  --ink:     #241009;  /* deep brown-black, reads as letterpress, not tinted black */
-  --kumkum:  #D6002A;  /* vivid celebratory red — the primary. NOT orange, NOT terracotta */
-  --zari:    #B8862A;  /* foil gold — hairlines, rules and borders ONLY, never a fill */
-  --haldi:   #946600;  /* turmeric — the single urgency accent (countdown, low stock) */
-  --mehendi: #4C6B1F;  /* olive — verified, approved, checked-in */
+  --saffron:  #E9A93C;  /* page ground — golden ochre, the poster's field */
+  --marigold: #FFC61A;  /* display lettering and highlights */
+  --scarlet:  #C8102E;  /* primary actions, the film strip */
+  --magenta:  #D6006E;  /* mandala borders, secondary accent */
+  --maroon:   #5E0C18;  /* all body text, and the extrusion shadow */
+  --cream:    #FFF3DC;  /* card surfaces — text sits here, never on saffron */
 }
 ```
 
-> **Amendment (bright re-skin):** the original spec defined a muted light
-> palette plus a dark-mode override (`@media (prefers-color-scheme: dark)`
-> and `:root[data-theme="dark"]`). Both are deleted. There is no dark mode
-> and no theme toggle — `:root` is the only palette definition, ever.
-> `body` still gets an explicit `background: var(--paper)`.
+**The contrast rule that makes this work:** saffron is a *ground*, not a text
+background. Body text never sits directly on it. Every block of reading text
+lives on a `--cream` card, where `--maroon` gives 11:1. Marigold is for display
+type at 2rem and above, always carrying a hard `--maroon` offset shadow, which
+is what makes it legible and what makes it look like the poster.
 
-Contrast floor: body text ≥ 4.5:1, large display ≥ 3:1, verified by
-computing WCAG 2.1 ratios (not eyeballed):
-
-| Token      | Hex       | On `--paper` | Use                                   |
-|------------|-----------|--------------|----------------------------------------|
-| `--ink`    | `#241009` | 17.26:1      | body text                              |
-| `--kumkum` | `#D6002A` | 5.11:1       | links, errors, primary button (as bg, with `--paper` text also 5.11:1) |
-| `--haldi`  | `#946600` | 4.78:1       | urgency text (countdown, state labels) |
-| `--mehendi`| `#4C6B1F` | 5.80:1       | approved/checked-in text               |
-| `--zari`   | `#B8862A` | 3.07:1       | borders/hairlines only — never text    |
-
-`--zari` stays a *line* colour and must never carry body text — its ratio is
-reported for border legibility only, not as a text-contrast pass.
+Verify every pairing you ship and report the ratios. Minimums: body 4.5:1,
+display 3:1. If a pairing fails, fix the pairing — do not lower the floor.
 
 ## Type
 
-Two families, clearly distinct, both with real fallbacks.
+- **Display — Baloo Bhai 2** (Indian Type Foundry). Heavy, even-weight, drawn
+  alongside Devanagari. With a hard offset shadow it reads as the poster's
+  chunky marigold lettering. Event name, screen titles, the pass.
+  Fallback: `"Baloo Bhai 2", "Baloo 2", Impact, sans-serif`.
+- **Body and UI — Mukta** (also ITF). Already in use, highly legible on a phone.
+  Keep it.
 
-- **Display — Marcellus.** Roman inscriptional capitals-and-lowercase; it is what
-  a good bilingual invitation is actually set in, and it sits beside Devanagari
-  without fighting it. Used for the event name, screen titles, and the pass.
-  Fallback: `"Marcellus", "Cormorant Garamond", Georgia, serif`.
-- **Body and UI — Mukta.** By Indian Type Foundry, drawn for Devanagari/Latin
-  harmony. Highly legible at form sizes on a phone. This is a choice grounded in
-  the subject, not a default reach for Inter.
-  Fallback: `"Mukta", ui-sans-serif, system-ui, sans-serif`.
+The extrusion is the signature. Display type gets a hard, un-blurred offset:
+
+```css
+text-shadow: 3px 3px 0 var(--maroon);   /* scale with font size; never blur */
+```
+
+That is not a drop shadow for depth — it is poster lettering. Blurred shadows
+remain banned.
 
 Scale (1.25 minor third, 16px base):
 `0.8 / 1 / 1.25 / 1.563 / 1.953 / 2.441 / 3.052 rem`
 
-Rules:
-- Body line length under 66 characters. Body line-height 1.6.
-- Display sets tight: line-height 1.1, letter-spacing `0.01em` (Marcellus is
-  already generous).
-- Sentence case everywhere, including buttons. No all-caps.
-- Numbers that matter — countdown, amount, seats left, short code — set in
-  `font-variant-numeric: tabular-nums` so they do not jitter as they change.
+Sentence case for UI and copy. The event wordmark may set in caps, because that
+is how the poster sets it — that is a wordmark, not a label.
+
+## Ornament — now required, not banned
+
+Take these from the reference, drawn as inline SVG so they scale and take
+`currentColor`. No raster watermarks, no external icon library.
+
+- **Mandala quarter-rosettes** anchored in page corners, as in `deck-1.jpg`.
+- **A film-strip band** — a rectangle with evenly spaced sprocket holes —
+  replacing the old rule as the section divider, and forming the pass edge.
+- **Sparkle / firework line bursts**, small, used sparingly near headings.
+
+Ornament sits *behind* content and never reduces text contrast. It must not
+intercept pointer events, and it is hidden from assistive tech
+(`aria-hidden="true"`).
+
+## Header
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  [S]  ×  [inferno]        FAKE SANGEET          identity │
+│                        band baaja no baarat              │
+└──────────────────────────────────────────────────────────┘
+```
+
+- **Top left:** the Snuphoria mark, a large `×` between, then the Inferno mark.
+  The `×` is a real display glyph at collab scale — the societies' own decks use
+  it that way. Not a small times-sign, not the letter x.
+- **Centre:** the event wordmark, `FAKE SANGEET`, in display type with the
+  extrusion, and the tagline **band baaja no baarat** beneath it in Mukta.
+- **Right:** the signed-in identity and sign out.
+
+At 360px the lockup stacks rather than shrinking into illegibility: logos and
+`×` on one row, wordmark and tagline beneath, identity control still reachable.
+Both logos need real `alt` text naming the society.
 
 ## Layout
 
 Mobile-first, single centred column, `max-width: 34rem` for participant screens.
-The admin queue is the one wide surface (`min-width` two-pane at ≥ 60rem).
+The admin queue is the one wide surface.
 
-Content is **centred** on ceremonial surfaces (the invitation hero, the pass) and
-**left-aligned** on working surfaces (forms, the admin queue). That contrast is
-deliberate: ceremony is symmetric, work is scannable.
+Ceremonial surfaces (landing, pass) centre their content. Working surfaces
+(forms, admin queue) are left-aligned and scannable.
 
-```
- INVITATION (landing)            PASS
-┌───────────────────────┐   ┌───────────────────────┐
-│ ══════ zari rule ═════ │   │ ═══════════════════  │
-│                       │   │   Aarav Sharma        │
-│     You're invited    │   │   Couple · seat 1 of 2│
-│                       │   │                       │
-│   SANGAM NIGHT        │   │ ╌╌╌ perforation ╌╌╌╌ │
-│   Marcellus, large    │   │                       │
-│                       │   │      ███ QR ███       │
-│   Friday 14 November  │   │       7K3-QD9         │
-│   Main Auditorium     │   │ ═══════════════════  │
-│                       │   └───────────────────────┘
-│ ══════ zari rule ═════ │    ↑ the one bold element
-│                       │
-│  [ Reserve your seat ]│
-│   42 of 150 seats left│
-└───────────────────────┘
-```
-
-The **zari band** is the section divider — a 2px rule in `--zari` with a 1px
-`--paper` gap inside it, giving a double-rule that reads as foil edging. It
-replaces every `<hr>`, every card shadow, and every "section" wrapper.
-
-Card edges: `border: 1px solid var(--zari)`, `border-radius: 2px`. Not 12px, not
-16px. Invitation stock has a crisp edge.
+Card edges stay crisp: `2px solid var(--maroon)`, `border-radius: 2px`. The
+heavier border replaces the old hairline — it matches the poster's inked
+outlines and it holds up against a saturated ground.
 
 ## Motion
 
-**One orchestrated moment: the pass reveal.** When a pass is first issued, the
-card draws its zari border, then the QR resolves in. Once, on first view.
+One orchestrated moment: the pass reveal — the film-strip border draws, then the
+QR resolves. Once, on first view, never under `prefers-reduced-motion: reduce`.
 
-Nothing else animates on scroll or hover-fades. Motion that answers an action —
-a countdown ticking, a hold expiring, an approval landing, a drawer opening — is
-welcome because it shows what changed. Everything respects
-`prefers-reduced-motion: reduce`.
+Nothing else animates on scroll. Motion that answers an action — a countdown
+ticking, a hold expiring — is welcome because it shows what changed.
 
 ## Voice
 
-Plain, warm, specific. Sentence case. Active voice. The button says what happens
-and keeps its name through the flow.
+Unchanged, and still binding. Plain, warm, specific. Sentence case. Active
+voice. The button says what happens and keeps its name through the flow. Copy is
+specified in `participant-screens.md` and is final — this re-skin changes how
+screens look, not what they say.
 
-- "Reserve your seat" → "Seat reserved", not "Submit" → "Success".
-- Never "verification failed". Say what to do: "There's glare on the card. Move
-  away from direct light and retry." (LLD-v2 §1 has the full table — use those
-  strings verbatim when the ID flow lands.)
-- Urgency is factual, never manufactured: "Only 1 seat left — singles only",
-  not "Hurry! Almost gone!"
-- Empty and error states give direction: an expired hold says what happened and
-  exactly what to do next, and self-expires client-side rather than sitting there
-  looking valid.
-- Money is unambiguous: the exact amount appears as copyable text *and* inside
-  the UPI deep link, so nobody pays ₹499 for a couple ticket.
+Urgency stays factual: "Only 1 seat left — singles only", never "Hurry!".
 
 ## Quality floor — non-negotiable
 
-- Responsive to 360px. Nothing scrolls horizontally except the admin table, which
-  scrolls inside its own container.
-- Visible keyboard focus everywhere: `outline: 2px solid var(--kumkum); outline-offset: 2px`.
-  Never `outline: none` without an equally visible replacement.
+- Responsive to 360px, no horizontal page scroll.
+- Visible keyboard focus everywhere: a 2px `--maroon` outline with 2px offset,
+  which must stay visible against both cream and saffron.
 - Every input has a real `<label>`. Placeholders are not labels.
 - Touch targets ≥ 44px.
-- The admin queue is keyboard-first: `a` approve, `r` reject, `j`/`k` navigate,
-  auto-advance. A reviewer should never need the mouse.
-- Colour never carries meaning alone — approved/denied states pair the colour
-  with an icon and a word.
+- Colour never carries meaning alone — pair it with an icon and a word.
+- **No blurred shadows, no gradients.** Flat colour, hard offsets, inked edges.
+  Brightness comes from the palette, not from glows.
