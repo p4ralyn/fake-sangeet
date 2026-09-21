@@ -35,16 +35,29 @@ class SeedConfig(BaseSettings):
     seed_security_net_ids: list[str] = Field(default_factory=list)
 
     def event_config(self) -> dict:
-        """Addendum §A1 shape. No `phases[]`, no `hard_cap` (Phase 0 decisions 2.2, 2.3)."""
+        """Addendum §A1 shape. No `phases[]`, no `hard_cap` (Phase 0 decisions 2.2, 2.3).
+
+        Phase 3 pricing. Note COUPLE is not 2x SINGLE -- 519 against 598 -- so
+        never derive the couple price by doubling; read it from this config.
+
+        `total_seats` stays the REAL cap (600), not the number still on sale.
+        The ~550 already sold offline are ingested as approved rows that each
+        consume their seats, so `seats_available` falls out of the addendum A1
+        arithmetic instead of being hardcoded. Setting total_seats to 50 would
+        break the gate headcount and the ledger reconciliation.
+        """
         return {
             "capacity": {"total_seats": self.event_seats_total},
             "ticket_types": [
-                {"code": "SINGLE", "label": "Single", "seats": 1, "price": 499, "active": True},
-                {"code": "COUPLE", "label": "Couple", "seats": 2, "price": 899, "active": True},
+                {"code": "SINGLE", "label": "Single", "seats": 1, "price": 299, "active": True},
+                {"code": "COUPLE", "label": "Couple", "seats": 2, "price": 519, "active": True},
             ],
             "hold_ttl_minutes": 20,
             "hold_grace_minutes": 10,
-            "couple_partner_mode": "SELF_CLAIM",
+            # Per-TICKET now, not per-event: a sheet row that carries partner
+            # details self-claims; one that does not stays proxied to the buyer.
+            # See docs/design/cohort-and-verification.md.
+            "couple_partner_mode": "PER_TICKET",
         }
 
     def staff_grants(self) -> list[tuple[str, StaffRole]]:
