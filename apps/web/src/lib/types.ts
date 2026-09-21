@@ -59,7 +59,21 @@ export type ErrorCode =
   | "UTR_ALREADY_USED"
   | "PHASE_CLOSED"
   | "RESUBMIT_LIMIT"
-  | "PAYMENT_PENDING";
+  | "PAYMENT_PENDING"
+  // access core, M2 — apps/api/app/core/errors.py::ErrorCode (LLD-v1 §13.6).
+  // One code per refusal reason: at a gate, "why" decides whether the
+  // volunteer waves someone through, sends them to the desk, or calls
+  // security, so the UI branches on these by name, never by HTTP status.
+  | "INVALID_TOKEN"
+  | "INVALID_SIGNATURE"
+  | "TOKEN_WRONG_EVENT"
+  | "PASS_EXPIRED"
+  | "PASS_REVOKED"
+  | "PASS_SUPERSEDED"
+  | "INVALID_STATE"
+  | "GATE_NOT_PERMITTED"
+  | "DECISION_TOKEN_INVALID"
+  | "DECISION_TOKEN_EXPIRED";
 
 export interface ErrorDetail {
   code: ErrorCode | (string & {});
@@ -237,3 +251,74 @@ export interface AdminRejectRequest {
   reason: string;
   allow_resubmit: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Scans — POST /api/v1/scans, POST /api/v1/scans/confirm (SECURITY/ADMIN/OWNER)
+// Source of truth: apps/api/app/schemas/scans.py, apps/api/app/models/access.py.
+// The four-scan state machine is LLD-v1 §11.1; the operator UX contract is
+// LLD-v1 §11.5.
+// ---------------------------------------------------------------------------
+
+/** `passes.current_state` — apps/api/app/models/access.py::PassState. */
+export type PassState = "NOT_ARRIVED" | "INSIDE" | "ON_BREAK" | "DEPARTED" | "REVOKED";
+
+/** `scans.action` — apps/api/app/models/access.py::ScanAction. */
+export type ScanAction = "CHECK_IN" | "EXIT_BREAK" | "RE_ENTRY" | "CHECK_OUT" | "DENIED" | "MANUAL_OVERRIDE";
+
+export interface ScanRequest {
+  token: string;
+  gate_id?: string | null;
+  device_id?: string | null;
+  client_scan_uuid: string;
+  /** ISO 8601, the device clock — exists so an offline queue can replay in order later. */
+  occurred_at: string;
+  offline_replay?: boolean;
+}
+
+export interface ScanConfirmRequest {
+  decision_token: string;
+  action: ScanAction;
+}
+
+/**
+ * What a SECURITY volunteer's phone receives — schemas.scans.SecurityScanResponse,
+ * verbatim. Deliberately narrow: the API has a *second*, richer model for
+ * ADMIN/OWNER (see StaffScanResponse below) rather than filtering fields at
+ * runtime, specifically so a field never leaks to a SECURITY device just
+ * because it was added to the rich model. There is no NetID, department,
+ * ticket reference or pass id here — LLD-v1 §11.5's card sketch shows a NetID
+ * line, but the shipped M2 response never carries one, for anyone.
+ */
+export interface SecurityScanResponse {
+  status: "DONE" | "ACTION_REQUIRED";
+  /** True when this is the suppressed re-serve of a very recent identical
+   * scan (§11.2 anti-passback). Never render this as an error — operators
+   * double-tap constantly. */
+  duplicate: boolean;
+  participant_name: string | null;
+  /** A 90-second signed URL, present only on ACTION_REQUIRED, null until M4
+   * ships ID capture. Render a placeholder, never a broken <img>. */
+  id_image_url: string | null;
+  state: PassState;
+  breaks_used: number;
+  max_breaks: number;
+  /** The buttons to render, in server-decided order. Never hardcode this set. */
+  legal_actions: ScanAction[];
+  /** Single-use, 60s TTL, binds an operator's choice to this scan attempt. */
+  decision_token: string | null;
+  decision_expires_in: number | null;
+  /** The action just applied, when status is DONE. */
+  action: ScanAction | null;
+}
+
+/** ADMIN/OWNER additionally get these — schemas.scans.StaffScanResponse. */
+export interface StaffScanResponse extends SecurityScanResponse {
+  pass_id: string;
+  short_code: string;
+  serial: number;
+  version: number;
+  from_state: PassState | null;
+  scan_id: string | null;
+}
+
+export type ScanResponse = SecurityScanResponse | StaffScanResponse;
