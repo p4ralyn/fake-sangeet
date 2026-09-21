@@ -7,7 +7,7 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 
-from app.api.v1.routes import auth, health
+from app.api.v1.routes import auth, health, scans
 from app.api.v1.routes import me as me_routes
 from app.core.deps import get_redis_client
 from app.core.errors import register_error_handlers
@@ -56,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(me_routes.router)
+    app.include_router(scans.router)
     return app
 
 

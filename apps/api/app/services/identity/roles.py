@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ErrorCode
 from app.core.settings import get_settings
-from app.models import Event, EventStaff, StaffRole, User
+from app.models import TICKET_LIVE_STATUSES, Event, EventStaff, StaffRole, Ticket, User
 
 # Staff roles are the source of truth; the derived roles extend it.
 STAFF_ROLE_NAMES = frozenset(role.value for role in StaffRole)
@@ -22,6 +22,16 @@ class Role(StrEnum):
 
 # Fail loudly at import if the two enums ever drift apart.
 assert STAFF_ROLE_NAMES <= {role.value for role in Role}
+
+# LLD-v1 §11.5: SECURITY sees the narrow scanner card and nothing else -- that
+# card is the entire, audited channel through which a volunteer ever sees PII.
+# Anything above it sees the full scan record. Classification is explicit and
+# defaults to restricted; the assert below fails at import if a new staff role
+# is ever added without someone deciding which side of this line it sits on.
+SCAN_FULL_VIEW_ROLES = frozenset({Role.OWNER, Role.ADMIN})
+SCAN_RESTRICTED_ROLES = frozenset({Role.SECURITY})
+assert {r.value for r in SCAN_FULL_VIEW_ROLES | SCAN_RESTRICTED_ROLES} == STAFF_ROLE_NAMES
+assert not (SCAN_FULL_VIEW_ROLES & SCAN_RESTRICTED_ROLES)
 
 
 def parse_roles(values: Iterable[str]) -> list[Role]:
@@ -72,8 +82,9 @@ async def resolve_roles(db: AsyncSession, event_id, user: User) -> list[Role]:
     role in the system. `is_staff` is derived from STAFF_ROLE_NAMES, so session
     TTL and audit attribution are unaffected by the extra member.
 
-    PARTICIPANT lands at M2, when `tickets` exists and an approved ticket can be
-    looked up. Until then a ticket cannot exist, so the answer is always VISITOR.
+    As of M2 `tickets` exists, so PARTICIPANT is resolved for real: holding any
+    ticket that is not dead (`TICKET_LIVE_STATUSES`, the same set the
+    `tickets_one_per_identity` index is built from) swaps VISITOR out.
     """
     rows = await db.execute(
         select(EventStaff.role).where(
@@ -83,9 +94,18 @@ async def resolve_roles(db: AsyncSession, event_id, user: User) -> list[Role]:
         )
     )
     staff_roles = {Role(row[0].value) for row in rows}
-    # M2: swap VISITOR for PARTICIPANT when this identity holds an approved ticket.
+    holds_ticket = await db.scalar(
+        select(Ticket.id)
+        .where(
+            Ticket.event_id == event_id,
+            Ticket.user_id == user.id,
+            Ticket.status.in_(TICKET_LIVE_STATUSES),
+        )
+        .limit(1)
+    )
+    participant_role = Role.PARTICIPANT if holds_ticket else Role.VISITOR
     order = list(Role)
-    return sorted(staff_roles | {Role.VISITOR}, key=order.index)
+    return sorted(staff_roles | {participant_role}, key=order.index)
 
 
 async def list_active_staff(db: AsyncSession, event_id) -> list[tuple[str, str]]:

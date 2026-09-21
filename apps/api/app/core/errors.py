@@ -26,6 +26,22 @@ class ErrorCode(StrEnum):
     EVENT_NOT_CONFIGURED = "EVENT_NOT_CONFIGURED"
     INTERNAL = "INTERNAL"
 
+    # ── access core, M2 (LLD-v1 §13.6) ───────────────────────────────────
+    # Each failure mode gets its own code: at a gate, "why was this refused"
+    # decides whether the volunteer waves someone through, sends them to the
+    # desk, or calls security.
+    INVALID_TOKEN = "INVALID_TOKEN"  # noqa: S105 -- error code label, not a secret
+    INVALID_SIGNATURE = "INVALID_SIGNATURE"
+    TOKEN_WRONG_EVENT = "TOKEN_WRONG_EVENT"  # noqa: S105 -- error code label
+    UNKNOWN_PASS = "UNKNOWN_PASS"  # noqa: S105 -- error code label
+    PASS_EXPIRED = "PASS_EXPIRED"  # noqa: S105 -- error code label
+    PASS_REVOKED = "PASS_REVOKED"  # noqa: S105 -- error code label
+    PASS_SUPERSEDED = "PASS_SUPERSEDED"  # noqa: S105 -- error code label
+    INVALID_STATE = "INVALID_STATE"
+    GATE_NOT_PERMITTED = "GATE_NOT_PERMITTED"
+    DECISION_TOKEN_INVALID = "DECISION_TOKEN_INVALID"  # noqa: S105 -- error code label
+    DECISION_TOKEN_EXPIRED = "DECISION_TOKEN_EXPIRED"  # noqa: S105 -- error code label
+
 
 class AppError(Exception):
     def __init__(

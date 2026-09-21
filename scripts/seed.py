@@ -29,6 +29,7 @@ class SeedConfig(BaseSettings):
     event_ends_at: datetime
     event_seats_total: int = 150
     event_gate_name: str = "Main Gate"
+    event_max_breaks: int = 1
 
     seed_owner_net_ids: list[str] = Field(default_factory=list)
     seed_admin_net_ids: list[str] = Field(default_factory=list)
@@ -54,6 +55,10 @@ class SeedConfig(BaseSettings):
             ],
             "hold_ttl_minutes": 20,
             "hold_grace_minutes": 10,
+            # LLD-v1 §11.1. One break per pass: EXIT_BREAK is refused once
+            # `breaks_used >= max_breaks`, and the gate then offers CHECK_OUT
+            # only. Lives here, not in Settings, because it is per-event policy.
+            "access": {"max_breaks": self.event_max_breaks},
             # Per-TICKET now, not per-event: a sheet row that carries partner
             # details self-claims; one that does not stays proxied to the buyer.
             # See docs/design/cohort-and-verification.md.
