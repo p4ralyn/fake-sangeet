@@ -63,6 +63,20 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_allowed_domain: str = "snu.edu.in"
 
+    # ── access core (M2) ─────────────────────────────────────────────────
+    # QR token HMAC master key (LLD-v1 §10.1). No default -- a missing key must
+    # fail startup, not silently sign passes with a guessable secret. A
+    # per-event key is derived from this at mint/verify time (see
+    # app/services/passes/token.py) so the code already carries the seam for a
+    # real per-event Secret Manager key in v1, without needing a secrets store
+    # for a single-event dry run.
+    pass_signing_key: str
+    # LLD-v1 §11.2 anti-passback: an identical (pass_id, action) within this
+    # window returns the previous result with duplicate=true instead of erroring.
+    scan_duplicate_window_seconds: int = 10
+    # LLD-v1 §11.2: single-use, binds an operator's choice to one scan attempt.
+    scan_decision_token_ttl_seconds: int = 60
+
     # ── object storage ───────────────────────────────────────────────────
     storage_backend: StorageBackend = StorageBackend.LOCAL
     storage_bucket: str = "unigate-local"

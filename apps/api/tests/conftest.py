@@ -16,6 +16,7 @@ TEST_ENV = {
     "AUTH_PROVIDER": "dev",
     "ALLOWED_DOMAINS": '["university.edu"]',
     "EVENT_SLUG": "dryrun",
+    "PASS_SIGNING_KEY": "test-pass-signing-key-not-for-production",
     # .env.example points this at localhost:4443 for a real browser; inside the
     # api container (where tests run) that's unreachable, so tests fetch signed
     # URLs over the compose network instead. See the comment in .env.example.
