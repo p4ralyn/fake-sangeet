@@ -71,6 +71,7 @@ export const MOCK_SCENARIOS = [
   "hold_expiring",
   "duplicate_utr",
   "rejected_one_resubmit_left",
+  "has_pass",
 ] as const;
 
 export type MockScenario = (typeof MOCK_SCENARIOS)[number];
@@ -112,6 +113,7 @@ export function setMockScenario(scenario: MockScenario): void {
 const STATE_STORAGE_KEY = "unigate_mock_state";
 
 interface PersistedMockState {
+  scenario: MockScenario;
   intents: [string, MockIntent][];
   approvedIntentId: string | null;
 }
@@ -119,7 +121,12 @@ interface PersistedMockState {
 function loadPersistedState(): PersistedMockState | null {
   try {
     const raw = window.sessionStorage.getItem(STATE_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as PersistedMockState) : null;
+    if (!raw) return null;
+    const state = JSON.parse(raw) as PersistedMockState;
+    // State belongs to the scenario that produced it. Switching scenario via
+    // the query param must not inherit the previous one's purchase -- only
+    // setMockScenario() clears the key, and the query param bypasses it.
+    return state.scenario === getMockScenario() ? state : null;
   } catch {
     return null;
   }
@@ -179,11 +186,36 @@ function buildEngine(): MockEngine | null {
   const intents = new Map<string, MockIntent>(restored?.intents ?? []);
   let approvedIntentId: string | null = restored?.approvedIntentId ?? null;
 
+  // `has_pass` drops you straight into an approved COUPLE purchase, so /pass has
+  // something to show without walking the six-step flow. COUPLE rather than
+  // SINGLE because two cards exercise the addendum A3 behaviour -- two tickets,
+  // two QR codes, scanned independently.
+  if (!restored && getMockScenario() === "has_pass") {
+    const demo: MockIntent = {
+      id: "demo-approved-intent",
+      ticketType: "COUPLE",
+      seats: 2,
+      amount: COUPLE_PRICE,
+      referenceCode: "UG-DEMO01",
+      holdExpiresAt: Date.now(),
+      state: "APPROVED",
+      resubmitCount: 0,
+      statusPollCount: 0,
+      payerName: "Aarav Sharma",
+    };
+    intents.set(demo.id, demo);
+    approvedIntentId = demo.id;
+  }
+
   function persist(): void {
     try {
       window.sessionStorage.setItem(
         STATE_STORAGE_KEY,
-        JSON.stringify({ intents: [...intents.entries()], approvedIntentId }),
+        JSON.stringify({
+          scenario: getMockScenario(),
+          intents: [...intents.entries()],
+          approvedIntentId,
+        }),
       );
     } catch {
       // Demo convenience only -- a storage failure must never break the app.

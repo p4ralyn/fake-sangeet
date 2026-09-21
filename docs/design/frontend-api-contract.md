@@ -86,6 +86,17 @@ UNAUTHENTICATED`
   seat left so COUPLE is disabled, a hold that expires while you watch, a
   duplicate UTR, a rejected payment with one resubmit left.
 - Mocks are dev-only and must not ship in a production build.
+- Scenarios are selected with `?mock_scenario=<name>`, sticky in sessionStorage.
+  Available: `default`, `sold_out`, `last_seat_couple_disabled`, `hold_expiring`,
+  `duplicate_utr`, `rejected_one_resubmit_left`, `has_pass`.
+- `has_pass` starts you on an already-approved COUPLE purchase so `/pass` has
+  something to show without walking the six-step flow. COUPLE rather than SINGLE
+  because two cards exercise the §A3 behaviour: two tickets, two QR codes,
+  scanned independently. The holder name is a fixed demo name, not the
+  signed-in user -- the mock layer has no access to the session.
+- Persisted purchase state records which scenario produced it and is discarded
+  on a scenario change, so switching via the query param cannot inherit the
+  previous scenario's hold.
 
 ## Flow order — binding (addendum §A2)
 
