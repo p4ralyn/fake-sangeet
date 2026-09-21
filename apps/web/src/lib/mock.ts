@@ -114,6 +114,51 @@ export function setMockScenario(scenario: MockScenario): void {
 
 const STATE_STORAGE_KEY = "unigate_mock_state";
 
+// ---------------------------------------------------------------------------
+// Demo identities.
+//
+// Some NetIDs are treated as having already bought before the app existed --
+// they stand in for the ~441 people whose tickets arrive by sheet ingestion
+// (M3), so the pass page can be shown without walking a purchase. Signing in
+// as one of these and visiting /pass just works, with no scenario parameter.
+//
+// This is mock-layer only. Once M3 ingests the real sheets, a pass comes from
+// the database and this list is deleted.
+// ---------------------------------------------------------------------------
+export const DEMO_PREPURCHASED: Record<
+  string,
+  { ticketType: TicketTypeCode; seats: number; holderName?: string }
+> = {
+  // holderName overrides the display name, because the dev auth provider
+  // builds one from the NetID ("zq204" -> "Zq204") and a pass reading "Zq204"
+  // looks wrong in a demo. Real Google sign-in supplies the actual name, so
+  // this override is only needed while AUTH_PROVIDER=dev.
+  zq204: { ticketType: "COUPLE", seats: 2, holderName: "Riya Sharma" },
+};
+
+const IDENTITY_STORAGE_KEY = "unigate_current_identity";
+
+/** Written by the session provider so the mock can attribute a purchase. */
+export function rememberIdentity(netId: string, displayName: string): void {
+  try {
+    window.sessionStorage.setItem(
+      IDENTITY_STORAGE_KEY,
+      JSON.stringify({ netId: netId.toLowerCase(), displayName }),
+    );
+  } catch {
+    // Demo convenience only; never break the app over storage.
+  }
+}
+
+function currentIdentity(): { netId: string; displayName: string } | null {
+  try {
+    const raw = window.sessionStorage.getItem(IDENTITY_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 interface PersistedMockState {
   scenario: MockScenario;
   intents: [string, MockIntent][];
@@ -197,6 +242,35 @@ function buildEngine(): MockEngine | null {
   // something to show without walking the six-step flow. COUPLE rather than
   // SINGLE because two cards exercise the addendum A3 behaviour -- two tickets,
   // two QR codes, scanned independently.
+  /** Seed a demo identity's existing purchase.
+   *
+   * Called at REQUEST time, not here at construction: the engine is built when
+   * the module loads, which is before `/api/v1/me` has resolved, so the signed
+   * -in identity is not known yet. Idempotent -- it returns immediately once a
+   * purchase exists.
+   */
+  function ensureDemoPurchase(): void {
+    if (approvedIntentId) return;
+    const who = currentIdentity();
+    if (!who) return;
+    const bought = DEMO_PREPURCHASED[who.netId];
+    if (!bought) return;
+    const intent: MockIntent = {
+      id: `demo-${who.netId}`,
+      ticketType: bought.ticketType,
+      seats: bought.seats,
+      amount: bought.seats === 2 ? COUPLE_PRICE : SINGLE_PRICE,
+      referenceCode: `UG-${who.netId.toUpperCase()}`,
+      holdExpiresAt: Date.now(),
+      state: "APPROVED",
+      resubmitCount: 0,
+      statusPollCount: 0,
+      payerName: bought.holderName ?? who.displayName,
+    };
+    intents.set(intent.id, intent);
+    approvedIntentId = intent.id;
+  }
+
   if (!restored && getMockScenario() === "has_pass") {
     const demo: MockIntent = {
       id: "demo-approved-intent",
@@ -208,7 +282,7 @@ function buildEngine(): MockEngine | null {
       state: "APPROVED",
       resubmitCount: 0,
       statusPollCount: 0,
-      payerName: "Aarav Sharma",
+      payerName: currentIdentity()?.displayName ?? "Aarav Sharma",
     };
     intents.set(demo.id, demo);
     approvedIntentId = demo.id;
@@ -458,6 +532,7 @@ function buildEngine(): MockEngine | null {
     },
 
     async myPass() {
+      ensureDemoPurchase();
       if (!approvedIntentId) {
         return { tickets: [] };
       }
