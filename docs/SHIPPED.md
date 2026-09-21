@@ -1,7 +1,7 @@
 # unigate — shipped checkpoint
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
-Last updated: M1 complete + participant frontend complete.
+Last updated: M1 + M2 complete, M3 and scanner in flight. 208 tests.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -120,17 +120,66 @@ API contract: `docs/design/frontend-api-contract.md`
 
 ---
 
+## M2 — Access core ✅ COMPLETE
+
+- [x] `orders · tickets · passes · scans` tables, `event_id` on every one
+- [x] **`scans` append-only in the database** — triggers raise on UPDATE and
+      DELETE. Proven by attempting a real UPDATE, which errors.
+- [x] Four-scan state machine (LLD-v1 §11.1), pure and unit-tested
+- [x] `EXIT_BREAK` refused past `max_breaks`; the server decides, never the phone
+- [x] QR token: HMAC-SHA256 truncated to 128 bits over a CBOR payload
+      (52 bytes vs 123 as JSON — lower density scans better at a dark door)
+- [x] `serial` mismatch rejects as `SUPERSEDED`, so a reissued pass dies
+      without changing `pass_id`
+- [x] **Concurrency proven, not reasoned about** — 12 simultaneous CHECK_INs
+      against one pass yield exactly one OK row and `version == 1`
+- [x] `decision_token`, single-use, 60s, bound to one scan attempt
+- [x] Duplicate suppression: a double-tap returns the previous result, not an error
+- [x] SECURITY sees a separate narrow Pydantic model, never a filtered rich one
+- [x] `PARTICIPANT` resolves for real against `TICKET_LIVE_STATUSES`
+- [x] Per-ticket `partner_mode`, `partner_of`, `claim_code`
+- [x] **208 tests**
+
+## Ticket data — audited against the real sheets
+
+- [x] Both client workbooks read and catalogued (`docs/design/ingestion-audit.md`)
+- [x] Normaliser handling all six defect classes, self-checked
+      (`scripts/sheet_normalise.py`)
+- [x] **291 of 295 tickets ingestable, 435 of 441 seats**
+- [x] 124 `SELF_CLAIM` couples, 22 `PROXY`
+- [x] 292 phone numbers recovered from Excel's float coercion
+- [x] `NEEDS REVIEW` sheet written into the client's workbook for the 4
+      unreadable rows; original backed up
+- [ ] **Unreconciled: 441 sold against a 600 cap leaves 159 free, not 50.**
+      Either a phase-2 sheet is missing or the 550 figure was an estimate.
+
+## In flight
+
+- [~] **M3** — `TicketSource` adapter, idempotent row-hashed ingestion,
+      `ingestion_errors`, per-ticket partner mode, seat commitment, outbox
+- [~] **Scanner (part of M6)** — camera scan, decision card, four result
+      states, thumb-reach ergonomics, wake lock, haptics
+
 ## Not started
 
-- [ ] **M2** — tickets, passes, scans, the four-scan state machine, token
-      mint/verify, exhaustive transition tests
-- [ ] **M3** — Google Sheet ingestion, cohort A, "your ticket is ready" email
-- [ ] **M4** — registration, ID upload, OCR, scoring, the retry loop, review queue
-- [ ] **M5** — holds, seat inventory under concurrency, UPI proof, admin
-      approval, reconciliation CSV. **Addendum §A6's concurrency tests must pass
-      before a single ticket is sold.**
-- [ ] **M6** — QR render, confirmation email, scanner PWA, offline mode,
-      dashboard, and the 20-person dress rehearsal at a real door
+- [ ] **M4** — ID upload and manual review. OCR scoring (§A4) deliberately cut:
+      a human glancing at ~600 photos is hours, and it removes Cloud Vision,
+      the scoring model and the retry loop from the build.
+- [ ] **M5** — phase 3 purchase (holds, UPI proof, approval, reconciliation).
+      **Recommended to cut**: 50 seats sold by hand into the sheet removes the
+      largest remaining chunk of work for 8% of attendees.
+- [ ] **M6 remainder** — QR render, confirmation email, offline scanning,
+      dashboard, paper fallback export, and the dress rehearsal at a real door
+
+## Deployed
+
+- [x] GCE VM `unigate-vm`, e2-medium, asia-south1-a, **static IP 203.0.113.10**
+- [x] `deploy/provision.sh` — dry-run by default, prints cost, idempotent
+- [x] `deploy/bootstrap-vm.sh`, `deploy.sh`, `rollback.sh`
+- [x] Firewall 80/443 only; 5432 deliberately shut
+- [x] Dedicated service account, so M3 reads the Sheet with no key file on disk
+- [ ] Domain — **not bought yet**, blocking TLS and DNS propagation
+- [ ] Google OAuth client — credentials not yet created
 
 ## Carry-forward
 
