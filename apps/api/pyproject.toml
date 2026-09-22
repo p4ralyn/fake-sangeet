@@ -62,6 +62,9 @@ ignore = ["S101"]
 # same idiom, evaluated once at route-declaration time, same as Depends itself.
 extend-immutable-calls = [
     "fastapi.Depends", "fastapi.Query", "fastapi.Security",
+    # File()/Form() are the same idiom for a multipart body -- the M4 ID
+    # upload cannot declare an UploadFile any other way.
+    "fastapi.File", "fastapi.Form",
     "app.core.deps.require_role",
 ]
 

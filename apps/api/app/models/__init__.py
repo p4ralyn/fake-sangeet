@@ -34,13 +34,22 @@ from app.models.ticketing import (
     TicketStatus,
 )
 from app.models.user import EventStaff, StaffRole, User
+from app.models.verification import (
+    VERIFY_DECIDED_OUTCOMES,
+    VERIFY_OPEN_OUTCOMES,
+    IdImage,
+    Registration,
+    Verification,
+    VerifyOutcome,
+)
 
 __all__ = [
     "EMAIL_CLAIMABLE_STATUSES", "EMAIL_TERMINAL_STATUSES",
     "TERMINAL_PASS_STATES", "TICKET_DEAD_STATUSES", "TICKET_LIVE_STATUSES",
+    "VERIFY_DECIDED_OUTCOMES", "VERIFY_OPEN_OUTCOMES",
     "AuditLog", "EmailOutbox", "EmailStatus", "Event", "EventInventory", "EventStaff",
-    "FunnelEvent", "Gate", "GateType", "IngestionError", "InventoryLedger",
-    "LedgerReason", "Order", "PartnerMode", "Pass", "PassState",
+    "FunnelEvent", "Gate", "GateType", "IdImage", "IngestionError", "InventoryLedger",
+    "LedgerReason", "Order", "PartnerMode", "Pass", "PassState", "Registration",
     "Scan", "ScanAction", "ScanResult", "StaffRole", "Ticket", "TicketSource",
-    "TicketStatus", "User",
+    "TicketStatus", "User", "Verification", "VerifyOutcome",
 ]

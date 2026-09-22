@@ -5,7 +5,6 @@ trigger that raises on UPDATE and on DELETE. That is deliberate — a convention
 that only lives in a docstring is not an invariant.
 
 Deferred by scope, not forgotten:
-  * `passes.registration_id` lands with `registrations` in M4.
   * `scans.device_id` gets its FK when `scanner_devices` lands in M6; until then
     it records whatever the scanner reported, unvalidated.
 """
@@ -89,6 +88,13 @@ class Pass(UUIDPk, EventScoped, Base):
 
     ticket_id: Mapped[UUID] = mapped_column(
         ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    # Which registration's ID was checked before this pass was issued. Arrives
+    # with `registrations` in M4, as the module docstring promised. Nullable:
+    # M2 minted passes directly in tests before any registration existed, and
+    # an admin-issued replacement pass may never have one.
+    registration_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("registrations.id", ondelete="SET NULL")
     )
     serial: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     short_code: Mapped[str] = mapped_column(Text, nullable=False)

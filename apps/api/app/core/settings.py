@@ -77,6 +77,19 @@ class Settings(BaseSettings):
     # LLD-v1 §11.2: single-use, binds an operator's choice to one scan attempt.
     scan_decision_token_ttl_seconds: int = 60
 
+    # ── ID verification (M4) ─────────────────────────────────────────────
+    # LLD-v1 §9.3: three attempts, then a human decides. OCR is cut, so the
+    # only thing that consumes an attempt is a reviewer asking for a better
+    # photo -- this is a budget on "try again", not on failure.
+    max_id_upload_attempts: int = 3
+    # How long the signed URL that shows a reviewer (or a gate volunteer) an ID
+    # photo stays valid. §9.2 and §11.5 both say 90 seconds: long enough to
+    # look at, too short to forward.
+    id_image_url_ttl_seconds: int = 90
+    # Bumped whenever the consent wording changes, so a stored consent can be
+    # traced to the exact text the person agreed to.
+    id_consent_version: str = "2026-09-v1"
+
     # ── object storage ───────────────────────────────────────────────────
     storage_backend: StorageBackend = StorageBackend.LOCAL
     storage_bucket: str = "unigate-local"

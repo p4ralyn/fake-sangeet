@@ -29,6 +29,7 @@ from app.core.errors import AppError, ErrorCode
 from app.core.settings import get_settings
 from app.models import Event, Gate, Order, Pass, PassState, Scan, ScanAction, ScanResult, Ticket
 from app.models.user import User
+from app.models.verification import IdImage, Registration, Verification, VerifyOutcome
 from app.services.access.decisions import (
     DecisionRecord,
     consume_decision,
@@ -44,7 +45,9 @@ from app.services.access.state_machine import (
     auto_action,
     legal_actions,
 )
+from app.services.audit import write_audit
 from app.services.passes.token import PassTokenError, token_fingerprint, verify_pass_token
+from app.services.storage.provider import get_object_store
 
 log = structlog.get_logger()
 
@@ -109,6 +112,29 @@ def _error(code: ErrorCode, message: str) -> AppError:
     return AppError(code, message, http_status=_HTTP_STATUS.get(code, 400))
 
 
+async def _approved_id_image(db: AsyncSession, ticket_id: UUID) -> IdImage | None:
+    """The ID photo that was actually approved for this ticket.
+
+    Only an APPROVED verification counts. An image still sitting in the review
+    queue is not evidence of anything, and showing it at the door would put a
+    volunteer in the position of doing the reviewer's job at 9pm with a queue
+    behind them.
+    """
+    return await db.scalar(
+        select(IdImage)
+        .select_from(Verification)
+        .join(Registration, Registration.id == Verification.registration_id)
+        .join(IdImage, IdImage.id == Verification.id_image_id)
+        .where(
+            Registration.ticket_id == ticket_id,
+            Verification.outcome == VerifyOutcome.APPROVED,
+            IdImage.purged_at.is_(None),
+        )
+        .order_by(Verification.attempt_no.desc())
+        .limit(1)
+    )
+
+
 def access_config(event: Event) -> AccessConfig:
     return AccessConfig.model_validate((event.config or {}).get("access") or {})
 
@@ -116,10 +142,17 @@ def access_config(event: Event) -> AccessConfig:
 async def _participant_name(db: AsyncSession, ticket_id: UUID) -> str | None:
     """The name on the card the volunteer is eyeballing.
 
-    Prefers the signed-in identity's display name; falls back to the purchaser
-    for a PROXY ticket, which by definition has nobody signed in behind it.
-    M4 replaces this with `registrations.full_name` once that table exists.
+    Prefers `registrations.full_name` — what the person themselves gave when
+    they uploaded their ID, and therefore the name most likely to match the
+    card in the volunteer's hand. Falls back to the signed-in display name,
+    then to the purchaser for a PROXY ticket, which by definition has nobody
+    signed in behind it.
     """
+    registered = await db.scalar(
+        select(Registration.full_name).where(Registration.ticket_id == ticket_id)
+    )
+    if registered:
+        return registered
     row = (
         await db.execute(
             select(User.display_name, Order.purchaser_name)
@@ -470,6 +503,12 @@ async def present_token(
                 token_hash=token_hash,
             ),
         )
+        # Read the ID row while the transaction is still open, but do NOT sign
+        # yet: signing is CPU on a threadpool and the row lock is still held.
+        id_image = await _approved_id_image(db, pass_.ticket_id)
+        image_id = id_image.id if id_image else None
+        image_key = id_image.object_key if id_image else None
+
         outcome = ScanOutcome(
             status="ACTION_REQUIRED",
             pass_id=pass_.id,
@@ -484,10 +523,37 @@ async def present_token(
             decision_token=decision_token,
             decision_expires_in=ttl,
         )
+        # Snapshot every id needed after the rollback below. A rollback expires
+        # EVERY loaded ORM object -- `event` as much as `pass_` -- and reading
+        # an expired attribute from here would attempt lazy IO that asyncpg
+        # cannot service.
+        scanned_pass_id = pass_.id
+        scanned_event_id = event.id
         # Nothing was written, so release the row lock rather than hold it
         # across the operator's think time. Built the response first: rollback
         # expires every loaded object, and `pass_` is one of them.
         await db.rollback()
+
+        if image_key is not None:
+            outcome.id_image_url = await get_object_store().signed_url(
+                image_key, expires_seconds=get_settings().id_image_url_ttl_seconds
+            )
+            # LLD-v1 §9.2: this is the narrow channel through which SECURITY
+            # ever sees PII, and every opening of it is logged with the
+            # scanner's identity. Written after the rollback above, which would
+            # otherwise discard it, and committed on its own.
+            await write_audit(
+                db,
+                event_id=scanned_event_id,
+                actor_user_id=context.actor_user_id,
+                actor_net_id=None,
+                actor_role=None,
+                action="ID_IMAGE_VIEWED",
+                object_type="id_image",
+                object_id=image_id,
+                after={"pass_id": str(scanned_pass_id), "device_id": context.device_id},
+            )
+            await db.commit()
         return outcome
 
     transition = apply(
