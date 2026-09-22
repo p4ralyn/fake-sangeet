@@ -7,8 +7,9 @@ import { Field } from "../components/Field";
 import { Stepper } from "../components/Stepper";
 import { ZariRule } from "../components/ZariRule";
 import { ApiError } from "../lib/api";
-import { rememberHoldDetails } from "../lib/holdStore";
+import { rememberCurrentIntent, rememberHoldDetails } from "../lib/holdStore";
 import { createHold } from "../lib/mock";
+import { usePersonStatus } from "../lib/personStatus";
 import { useSession } from "../lib/session";
 import type { RegistrationDetails, TicketTypeCode } from "../lib/types";
 import styles from "./BuyDetails.module.css";
@@ -19,11 +20,17 @@ const STEPS = ["Choose", "Details", "Payment"];
  * Your details (`/buy/details`) — step 2 of 3. No payment information
  * appears on this screen; that ordering is the point (addendum §A2). A hold
  * is granted only after this form is submitted.
+ *
+ * Reachable directly by URL (a couple's partner link, a bookmark, a typed
+ * URL), so it carries the same one-ticket / one-live-intent guard as `/buy`
+ * rather than trusting that nobody arrives here without having passed
+ * through the chooser.
  */
 export function BuyDetails() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useSession();
+  const personStatus = usePersonStatus();
 
   const ticketType = searchParams.get("type") as TicketTypeCode | null;
   const isCouple = ticketType === "COUPLE";
@@ -46,8 +53,29 @@ export function BuyDetails() {
     }
   }, [ticketType, navigate]);
 
+  useEffect(() => {
+    if (personStatus.kind === "has_pass") {
+      navigate("/pass", { replace: true });
+    } else if (personStatus.kind === "in_progress") {
+      navigate(personStatus.target, { replace: true });
+    }
+  }, [personStatus, navigate]);
+
   if (ticketType !== "SINGLE" && ticketType !== "COUPLE") {
     return null;
+  }
+
+  if (
+    personStatus.kind === "loading" ||
+    personStatus.kind === "has_pass" ||
+    personStatus.kind === "in_progress"
+  ) {
+    return (
+      <Card>
+        <Stepper steps={STEPS} currentIndex={1} />
+        <p>Checking your details&hellip;</p>
+      </Card>
+    );
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -68,6 +96,7 @@ export function BuyDetails() {
     try {
       const hold = await createHold({ ticket_type: ticketType as TicketTypeCode, details });
       rememberHoldDetails(hold.intent_id, { payerName: fullName, payerPhone: phone });
+      if (user) rememberCurrentIntent(user.net_id, hold.intent_id);
       navigate(`/buy/pay/${hold.intent_id}`);
     } catch (err) {
       if (err instanceof ApiError && err.code === "SOLD_OUT") {

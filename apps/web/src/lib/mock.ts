@@ -206,6 +206,15 @@ interface MockIntent {
   resubmitCount: number;
   statusPollCount: number;
   payerName: string;
+  /**
+   * Whose intent this is, so myPass() can return the CALLER's own tickets
+   * rather than "whichever intent was approved most recently" -- the dev
+   * identity picker lets a tester switch NetIDs inside one browser session,
+   * and without this, signing in as a second identity in the same tab would
+   * see the first identity's pass. Null only for the has_pass scenario's
+   * seed, which is deliberately identity-agnostic (see myPass() below).
+   */
+  netId: string | null;
 }
 
 interface MockEngine {
@@ -266,6 +275,7 @@ function buildEngine(): MockEngine | null {
       resubmitCount: 0,
       statusPollCount: 0,
       payerName: bought.holderName ?? who.displayName,
+      netId: who.netId,
     };
     intents.set(intent.id, intent);
     approvedIntentId = intent.id;
@@ -283,6 +293,12 @@ function buildEngine(): MockEngine | null {
       resubmitCount: 0,
       statusPollCount: 0,
       payerName: currentIdentity()?.displayName ?? "Aarav Sharma",
+      // Deliberately identity-agnostic (frontend-api-contract.md's mock
+      // adapter rules): the mock layer has no access to the session at
+      // module-load time, and any signed-in person exercising this scenario
+      // should see the demo pass, not just whoever happened to be signed in
+      // first.
+      netId: null,
     };
     intents.set(demo.id, demo);
     approvedIntentId = demo.id;
@@ -413,6 +429,7 @@ function buildEngine(): MockEngine | null {
         resubmitCount: 0,
         statusPollCount: 0,
         payerName: body.details.full_name,
+        netId: currentIdentity()?.netId ?? null,
       };
       intents.set(id, intent);
 
@@ -533,10 +550,24 @@ function buildEngine(): MockEngine | null {
 
     async myPass() {
       ensureDemoPurchase();
-      if (!approvedIntentId) {
-        return { tickets: [] };
+
+      // The has_pass scenario's seed is deliberately identity-agnostic (see
+      // its netId: null above) -- it's the one case where "whichever intent
+      // was most recently approved" is the right lookup. Every other case
+      // must return the CALLER's own tickets, never the last approved
+      // intent globally: the dev identity picker lets a tester switch
+      // NetIDs inside one browser tab, and intents/approvedIntentId are
+      // shared engine state across that whole tab.
+      let intent: MockIntent | undefined;
+      if (getMockScenario() === "has_pass" && approvedIntentId) {
+        intent = intents.get(approvedIntentId);
+      } else {
+        const netId = currentIdentity()?.netId;
+        intent = netId
+          ? [...intents.values()].find((candidate) => candidate.netId === netId && candidate.state === "APPROVED")
+          : undefined;
       }
-      const intent = intents.get(approvedIntentId);
+
       if (!intent || intent.state !== "APPROVED") {
         return { tickets: [] };
       }

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { clearCurrentIntent, rememberCurrentIntent } from "../lib/holdStore";
 import { getPaymentStatus } from "../lib/mock";
+import { useSession } from "../lib/session";
 import type { PaymentStatusResponse } from "../lib/types";
 
 const POLL_MS = 5_000;
@@ -14,6 +16,7 @@ const POLL_MS = 5_000;
 export function Status() {
   const { intentId } = useParams<{ intentId: string }>();
   const navigate = useNavigate();
+  const { user } = useSession();
   const [status, setStatus] = useState<PaymentStatusResponse | null>(null);
   const statusRef = useRef<PaymentStatusResponse | null>(null);
 
@@ -29,6 +32,16 @@ export function Status() {
         if (!cancelled) {
           statusRef.current = result;
           setStatus(result);
+          // Keep Landing/the buy flow's "do they already have something in
+          // progress" check current: a live state stays remembered, a
+          // terminal one (approved — myPass takes over; closed) is dropped.
+          if (user) {
+            if (result.state === "PENDING_APPROVAL" || result.state === "REJECTED") {
+              rememberCurrentIntent(user.net_id, intentId!);
+            } else {
+              clearCurrentIntent(user.net_id);
+            }
+          }
         }
       } catch {
         // A transient network error just leaves the last known state on

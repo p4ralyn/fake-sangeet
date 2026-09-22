@@ -39,7 +39,17 @@ def test_entra_requires_credentials(monkeypatch):
 
 
 def test_google_requires_credentials(monkeypatch):
+    """A half-configured Google provider must fail at startup, not at a sign-in.
+
+    The credentials are blanked EXPLICITLY rather than left unset. Settings
+    reads `.env`, so once a developer puts real credentials there this test
+    would otherwise stop exercising the validator and quietly pass for the
+    wrong reason -- which is exactly what happened the first time real
+    credentials landed in `.env`.
+    """
     monkeypatch.setenv("AUTH_PROVIDER", "google")
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "")
     get_settings.cache_clear()
     with pytest.raises(ValidationError, match="requires GOOGLE_"):
         get_settings()

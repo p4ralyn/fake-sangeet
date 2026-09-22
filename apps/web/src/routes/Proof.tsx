@@ -5,7 +5,7 @@ import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Field } from "../components/Field";
 import { ApiError } from "../lib/api";
-import { getHoldDetails } from "../lib/holdStore";
+import { getHoldDetails, rememberCurrentIntent } from "../lib/holdStore";
 import { requestProofUpload, submitProof } from "../lib/mock";
 import { useSession } from "../lib/session";
 import styles from "./Proof.module.css";
@@ -41,6 +41,13 @@ export function Proof() {
       if (preview) URL.revokeObjectURL(preview);
     };
   }, [preview]);
+
+  useEffect(() => {
+    // Arriving here at all (a live payment's "I've paid", or an expired
+    // hold's recovery path) means this is the person's live intent — make
+    // sure Landing and the buy flow's entry points can find it.
+    if (user && intentId) rememberCurrentIntent(user.net_id, intentId);
+  }, [user, intentId]);
 
   if (!intentId) {
     navigate("/", { replace: true });

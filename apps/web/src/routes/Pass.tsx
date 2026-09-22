@@ -76,23 +76,42 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
 export function Pass() {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<PassTicket[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [animate] = useState(() => !hasSeenPassReveal());
 
   useEffect(() => {
     let cancelled = false;
-    getMyPass().then((result) => {
-      if (!cancelled) setTickets(result.tickets);
-    });
+    setLoadFailed(false);
+    getMyPass()
+      .then((result) => {
+        if (!cancelled) setTickets(result.tickets);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadFailed(true);
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [retryCount]);
 
   useEffect(() => {
     if (tickets && tickets.length > 0) {
       markPassRevealSeen();
     }
   }, [tickets]);
+
+  if (loadFailed) {
+    return (
+      <Card>
+        <h1>Your pass</h1>
+        <p>We couldn&rsquo;t reach the server. Please try again.</p>
+        <Button variant="primary" onClick={() => setRetryCount((n) => n + 1)}>
+          Try again
+        </Button>
+      </Card>
+    );
+  }
 
   if (!tickets) {
     return (

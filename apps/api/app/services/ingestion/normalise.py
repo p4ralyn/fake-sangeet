@@ -20,7 +20,8 @@ import re
 import zipfile
 from dataclasses import dataclass, field
 from decimal import Decimal
-from xml.etree import ElementTree as ET
+
+from defusedxml import ElementTree as ET
 
 DOMAIN = "snu.edu.in"
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"

@@ -5,6 +5,7 @@ import { Card } from "../components/Card";
 import { Stepper } from "../components/Stepper";
 import { formatRupees } from "../lib/format";
 import { getAvailability } from "../lib/mock";
+import { usePersonStatus } from "../lib/personStatus";
 import type { AvailabilityResponse, TicketTypeAvailability } from "../lib/types";
 import styles from "./BuyTicketType.module.css";
 
@@ -22,20 +23,67 @@ const COUPLE_CONSEQUENCE =
  * Choose your ticket (`/buy`) — step 1 of 3 (addendum §A2). A type is
  * offered only while seats_available >= type.seats; when unavailable it is
  * disabled and explained in place, never hidden, never clickable-then-rejected.
+ *
+ * One ticket per identity (`tickets_one_per_identity`) and one live intent
+ * per person (`pi_one_live_per_user`) are both enforced server-side, so this
+ * screen must not render the chooser for someone who already holds a pass or
+ * has a purchase in progress — it routes them onward instead.
  */
 export function BuyTicketType() {
   const navigate = useNavigate();
+  const personStatus = usePersonStatus();
   const [availability, setAvailability] = useState<AvailabilityResponse | undefined>(undefined);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    getAvailability().then((result) => {
-      if (!cancelled) setAvailability(result);
-    });
+    setLoadFailed(false);
+    getAvailability()
+      .then((result) => {
+        if (!cancelled) setAvailability(result);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadFailed(true);
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [retryCount]);
+
+  useEffect(() => {
+    if (personStatus.kind === "has_pass") {
+      navigate("/pass", { replace: true });
+    } else if (personStatus.kind === "in_progress") {
+      navigate(personStatus.target, { replace: true });
+    }
+  }, [personStatus, navigate]);
+
+  if (
+    personStatus.kind === "loading" ||
+    personStatus.kind === "has_pass" ||
+    personStatus.kind === "in_progress"
+  ) {
+    return (
+      <Card>
+        <Stepper steps={STEPS} currentIndex={0} />
+        <p>Checking availability&hellip;</p>
+      </Card>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <Card>
+        <Stepper steps={STEPS} currentIndex={0} />
+        <h1>Choose your ticket</h1>
+        <p>We couldn&rsquo;t reach the server. Please try again.</p>
+        <Button variant="primary" onClick={() => setRetryCount((n) => n + 1)}>
+          Try again
+        </Button>
+      </Card>
+    );
+  }
 
   if (!availability) {
     return (

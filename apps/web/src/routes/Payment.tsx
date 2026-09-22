@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
@@ -8,7 +8,9 @@ import { Stepper } from "../components/Stepper";
 import { ZariRule } from "../components/ZariRule";
 import { ApiError } from "../lib/api";
 import { formatClockTime, formatRupees } from "../lib/format";
+import { rememberCurrentIntent } from "../lib/holdStore";
 import { getPaymentPage } from "../lib/mock";
+import { useSession } from "../lib/session";
 import type { PaymentPageResponse } from "../lib/types";
 import styles from "./Payment.module.css";
 
@@ -64,9 +66,11 @@ function CopyableRow({
 export function Payment() {
   const { intentId } = useParams<{ intentId: string }>();
   const navigate = useNavigate();
+  const { user } = useSession();
   const [page, setPage] = useState<PaymentPageResponse | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [expired, setExpired] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!intentId) {
@@ -74,9 +78,16 @@ export function Payment() {
       return;
     }
     let cancelled = false;
+    setNotFound(false);
     getPaymentPage(intentId)
       .then((result) => {
-        if (!cancelled) setPage(result);
+        if (cancelled) return;
+        setPage(result);
+        // This is now known to be the person's live intent — remember it so
+        // Landing and the buy flow's entry points can find it too, even if
+        // they arrived here directly (a bookmark, a resumed link) rather
+        // than through /buy/details in this browser tab.
+        if (user) rememberCurrentIntent(user.net_id, intentId);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -91,14 +102,21 @@ export function Payment() {
     return () => {
       cancelled = true;
     };
-  }, [intentId, navigate]);
+  }, [intentId, navigate, user, retryCount]);
 
   if (!intentId) return null;
 
   if (notFound) {
     return (
       <Card>
+        <Stepper steps={STEPS} currentIndex={2} />
         <p>We couldn&rsquo;t reach the server. Please try again.</p>
+        <Button variant="primary" onClick={() => setRetryCount((n) => n + 1)}>
+          Try again
+        </Button>
+        <p>
+          <Link to="/">Back to the invitation</Link>
+        </p>
       </Card>
     );
   }

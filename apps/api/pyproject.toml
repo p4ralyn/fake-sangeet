@@ -20,6 +20,10 @@ dependencies = [
     # LLD-v1 §10.1 wants the QR payload CBOR-encoded, not JSON: fewer bytes ->
     # lower QR density -> a scan that still works in bad light at a dark door.
     "cbor2>=5.6",
+    # .xlsx files are zip archives of XML the app did not author. stdlib
+    # ElementTree is vulnerable to entity-expansion (billion laughs) and
+    # quadratic blowup; defusedxml is the drop-in that refuses them.
+    "defusedxml>=0.7",
     "aiosmtplib>=3.0",
     "google-cloud-storage>=2.19",
     "email-validator>=2.2",
