@@ -1,0 +1,27 @@
+# TLS terminates here. The hostname is wildcard DNS pointing at the static IP,
+# which exists because Google OAuth refuses a bare IP as a redirect URI and our
+# own Settings refuses APP_ENV=prod without secure cookies. Swap in the real
+# domain later by changing this line and APP_BASE_URL -- nothing else moves.
+{$SITE_HOST} {
+	encode zstd gzip
+
+	# Everything the API owns. /auth is the OIDC dance, so it must reach the
+	# API directly rather than the SPA.
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /auth/* {
+		reverse_proxy api:8000
+	}
+	handle /healthz {
+		reverse_proxy api:8000
+	}
+	handle /readyz {
+		reverse_proxy api:8000
+	}
+
+	# Everything else is the single-page app.
+	handle {
+		reverse_proxy web:5173
+	}
+}
