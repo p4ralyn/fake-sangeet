@@ -1,0 +1,234 @@
+/* Gate scanner shell. Fixed and full-bleed: this route is mounted outside
+   the AppShell, so there is no brand header, no mandala corners and no 34rem
+   column. A volunteer at a door needs the camera and three facts, nothing
+   else. Flat fills and hairlines only — the app-wide no-gradient,
+   no-box-shadow rule holds here too. */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  /* dvh, not vh: mobile browser chrome collapses on scroll and a vh-sized
+     grid would leave the footer under it, out of thumb reach. */
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh;
+  background: var(--gate-ground);
+  color: var(--cream);
+}
+
+/* ── header: which door, who is holding it, is it connected ─────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  background: var(--gate-surface);
+  border-bottom: 1px solid var(--gate-line);
+  font-size: var(--text-xs);
+}
+
+.gateName {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator {
+  margin-left: auto;
+  color: color-mix(in srgb, var(--cream) 70%, transparent);
+}
+
+.pillOnline,
+.pillOffline {
+  padding: 0.125rem 0.5rem;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pillOnline {
+  color: var(--marigold);
+}
+
+/* Offline is scarlet-on-cream rather than a tinted outline: at a gate it is
+   the difference between "the next scan will fail" and "everything is fine". */
+.pillOffline {
+  background: var(--scarlet);
+  border-color: var(--scarlet);
+  color: var(--cream);
+}
+
+/* ── the viewfinder ─────────────────────────────────────────────────────── */
+.viewport {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A frame, not a target: the QR goes anywhere inside it. Drawn in marigold
+   so it reads against a phone screen, a dark jacket or a lit lobby alike. */
+.reticle {
+  position: absolute;
+  inset: 50% 50%;
+  width: min(62vw, 16rem);
+  height: min(62vw, 16rem);
+  translate: -50% -50%;
+  border: 2px solid var(--marigold);
+  border-radius: 2px;
+}
+
+.cameraNote,
+.cameraBlocked {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  margin: 0;
+  /* Overrides the global `p { max-width: 66ch }` measure cap, which would
+     otherwise leave this banner stranded at the left of the viewfinder. */
+  max-width: none;
+  padding: 0.625rem 0.875rem;
+  border-radius: 2px;
+  background: var(--gate-surface);
+  border: 1px solid var(--gate-line);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.cameraBlocked {
+  background: var(--scarlet);
+  border-color: var(--scarlet);
+  font-size: var(--text-sm);
+}
+
+/* ── footer: the two controls that belong in the thumb arc ──────────────── */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  /* Keeps the controls clear of the home indicator on a notched phone. */
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  background: var(--gate-surface);
+  border-top: 1px solid var(--gate-line);
+  font-size: var(--text-xs);
+}
+
+.torch,
+.torchOn {
+  min-height: 44px;
+  min-width: 5.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 2px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.torch {
+  background: transparent;
+  border: 2px solid var(--gate-line);
+  color: var(--cream);
+}
+
+.torchOn {
+  background: var(--marigold);
+  border: 2px solid var(--marigold);
+  color: var(--maroon);
+}
+
+.count,
+.footerNote {
+  color: color-mix(in srgb, var(--cream) 70%, transparent);
+}
+
+/* ── overlays: the decision card and the result field ───────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+/* ── naming the door, before the camera ever starts ─────────────────────── */
+.setup {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--gate-ground);
+  color: var(--cream);
+}
+
+.setupForm {
+  width: min(100%, 24rem);
+}
+
+/* Overrides the global h1 (scarlet fill + hard maroon extrusion), which is
+   specified for cream cards only — see the note in base.css. On the gate's
+   dark ground the maroon extrusion is invisible and the scarlet fill is
+   unreadable, so display type here is marigold and flat. Same local-override
+   pattern Pass.module.css already uses for headings off the cream card. */
+.setupTitle {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: 1.1;
+  color: var(--marigold);
+  text-shadow: none;
+}
+
+.setupNote {
+  margin: 0 0 1.25rem;
+  font-size: var(--text-xs);
+  color: color-mix(in srgb, var(--cream) 72%, transparent);
+}
+
+.setupInput {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.625rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border: 2px solid var(--gate-line);
+  border-radius: 2px;
+  background: var(--gate-surface);
+  color: var(--cream);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+}
+
+.setupInput:focus-visible {
+  outline: 2px solid var(--marigold);
+  outline-offset: 2px;
+}
+
+.setupSubmit {
+  width: 100%;
+  min-height: 48px;
+  border: 2px solid var(--marigold);
+  border-radius: 2px;
+  background: var(--marigold);
+  color: var(--maroon);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.setupSubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

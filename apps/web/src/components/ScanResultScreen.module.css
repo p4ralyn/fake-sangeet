@@ -1,0 +1,74 @@
+/* Result fields. Full-bleed, one colour, one glyph, one word — readable at
+   arm's length, across a queue, in bad light.
+
+   Three fields, not two. The glyphs differ in shape as well as meaning
+   (✓ / ✕ / ↻) so the screen still separates for an operator who cannot tell
+   the green from the scarlet. */
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--cream);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.admitted {
+  background: var(--gate-admit);
+}
+
+.refused {
+  background: var(--scarlet);
+}
+
+/* Deliberately neither field: a double-tap is not a success to celebrate and
+   not a refusal to act on. */
+.duplicate {
+  background: var(--gate-repeat);
+}
+
+.glyph {
+  margin: 0;
+  font-size: clamp(4rem, 22vw, 7rem);
+  line-height: 1;
+}
+
+/* Sentence case, not shouted caps: the size is already the emphasis. Cream
+   and flat — the global h1's scarlet fill would vanish into the refused
+   field and its maroon extrusion does nothing on any of these grounds. */
+.verdict {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-xl), 9vw, var(--text-3xl));
+  line-height: 1;
+  color: var(--cream);
+  text-shadow: none;
+}
+
+.name {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+/* `justify-items: center` on the grid centres the box; the 24rem cap is
+   this screen's own measure, not the global 66ch one. */
+.detail {
+  margin: 0.25rem 0 0;
+  max-width: 24rem;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.hint {
+  margin: 1.5rem 0 0;
+  font-size: var(--text-xs);
+  color: color-mix(in srgb, var(--cream) 72%, transparent);
+}

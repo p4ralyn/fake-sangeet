@@ -1,0 +1,169 @@
+/* The decision card. Photo up top where the eyes go, actions at the bottom
+   where the thumb already is, identity between them. Nothing competes with
+   the face. */
+
+.card {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 0.75rem;
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  background: var(--gate-ground);
+  color: var(--cream);
+  overflow-y: auto;
+}
+
+.photoFrame {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0.75rem;
+  border: 2px solid var(--gate-line);
+  border-radius: 2px;
+  background: var(--gate-surface);
+}
+
+.photo {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* M4 ships ID capture; until then every card lands here, so this has to be
+   an instruction rather than an apology. */
+.photoMissing {
+  margin: 0;
+  max-width: 22rem;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--marigold);
+}
+
+/* The global `p { max-width: 66ch }` measure cap makes these narrower than
+   the card, so `text-align: center` centres the text inside a box that is
+   itself sitting on the left. Centre the boxes too. */
+.identity {
+  text-align: center;
+}
+
+.identity p {
+  max-width: none;
+}
+
+/* Cream and flat, not the global scarlet extrusion — see the note on
+   .setupTitle in Scan.module.css. The name has to be the most legible thing
+   on the card after the photo. */
+.name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: 1.1;
+  color: var(--cream);
+  text-shadow: none;
+}
+
+.state {
+  margin: 0.25rem 0 0;
+  font-size: var(--text-sm);
+  color: color-mix(in srgb, var(--cream) 78%, transparent);
+}
+
+/* Its own line, not appended to the state: "Inside 0 of 1 breaks used" reads
+   as one run-on phrase at a glance, and a glance is all this gets. */
+.breaks {
+  margin: 0.125rem 0 0;
+  font-size: var(--text-xs);
+  color: color-mix(in srgb, var(--cream) 62%, transparent);
+}
+
+/* Flex, not an auto-fit grid: `repeat(auto-fit, minmax(…, 1fr))` leaves the
+   buttons at their minimum width on a wide screen instead of filling the row,
+   because the empty tracks collapse after the fr sizing is resolved. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Marigold on maroon: the affirmative actions are the brightest thing on the
+   card after the photo, and they sit at the bottom edge. */
+.action {
+  min-height: 56px;
+  border: 2px solid var(--marigold);
+  border-radius: 2px;
+  background: var(--marigold);
+  color: var(--maroon);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Not admitting is not an error and not a button you press by accident:
+   outlined, quieter, and the same height so it is still thumb-sized. */
+.dismiss {
+  min-height: 48px;
+  border: 2px solid var(--gate-line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--cream);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dismiss:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.action:focus-visible,
+.dismiss:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 2px;
+}
+
+.expiry {
+  margin: 0;
+  /* Same global 66ch measure cap as .identity's paragraphs. */
+  max-width: none;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: color-mix(in srgb, var(--cream) 62%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* On anything wider than a phone the photo and the identity can share a row,
+   but the actions stay pinned along the bottom — the ergonomic rule does not
+   change just because the screen got bigger. */
+@media (min-width: 40rem) {
+  .card {
+    padding: 2rem;
+  }
+
+  /* The affirmative actions share one row; "Don't admit" and the countdown
+     each keep their own full-width line below it. */
+  .actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .action {
+    flex: 1 1 12rem;
+  }
+
+  .dismiss,
+  .expiry {
+    flex: 1 0 100%;
+  }
+}

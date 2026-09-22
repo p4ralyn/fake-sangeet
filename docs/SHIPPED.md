@@ -1,7 +1,7 @@
 # unigate — shipped checkpoint
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
-Last updated: M1 + M2 + M3 complete, scanner in flight. 230 tests.
+Last updated: M1 + M2 + M3 complete, gate scanner built. 230 tests.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -185,10 +185,37 @@ API contract: `docs/design/frontend-api-contract.md`
 - [x] **22 tests**, each negative one proven by breaking the guard and watching
       it fail
 
-## In flight
+## Gate scanner
 
-- [~] **Scanner (part of M6)** — camera scan, decision card, four result
-      states, thumb-reach ergonomics, wake lock, haptics
+- [x] `/scan`, outside the AppShell — no brand chrome, camera fills the
+      viewport, the scanner paints its own dark ground
+- [x] Two decoders: native `BarcodeDetector`, falling back to jsQR (which is
+      code-split, so Android Chrome never downloads it). Without the fallback
+      the scanner is dead on every iPhone
+- [x] Decoding throttled to 8fps and downscaled to 480px — a full-rate jsQR
+      loop flattens a phone battery before the last guest arrives
+- [x] Decision card: ID photo at the top where the eyes go, actions at the
+      bottom in the thumb arc, `legal_actions` rendered in the server's order
+- [x] **No `DENY` button** — the server never offers `DENIED`, so not
+      admitting someone is "Don't admit", which records nothing. A button that
+      posted `DENIED` would have failed every single time it was pressed
+- [x] Four result states — admitted (green), refused (scarlet), already
+      scanned (maroon, deliberately neither), plus the decision card. Each
+      carries colour, a distinct glyph, a distinct word and a distinct tone,
+      so the screen reads for a colour-blind operator and for one who isn't
+      looking at it
+- [x] Only the admitting results self-clear at 2s; a refusal waits to be
+      dismissed, so nobody is admitted by a screen that timed out
+- [x] Decision-token countdown that closes the card when the token dies
+- [x] Torch toggle, wake lock, online/offline pill, per-device gate label
+- [x] Every error code mapped to an operator headline, with the API's own
+      message as the detail — so the wording lives in one place
+- [x] Verified in a real browser: route guard, dev sign-in as SECURITY, all
+      four screens, the camera-refused path, and a live `POST /api/v1/scans`
+      returning the `INVALID_TOKEN` envelope the UI maps
+- [ ] **Never decoded a frame from a real camera.** See the dress rehearsal.
+- [ ] Offline scanning — needs a server-issued, gate-scoped verification key
+      (M6, backend work)
 
 ## Not started
 

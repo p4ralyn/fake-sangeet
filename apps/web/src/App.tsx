@@ -9,6 +9,7 @@ import { Pass } from "./routes/Pass";
 import { Payment } from "./routes/Payment";
 import { Proof } from "./routes/Proof";
 import { RequireRole } from "./routes/RequireRole";
+import { Scan } from "./routes/Scan";
 import { Status } from "./routes/Status";
 import { Waitlist } from "./routes/Waitlist";
 
@@ -19,10 +20,24 @@ import { Waitlist } from "./routes/Waitlist";
  *
  * Flow order is binding (addendum §A2): choose type -> details -> hold ->
  * payment -> proof -> status -> pass.
+ *
+ * /scan sits OUTSIDE the AppShell on purpose. It is an operator tool held at
+ * a dark door, not a participant screen: no brand header, no mandala
+ * corners, no 34rem column — the camera fills the viewport and the scanner
+ * paints its own ground (LLD-v1 §11.5).
  */
 export function App() {
   return (
     <Routes>
+      <Route
+        path="scan"
+        element={
+          <RequireRole allow={["SECURITY", "ADMIN", "OWNER"]}>
+            <Scan />
+          </RequireRole>
+        }
+      />
+
       <Route element={<AppShell />}>
         <Route index element={<Landing />} />
 

@@ -49,3 +49,20 @@
   --motion-fast: 150ms;
   --motion-slow: 600ms;
 }
+
+/* Gate scanner (LLD-v1 §11.5). A darker register than the participant
+   screens, deliberately: this is a tool held at a dark door at 9pm, not a
+   poster. The ground is dark so the camera viewfinder is the brightest thing
+   on screen and a volunteer's night vision survives a three-hour shift.
+
+   Still the poster's palette, though — the dark is a MAROON dark mixed from
+   --maroon, never a neutral near-black, and refusal reuses --scarlet, the
+   same red this app already means "stop" with. --gate-admit is --state-good
+   taken darker so cream text clears 4.5:1 on it as a full field. */
+:root {
+  --gate-ground: #17040a; /* the ground behind the camera */
+  --gate-surface: #2b0a13; /* header and footer strips */
+  --gate-line: #6e2030; /* hairlines and the reticle */
+  --gate-admit: #1c4a12; /* result field: admitted */
+  --gate-repeat: #4a0f1c; /* result field: already scanned — neither green nor red */
+}
