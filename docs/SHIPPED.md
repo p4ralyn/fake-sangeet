@@ -1,7 +1,7 @@
 # unigate — shipped checkpoint
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
-Last updated: M1 + M2 complete, M3 and scanner in flight. 208 tests.
+Last updated: M1 + M2 + M3 complete, scanner in flight. 230 tests.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -153,10 +153,40 @@ API contract: `docs/design/frontend-api-contract.md`
 - [ ] **Unreconciled: 441 sold against a 600 cap leaves 159 free, not 50.**
       Either a phase-2 sheet is missing or the 550 figure was an estimate.
 
+## M3 — sheet ingestion
+
+- [x] `TicketSource` port with two workbook adapters, picked by sniffing the
+      file rather than by a `--format` flag or the filename
+- [x] `ingest_source()` — one transaction per row, so a bad row rolls back
+      itself and nothing else
+- [x] **Idempotent on a stable row hash.** `orders.external_id` is a sha256 of
+      source + ticket type + buyer and partner NetID — identity only, never
+      position, never name or phone. Re-running the same workbook creates
+      nothing; re-running after the client repairs a row mints exactly that row
+- [x] Name and phone update in place on a re-sync (LLD-v1 §7.2); a corrected
+      phone number does not mint a second ticket
+- [x] Seats committed through `services/inventory.py` under the §A1.2 row lock,
+      in the same transaction as the order, with an `inventory_ledger` row each
+- [x] Running out of seats **halts** the batch rather than admitting whichever
+      rows happened to be small
+- [x] Per-ticket partner mode: `SELF_CLAIM` splits into two bound tickets with
+      a claim code on the partner's; `PROXY` mints two tickets with the second
+      unbound, because there is nobody to claim it
+- [x] Row-tolerant: unreadable buyer, partner-is-buyer, and an identity already
+      ticketed each write `ingestion_errors` and the batch continues
+- [x] The same open problem is trayed **once**, however many times the ingester
+      runs — the partial unique index does it, not the service remembering
+- [x] One queued `ticket_ready` per mailable ticket, keyed on `ticket_ref`, so
+      a second run mails nobody twice
+- [x] `scripts/ingest.py`, with `--dry-run` that previews through the very same
+      verdict function the real path uses
+- [x] **Dry run over both client workbooks reproduces the audit exactly:
+      295 rows → 291 orders, 435 seats, 4 trayed**
+- [x] **22 tests**, each negative one proven by breaking the guard and watching
+      it fail
+
 ## In flight
 
-- [~] **M3** — `TicketSource` adapter, idempotent row-hashed ingestion,
-      `ingestion_errors`, per-ticket partner mode, seat commitment, outbox
 - [~] **Scanner (part of M6)** — camera scan, decision card, four result
       states, thumb-reach ergonomics, wake lock, haptics
 
