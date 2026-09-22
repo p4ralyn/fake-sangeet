@@ -322,3 +322,76 @@ export interface StaffScanResponse extends SecurityScanResponse {
 }
 
 export type ScanResponse = SecurityScanResponse | StaffScanResponse;
+
+// ---------------------------------------------------------------------------
+// ID verification — M4. Source of truth: apps/api/app/schemas/verification.py.
+// These endpoints are REAL, not mocked: the commerce screens run on mock.ts
+// because M5 does not exist, but ID upload and review are shipped backend.
+// ---------------------------------------------------------------------------
+
+/** `verifications.outcome`. There is no AUTO_PASS — OCR is cut, a person decides. */
+export type VerifyOutcome = "MANUAL_REVIEW" | "APPROVED" | "RETRY_REQUIRED" | "REJECTED";
+
+/** `tickets.status` as M4 uses it. */
+export type TicketStatus =
+  | "PURCHASED"
+  | "CLAIMED"
+  | "PENDING_OCR"
+  | "MANUAL_REVIEW"
+  | "RETRY_REQUIRED"
+  | "VERIFIED"
+  | "PASS_ISSUED"
+  | "REJECTED"
+  | "EXPIRED_UNCLAIMED"
+  | "CANCELLED"
+  | "REVOKED";
+
+/**
+ * GET /api/v1/me/verification — what a person is told about their own ID
+ * check. Deliberately narrow: no image URL, no fraud flags, no reviewer
+ * identity. The API has a separate, richer model for reviewers rather than
+ * filtering this one.
+ */
+export interface MyVerification {
+  ticket_status: TicketStatus;
+  outcome: VerifyOutcome | null;
+  attempts_used: number;
+  attempts_remaining: number;
+  /** The server's answer, not the client's reading of a status. Gate the
+   * upload control on this and nothing else. */
+  can_upload: boolean;
+  blocked_reason: string | null;
+  /** The reviewer's note, present only when they asked again or refused. */
+  review_note: string | null;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  consent_version: string | null;
+}
+
+/** One row of GET /api/v1/admin/verifications. ADMIN/OWNER only. */
+export interface ReviewItem {
+  verification_id: string;
+  registration_id: string;
+  attempt_no: number;
+  outcome: VerifyOutcome;
+  full_name: string;
+  net_id: string;
+  email: string;
+  ticket_status: TicketStatus;
+  fraud_flags: string[];
+  submitted_at: string;
+  /** Signed, ~90s. Never cache it, never store it, never put it in a link. */
+  id_image_url: string | null;
+}
+
+export interface ReviewQueue {
+  pending: number;
+  items: ReviewItem[];
+}
+
+export interface ReviewDecisionRequest {
+  approve: boolean;
+  note?: string | null;
+  /** Only consulted on a refusal. */
+  allow_resubmit?: boolean;
+}

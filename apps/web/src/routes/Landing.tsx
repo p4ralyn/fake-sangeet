@@ -8,6 +8,7 @@ import { EVENT_DATE_LABEL, EVENT_NAME_FALLBACK, EVENT_VENUE } from "../lib/event
 import { getAvailability } from "../lib/mock";
 import { usePersonStatus } from "../lib/personStatus";
 import { useSession } from "../lib/session";
+import { useMyVerification } from "../lib/verificationApi";
 import type { AvailabilityResponse } from "../lib/types";
 import styles from "./Landing.module.css";
 
@@ -23,11 +24,24 @@ const POLL_MS = 15_000;
  * (usePersonStatus — myPass, then any remembered in-progress intent), never
  * on availability alone and never on role. A pass holder must see "View your
  * pass", not an invitation to buy a second ticket the server would refuse.
+ *
+ * One branch outranks all of that: a real, server-confirmed ticket that still
+ * needs an ID check (M4). Cohort A's ~441 people arrive here holding a ticket
+ * they bought offline, and the only thing standing between them and a pass is
+ * a photograph. That answer comes from the API, not from `mock.ts`, so it wins
+ * over anything the mock commerce adapter has to say.
  */
 export function Landing() {
   const { user, signIn } = useSession();
   const navigate = useNavigate();
   const personStatus = usePersonStatus();
+  const verification = useMyVerification();
+  // A real ticket that hasn't cleared ID review yet. `none` covers "no ticket
+  // on this account", which is every demo identity and every visitor.
+  const needsId =
+    verification.kind === "ready" &&
+    verification.verification.ticket_status !== "PASS_ISSUED" &&
+    verification.verification.ticket_status !== "VERIFIED";
   const [availability, setAvailability] = useState<AvailabilityResponse | undefined>(undefined);
 
   useEffect(() => {
@@ -83,7 +97,18 @@ export function Landing() {
       <ZariRule />
 
       <div className={styles.action}>
-        {personStatus.kind === "loading" ? (
+        {needsId ? (
+          <>
+            <Button variant="primary" onClick={() => navigate("/verify")}>
+              {verification.kind === "ready" && verification.verification.outcome === "MANUAL_REVIEW"
+                ? "Check your ID status"
+                : "Verify your ID"}
+            </Button>
+            <p className={styles.availabilityLine}>
+              You&rsquo;re on the list. One step left before your pass.
+            </p>
+          </>
+        ) : personStatus.kind === "loading" ? (
           // Reserves the same space a real button takes so nothing shifts
           // once we know which one to show — and, critically, never shows
           // "Reserve your seat" to someone we haven't yet confirmed doesn't
@@ -122,7 +147,7 @@ export function Landing() {
         )}
       </div>
 
-      {(personStatus.kind === "none" || personStatus.kind === "loading") && (
+      {!needsId && (personStatus.kind === "none" || personStatus.kind === "loading") && (
         <Link className={styles.passLink} to="/pass">
           Already have a pass?
         </Link>

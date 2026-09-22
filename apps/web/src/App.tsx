@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { AdminIdsScreen } from "./routes/AdminIds";
 import { AdminPaymentsScreen } from "./routes/admin";
 import { AppShell } from "./routes/AppShell";
 import { BuyDetails } from "./routes/BuyDetails";
@@ -11,6 +12,7 @@ import { Proof } from "./routes/Proof";
 import { RequireRole } from "./routes/RequireRole";
 import { Scan } from "./routes/Scan";
 import { Status } from "./routes/Status";
+import { VerifyId } from "./routes/VerifyId";
 import { Waitlist } from "./routes/Waitlist";
 
 /**
@@ -89,6 +91,14 @@ export function App() {
             </RequireRole>
           }
         />
+        <Route
+          path="verify"
+          element={
+            <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
+              <VerifyId />
+            </RequireRole>
+          }
+        />
         <Route path="waitlist" element={<Waitlist />} />
 
         <Route
@@ -96,6 +106,14 @@ export function App() {
           element={
             <RequireRole allow={["OWNER", "ADMIN"]}>
               <AdminPaymentsScreen />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin/ids"
+          element={
+            <RequireRole allow={["OWNER", "ADMIN"]}>
+              <AdminIdsScreen />
             </RequireRole>
           }
         />

@@ -1,0 +1,196 @@
+/* ID review. Sits on the saffron ground inside /admin's wide column, with the
+   photo as the only large element — everything else is support for one
+   decision. Flat fills, hairlines, no shadows, like the rest of the app. */
+
+.screen {
+  max-width: 44rem;
+  margin: 0 auto;
+  background: var(--cream);
+  border: 2px solid var(--maroon);
+  border-radius: 2px;
+  padding: 1.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--maroon) 30%, transparent);
+}
+
+.count {
+  font-weight: 700;
+  font-size: var(--text-md);
+}
+
+.shortcuts {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* The photo is the screen. Capped so a portrait ID doesn't push the buttons
+   off the bottom on a laptop. */
+.figure {
+  margin: 0 0 1.25rem;
+  display: grid;
+  place-items: center;
+  min-height: 16rem;
+  padding: 0.75rem;
+  background: color-mix(in srgb, var(--maroon) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--maroon) 30%, transparent);
+  border-radius: 2px;
+}
+
+.photo {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.noPhoto {
+  margin: 0;
+  max-width: none;
+  text-align: center;
+  font-weight: 600;
+  color: var(--scarlet);
+}
+
+.identity {
+  margin-bottom: 1rem;
+}
+
+/* Local override of the global h1 (scarlet + extrusion at --text-3xl): this
+   is a name to read at a glance beside a photo, not a poster headline. */
+.name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--maroon);
+  text-shadow: none;
+}
+
+.meta {
+  margin: 0.125rem 0 0;
+  max-width: none;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* Magenta: this is an "attend to this", not a verdict. Wording in the
+   component says so too — a flag is never an accusation. */
+.flag {
+  margin: 0.625rem 0 0;
+  max-width: none;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--magenta);
+  border-radius: 2px;
+  font-size: var(--text-xs);
+  color: var(--magenta);
+  font-weight: 600;
+}
+
+.note {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  border: 2px solid var(--maroon);
+  border-radius: 2px;
+  background: var(--cream);
+  color: var(--maroon);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
+.error {
+  margin: 0 0 0.75rem;
+  max-width: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--scarlet);
+}
+
+.actions {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.approve,
+.secondary,
+.refuse {
+  flex: 1 1 10rem;
+  min-height: 48px;
+  padding: 0.625rem 1rem;
+  border-radius: 2px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.approve:disabled,
+.secondary:disabled,
+.refuse:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Approve is the common case and the only filled button — the two refusals
+   are outlined, so the destructive pair never reads as the default. */
+.approve {
+  background: var(--state-good);
+  color: var(--cream);
+  border: 2px solid var(--maroon);
+}
+
+.secondary {
+  background: transparent;
+  color: var(--maroon);
+  border: 2px solid var(--maroon);
+}
+
+.secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--maroon) 12%, transparent);
+}
+
+.refuse {
+  background: transparent;
+  color: var(--scarlet);
+  border: 2px solid var(--scarlet);
+}
+
+.refuse:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--scarlet) 10%, transparent);
+}
+
+.state {
+  text-align: center;
+}
+
+.empty {
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  background: var(--cream);
+  border: 2px solid var(--maroon);
+  border-radius: 2px;
+}
+
+.emptyTitle {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--maroon);
+  text-shadow: none;
+}
+
+.empty p {
+  max-width: none;
+}

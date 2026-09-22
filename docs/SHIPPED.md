@@ -1,7 +1,7 @@
 # unigate — shipped checkpoint
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
-Last updated: M1 + M2 + M3 complete, gate scanner built. 230 tests.
+Last updated: M1–M4 complete, gate scanner built. 279 tests.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -217,11 +217,40 @@ API contract: `docs/design/frontend-api-contract.md`
 - [ ] Offline scanning — needs a server-issued, gate-scoped verification key
       (M6, backend work)
 
-## Not started
+## M4 — ID upload and review
 
-- [ ] **M4** — ID upload and manual review. OCR scoring (§A4) deliberately cut:
-      a human glancing at ~600 photos is hours, and it removes Cloud Vision,
-      the scoring model and the retry loop from the build.
+- [x] `registrations`, `id_images`, `verifications` + migration 0004, which
+      also adds the `passes.registration_id` that 0002 left for this milestone
+- [x] **OCR cut as planned.** §12's `engine`, `ocr_raw`, `extracted`,
+      `subscores`, `score` and `latency_ms` are absent rather than
+      present-and-always-NULL
+- [x] `POST /me/id-image` (multipart), `GET /me/verification`,
+      `GET /admin/verifications`, `POST /admin/verifications/{id}/decide`
+- [x] **Consent is structural** — `consent_version`/`consented_at` NOT NULL,
+      so no code path stores an ID photo without having asked
+- [x] **EXIF stripped server-side** (§9.1, "never trust the client") by walking
+      the JPEG segment table and the PNG chunk list — no Pillow. The SHA-256 is
+      taken over the stripped bytes, so a duplicate means the same picture
+- [x] Format sniffed from magic bytes, not the declared `Content-Type`
+- [x] Retry budget of 3, enforced by `UNIQUE (registration_id, attempt_no)`
+      rather than by counting; a decision is idempotent by refusal
+- [x] Duplicate-image flag **never** auto-refuses (§9.3: accusing is worse
+      than queuing)
+- [x] Approving issues the pass and links it to the registration
+- [x] **The gate now sees a face**: an APPROVED ID reaches the scanner as a
+      90-second signed URL on ACTION_REQUIRED, with an `ID_IMAGE_VIEWED` audit
+      row naming the scanner (§9.2). Only APPROVED — a photo still in the queue
+      is not evidence
+- [x] `participant_name` now prefers `registrations.full_name`, as §11.5 said
+      it would once the table existed
+- [x] Participant screen at `/verify`; reviewer queue at `/admin/ids` — one
+      card at a time, keyboard-driven (A / R / X), because somebody has to get
+      through ~600 photographs
+- [x] **Walked end to end in a real browser**: uploaded as the ticket holder,
+      reviewed as the admin, pass issued, both audit rows written
+- [x] **49 tests** (279 total), every negative one proven by breaking its guard
+
+## Not started
 - [ ] **M5** — phase 3 purchase (holds, UPI proof, approval, reconciliation).
       **Recommended to cut**: 50 seats sold by hand into the sheet removes the
       largest remaining chunk of work for 8% of attendees.
