@@ -21,11 +21,16 @@ async def me(
     db: AsyncSession = Depends(get_db),
 ) -> MeResponse:
     event = await get_current_event(db)
+    # Read from the row rather than the session: a session outlives a sign-in,
+    # so an avatar that arrived on the latest login would otherwise not show up
+    # until the cookie expired.
+    account = await db.get(User, session.user_id)
     return MeResponse(
         user_id=session.user_id,
         net_id=session.net_id,
         display_name=session.display_name,
         email=session.email,
+        avatar_url=account.avatar_url if account else None,
         roles=parse_roles(session.roles),
         event=EventSummary(id=event.id, slug=event.slug, name=event.name),
         csrf_token=session.csrf_token,

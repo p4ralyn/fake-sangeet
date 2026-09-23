@@ -33,6 +33,11 @@ class User(UUIDPk, Base):
     net_id: Mapped[str | None] = mapped_column(CITEXT, index=True)
     email: Mapped[str | None] = mapped_column(CITEXT)
     display_name: Mapped[str | None] = mapped_column(Text)
+    #: Google's `picture` claim. Stored because it is the one other thing the
+    #: `profile` scope tells us that this app can use: a face next to a name in
+    #: the staff header, and a second point of reference for a reviewer. It is
+    #: a URL Google hosts, never an image we hold.
+    avatar_url: Mapped[str | None] = mapped_column(Text)
     auth_method: Mapped[str] = mapped_column(Text, nullable=False, server_default="MICROSOFT_SSO")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(

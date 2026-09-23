@@ -25,6 +25,8 @@ class IdentityClaims(BaseModel):
     email: str | None
     display_name: str
     auth_method: str
+    #: Optional: only a real IdP supplies one. The dev provider leaves it None.
+    avatar_url: str | None = None
 
 
 @runtime_checkable

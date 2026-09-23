@@ -25,6 +25,8 @@ export interface MeResponse {
   user_id: string;
   net_id: string;
   display_name: string;
+  /** Google's `picture`, or null on the dev provider. */
+  avatar_url?: string | null;
   email: string | null;
   roles: Role[];
   event: EventSummary;

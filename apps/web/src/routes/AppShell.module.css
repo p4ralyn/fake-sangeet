@@ -172,3 +172,14 @@
     white-space: normal;
   }
 }
+
+/* Google's avatar, when there is one. `referrerPolicy="no-referrer"` on the
+   img stops the URL of the page somebody is on leaking to Google with every
+   load. */
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--maroon);
+  object-fit: cover;
+}

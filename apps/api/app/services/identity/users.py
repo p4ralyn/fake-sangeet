@@ -36,6 +36,12 @@ async def upsert_user(db: AsyncSession, claims: IdentityClaims) -> User:
     user.net_id = claims.net_id
     user.email = claims.email
     user.display_name = claims.display_name
+    # Only overwrite with something. A provider that stops returning `picture`
+    # (scope changed, claim absent) must not silently erase the avatar we
+    # already have — the same reasoning the display name would deserve if any
+    # provider could return it empty.
+    if claims.avatar_url:
+        user.avatar_url = claims.avatar_url
     user.last_login_at = datetime.now(UTC)
     await db.flush()
     return user

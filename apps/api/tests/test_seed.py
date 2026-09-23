@@ -56,7 +56,7 @@ async def test_seed_is_idempotent(db_session, seed_config):
     await seed(db_session, seed_config)
     second = await seed(db_session, seed_config)
 
-    assert second == {"events": 0, "gates": 0, "staff": 0}
+    assert second == {"events": 0, "gates": 0, "staff": 0, "revoked": 0}
     assert await db_session.scalar(select(func.count()).select_from(Event)) == 1
     assert await db_session.scalar(select(func.count()).select_from(EventStaff)) == 3
 

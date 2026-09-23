@@ -40,8 +40,11 @@ async def test_me_returns_the_owner_payload(client, seeded_staff):
     assert body["display_name"] == "Owner Test"
     assert body["event"]["slug"] == "dryrun"
     assert body["csrf_token"]
+    # An exact set, not a subset: this is the assertion that catches a field
+    # being added to /me without somebody deciding it belongs there.
     assert set(body) == {
-        "user_id", "net_id", "display_name", "email", "roles", "event", "csrf_token"
+        "user_id", "net_id", "display_name", "avatar_url", "email", "roles",
+        "event", "csrf_token",
     }
 
 

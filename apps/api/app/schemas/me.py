@@ -18,6 +18,8 @@ class MeResponse(BaseModel):
     net_id: str
     display_name: str
     email: str | None
+    #: Null for anyone who has not signed in with a provider that supplies one.
+    avatar_url: str | None = None
     roles: list[Role]
     event: EventSummary
     csrf_token: str

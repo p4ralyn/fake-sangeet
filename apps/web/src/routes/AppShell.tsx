@@ -71,6 +71,17 @@ export function AppShell() {
 
         {user && (
           <div className={styles.identity}>
+            {user.avatar_url && (
+              <img
+                className={styles.avatar}
+                src={user.avatar_url}
+                alt=""
+                // Decorative: the name is right beside it, so announcing the
+                // picture as well would just say the name twice.
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+              />
+            )}
             <span className={styles.name}>{user.display_name}</span>
             <span className={styles.role}>{user.roles.join(", ")}</span>
             <Button variant="quiet" onClick={() => void signOut()}>

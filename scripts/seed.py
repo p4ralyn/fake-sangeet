@@ -85,7 +85,7 @@ class SeedConfig(BaseSettings):
 
 
 async def seed(session: AsyncSession, config: SeedConfig) -> dict[str, int]:
-    created = {"events": 0, "gates": 0, "staff": 0}
+    created = {"events": 0, "gates": 0, "staff": 0, "revoked": 0}
 
     event = await session.scalar(select(Event).where(Event.slug == config.event_slug))
     if event is None:
@@ -123,7 +123,15 @@ async def seed(session: AsyncSession, config: SeedConfig) -> dict[str, int]:
         session.add(Gate(event_id=event.id, name=config.event_gate_name))
         created["gates"] = 1
 
-    for net_id, role in config.staff_grants():
+    # Staff are RECONCILED, not merely added: .env is the whole truth about who
+    # holds what. A grant that is no longer listed is deactivated, because
+    # `resolve_roles` filters on `is_active` and leaving a stale row active is
+    # how somebody keeps a role after they were meant to lose it.
+    #
+    # Deactivated rather than deleted: an `event_staff` row is what an audit row
+    # 's `actor_role` refers back to, and removing it would strand that history.
+    desired = set(config.staff_grants())
+    for net_id, role in desired:
         existing = await session.scalar(
             select(EventStaff).where(
                 EventStaff.event_id == event.id,
@@ -136,6 +144,17 @@ async def seed(session: AsyncSession, config: SeedConfig) -> dict[str, int]:
             created["staff"] += 1
         elif not existing.is_active:
             existing.is_active = True
+            created["staff"] += 1
+
+    current = await session.scalars(
+        select(EventStaff).where(
+            EventStaff.event_id == event.id, EventStaff.is_active.is_(True)
+        )
+    )
+    for row in current:
+        if (row.net_id, row.role) not in desired:
+            row.is_active = False
+            created["revoked"] += 1
 
     await session.flush()
     return created

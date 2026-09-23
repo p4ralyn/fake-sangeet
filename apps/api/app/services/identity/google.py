@@ -204,10 +204,18 @@ class GoogleAuthProvider:
                 "We could not verify that sign-in. Try again.",
                 http_status=HTTP_401,
             )
+        # Everything the `profile` scope gives us that this app has a use for.
+        # `name` is why the scope is requested at all: without it every screen
+        # falls back to a NetID, and "Pk944" is not a name to show a volunteer
+        # matching a face at a door. `picture` is the one other claim worth
+        # keeping. `given_name`/`family_name`/`locale` are deliberately dropped
+        # — nothing here reads them, and an unused column holding somebody's
+        # personal data is a liability, not a feature.
         return IdentityClaims(
             subject=sub,
             net_id=net_id,
             email=email,
             display_name=payload.get("name") or net_id,
+            avatar_url=payload.get("picture") or None,
             auth_method="GOOGLE_OAUTH",
         )

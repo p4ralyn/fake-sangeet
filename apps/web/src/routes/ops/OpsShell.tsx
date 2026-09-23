@@ -69,6 +69,15 @@ export function OpsShell() {
           Open the scanner
         </a>
         <p className={styles.who}>
+          {user?.avatar_url && (
+            <img
+              className={styles.avatar}
+              src={user.avatar_url}
+              alt=""
+              aria-hidden="true"
+              referrerPolicy="no-referrer"
+            />
+          )}
           {user?.net_id}
           <br />
           <span className={styles.role}>{user?.roles.join(", ")}</span>

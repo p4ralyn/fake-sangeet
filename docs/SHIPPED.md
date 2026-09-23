@@ -2,7 +2,7 @@
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
 Last updated: M1–M4 complete, scanner built, M6 part-done, transfer shipped,
-selling switched off, ops dashboard. 346 tests.
+selling switched off, ops dashboard, six admins. 360 tests.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -364,6 +364,27 @@ API contract: `docs/design/frontend-api-contract.md`
       not worth the reconnect logic for a four-hour event
 - [x] `/admin/ids` redirects, because people have it bookmarked
 - [x] **15 tests**, each creating a real condition rather than stubbing a feed
+
+## Accounts and identity
+
+- [x] **Six ADMINs**, reconciled from `.env`: zq204, zq203, pk944, zq202,
+      zq205, zq201. pk944 additionally holds OWNER so the role is not orphaned
+- [x] The seed **revokes** grants that leave the config rather than only
+      adding. zq203's old SECURITY row is deactivated, not deleted
+- [x] **Demo data purged.** The three `demo-*` orders, their tickets, passes,
+      seats and queued mail are gone, `scripts/demo_ticket.py` is deleted, and
+      the unused `SEED_DEV_VISITOR_NET_IDS` knob is removed. The database is at
+      0 orders / 0 tickets / 0 seats, ready for a real ingest
+- [x] **Google profile**: `name` and `email` were already carried; `picture`
+      now lands in `users.avatar_url` (migration 0006) and shows in the app
+      header and the ops rail. `given_name`/`family_name`/`locale` are
+      deliberately dropped — nothing reads them, and an unused column of
+      somebody's personal data is a liability
+- [x] A later sign-in without a `picture` claim does not erase the avatar
+      already stored
+- [x] `<img referrerPolicy="no-referrer">`, so the page somebody is on is not
+      sent to Google on every avatar load
+- [x] **14 tests** (360 total)
 
 ## Not started
 
