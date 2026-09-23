@@ -33,10 +33,10 @@ from app.models import (
 )
 from app.models.event import LedgerReason
 from app.models.ingestion import EmailOutbox
-from app.models.user import User
 from app.models.verification import IdImage, Registration, Verification
 from app.services.inventory import release_seats
 from app.services.mailer.outbox import TEMPLATE_TICKET_READY
+from app.services.ticketing.lookup import identity_keys, tickets_for_identities
 
 #: Deleting a ticket is the point of this script, so the seats it held go back.
 #: ADMIN_RELEASE is the ledger's word for "a human took this away", which is
@@ -56,59 +56,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _keys(identity: str) -> list[str]:
-    """Both spellings of one person.
-
-    A ticket's `bound_net_id` holds the NetID alone (`snuphoria`) even when the
-    sheet named them by address, while `users.email` holds the whole thing.
-    Accepting either spelling on the command line and looking for both is the
-    difference between this script working and silently reporting "no tickets
-    matched" — which it did, the first time it was run.
-    """
-    value = identity.strip().lower()
-    local, _, _domain = value.partition("@")
-    return [value] if local == value else [value, local]
-
-
-async def _tickets_for(db, event_id, keys: list[str]) -> list[Ticket]:
-    """Every ticket reachable from a name, by either route it can be attached:
-    bound to the NetID off the sheet, or owned by a signed-in user."""
-    by_net_id = (
-        await db.scalars(
-            select(Ticket).where(Ticket.event_id == event_id, Ticket.bound_net_id.in_(keys))
-        )
-    ).all()
-
-    user_ids = (
-        await db.scalars(select(User.id).where(User.email.in_(keys) | User.net_id.in_(keys)))
-    ).all()
-    by_user = (
-        await db.scalars(
-            select(Ticket).where(Ticket.event_id == event_id, Ticket.user_id.in_(user_ids))
-        )
-        if user_ids
-        else []
-    )
-    by_user = list(by_user)
-
-    # A couple's second ticket hangs off the first and may carry neither key.
-    found = {ticket.id: ticket for ticket in [*by_net_id, *by_user]}
-    partners = (
-        await db.scalars(
-            select(Ticket).where(
-                Ticket.event_id == event_id, Ticket.partner_of.in_(list(found))
-            )
-        )
-        if found
-        else []
-    )
-    for ticket in partners:
-        found.setdefault(ticket.id, ticket)
-    return list(found.values())
-
-
 async def reset(identities: list[str], *, event_slug: str, dry_run: bool) -> int:
-    keys = sorted({key for identity in identities for key in _keys(identity)})
+    keys = identity_keys(identities)
 
     async with session_factory() as db:
         event = await db.scalar(select(Event).where(Event.slug == event_slug))
@@ -116,7 +65,7 @@ async def reset(identities: list[str], *, event_slug: str, dry_run: bool) -> int
             print(f"no event with slug {event_slug!r}", file=sys.stderr)
             return 2
 
-        tickets = await _tickets_for(db, event.id, keys)
+        tickets = await tickets_for_identities(db, event_id=event.id, keys=keys)
         if not tickets:
             print("nothing to reset; no tickets matched")
             return 0

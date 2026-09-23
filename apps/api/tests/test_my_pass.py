@@ -197,6 +197,73 @@ async def test_a_proxy_couple_shows_both_seats_on_one_account(client, db_session
     assert body["tickets"][0]["short_code"] != body["tickets"][1]["short_code"]
 
 
+async def test_both_of_a_proxy_couples_qrs_admit_somebody(client, db_session, staff, event_id):
+    """The half the test above does not cover: two DIFFERENT tokens is not the
+    same as two WORKING tokens.
+
+    One phone carries both seats, so the buyer holds it out twice and two
+    different people walk in. If the second QR were a duplicate of the first,
+    or pointed at the same pass, the second scan would come back as somebody
+    already inside and the partner would be turned away at the door.
+    """
+    from datetime import UTC, datetime
+    from uuid import uuid4
+
+    event = await db_session.get(Event, event_id)
+    order, first = await make_ticket(
+        db_session, event_id, seats=2, seq=1, partner_mode=PartnerMode.PROXY
+    )
+    _, second = await make_ticket(
+        db_session, event_id, seats=2, seq=2, order=order, partner_mode=PartnerMode.PROXY
+    )
+    for ticket in (first, second):
+        await issue_pass(db_session, event=event, ticket=ticket)
+    await db_session.commit()
+
+    holder = await login(client, HOLDER_NET_ID)
+    body = (await client.get("/api/v1/me/pass", headers=holder)).json()
+    tokens = [ticket["qr_token"] for ticket in body["tickets"]]
+    assert len(tokens) == 2
+    client.cookies.clear()
+
+    guard = await login(client, SECURITY_NET_ID)
+    admitted = []
+    for token in tokens:
+        presented = await client.post(
+            "/api/v1/scans",
+            headers=guard,
+            json={
+                "token": token,
+                "client_scan_uuid": str(uuid4()),
+                "occurred_at": datetime.now(UTC).isoformat(),
+            },
+        )
+        assert presented.status_code == 200, presented.text
+        # Each is a fresh arrival: CHECK_IN, never "already inside".
+        assert presented.json()["legal_actions"] == ["CHECK_IN"], presented.text
+        confirmed = await client.post(
+            "/api/v1/scans/confirm",
+            headers=guard,
+            json={"decision_token": presented.json()["decision_token"], "action": "CHECK_IN"},
+        )
+        assert confirmed.status_code == 200, confirmed.text
+        assert confirmed.json()["state"] == "INSIDE"
+        admitted.append(token)
+
+    # Two seats, two headcounts. Asserted against the passes themselves rather
+    # than the response, which is narrowed for SECURITY (§11.5): if both QRs
+    # pointed at one pass, this would be a single row checked in twice.
+    for ticket in (first, second):
+        await db_session.refresh(ticket)
+    inside = [
+        await db_session.scalar(select(Pass).where(Pass.ticket_id == ticket.id))
+        for ticket in (first, second)
+    ]
+    assert len({p.id for p in inside}) == 2
+    assert all(p.current_state is PassState.INSIDE for p in inside)
+    assert len(set(admitted)) == 2  # and the two QRs were genuinely different
+
+
 async def test_a_self_claim_partners_ticket_stays_off_the_buyers_account(
     client, db_session, event_id
 ):
