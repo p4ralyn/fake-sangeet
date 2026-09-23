@@ -1,9 +1,42 @@
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuditLog, Event, FunnelEvent, User
 from app.services.identity.roles import STAFF_ROLE_NAMES, Role
+
+
+def json_safe(value: object) -> object:
+    """Coerce an audit payload into something JSONB can actually store.
+
+    `before`/`after` are JSONB, and psycopg serialises them with the stdlib
+    encoder, which raises on a UUID. Every caller passing one would have to
+    remember to `str()` it, and **one of them forgot**: a raw `device_id` in
+    the ID_IMAGE_VIEWED row turned every scan of a real attendee's pass into a
+    500 at the gate. CLAUDE.md is explicit that a rule which matters gets
+    enforced rather than asked for politely, so the coercion lives here, once,
+    where no call site can skip it.
+
+    Unknown types fall back to `repr` rather than raising. That is a deliberate
+    trade: an audit row is a side record of something that already happened,
+    and failing the scan because the note about it would not serialise is
+    strictly worse than storing an imperfect note. The row is still written,
+    still findable, and still says what happened.
+    """
+    if value is None or isinstance(value, str | bool | int | float):
+        return value
+    if isinstance(value, Enum):
+        return json_safe(value.value)
+    if isinstance(value, UUID | datetime | date | Decimal):
+        return str(value)
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, list | tuple | set | frozenset):
+        return [json_safe(item) for item in value]
+    return repr(value)
 
 
 async def write_audit(
@@ -21,7 +54,11 @@ async def write_audit(
     ip_hash: str | None = None,
     user_agent: str | None = None,
 ) -> None:
-    """Append-only. Never store raw PII in `before`/`after` — hash it first."""
+    """Append-only. Never store raw PII in `before`/`after` — hash it first.
+
+    Payloads are coerced by `json_safe`, so a caller may hand this a UUID, a
+    datetime or an enum without the write failing underneath them.
+    """
     db.add(
         AuditLog(
             event_id=event_id,
@@ -31,8 +68,8 @@ async def write_audit(
             action=action,
             object_type=object_type,
             object_id=object_id,
-            before=before,
-            after=after,
+            before=json_safe(before),
+            after=json_safe(after),
             ip_hash=ip_hash,
             user_agent=user_agent,
         )

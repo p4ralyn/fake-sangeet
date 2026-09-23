@@ -558,7 +558,10 @@ async def present_token(
                 action="ID_IMAGE_VIEWED",
                 object_type="id_image",
                 object_id=image_id,
-                after={"pass_id": str(scanned_pass_id), "device_id": context.device_id},
+                # Both raw: `write_audit` coerces. They used to disagree — one
+                # str()-ed, one not — and that asymmetry is exactly what hid a
+                # UUID that JSONB could not store.
+                after={"pass_id": scanned_pass_id, "device_id": context.device_id},
             )
             await db.commit()
         return outcome

@@ -343,6 +343,95 @@ async def test_a_superseded_serial_is_refused(
     assert response.json()["error"]["code"] == "PASS_SUPERSEDED"
 
 
+
+@pytest_asyncio.fixture
+async def approved_id_photo(db_session, issued_pass, event_id):
+    """A ticket whose ID card was uploaded and approved — i.e. every real
+    attendee on the night, and the only shape that makes the scanner fetch a
+    photo and log that it did.
+
+    COMMITTED for the same reason `issued_pass` is: the ACTION_REQUIRED path
+    releases its lock with a rollback that would take an uncommitted fixture
+    with it.
+    """
+    from app.models import User
+    from app.models.verification import IdImage, Registration, Verification, VerifyOutcome
+
+    user = User(net_id="aarav.test", email="aarav@snu.edu.in", display_name="Aarav Sharma")
+    db_session.add(user)
+    await db_session.flush()
+
+    registration = Registration(
+        event_id=event_id,
+        ticket_id=issued_pass.ticket_id,
+        user_id=user.id,
+        full_name="Aarav Sharma",
+        net_id="aarav.test",
+        email="aarav@snu.edu.in",
+        consent_version="v1",
+        consented_at=datetime.now(UTC),
+    )
+    db_session.add(registration)
+    await db_session.flush()
+
+    image = IdImage(
+        event_id=event_id,
+        registration_id=registration.id,
+        object_key="id-cards/aarav.jpg",
+        content_type="image/jpeg",
+        bytes=1024,
+        sha256="a" * 64,
+    )
+    db_session.add(image)
+    await db_session.flush()
+
+    db_session.add(
+        Verification(
+            event_id=event_id,
+            registration_id=registration.id,
+            id_image_id=image.id,
+            attempt_no=1,
+            outcome=VerifyOutcome.APPROVED,
+        )
+    )
+    await db_session.commit()
+    return image
+
+
+async def test_a_real_attendee_scanned_from_a_real_device_does_not_500(
+    client, scanner_staff, approved_id_photo, token
+):
+    """The night, in one test: somebody who uploaded an ID, scanned by a
+    volunteer on a registered phone.
+
+    This is the path every one of the ~441 attendees takes and the suite never
+    covered it. Two conditions have to coincide before it breaks, which is why
+    it survived 374 tests: the pass needs an APPROVED photo (so the scanner
+    fetches it and writes the ID_IMAGE_VIEWED audit row) AND the scanner has to
+    report a `device_id`. The helper above never sent one.
+    """
+    headers = await login(client, SECURITY_NET_ID)
+
+    response = await client.post(
+        "/api/v1/scans",
+        headers=headers,
+        json={
+            "token": token,
+            "device_id": str(uuid4()),
+            "client_scan_uuid": str(uuid4()),
+            "occurred_at": datetime.now(UTC).isoformat(),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "ACTION_REQUIRED"
+    assert body["legal_actions"] == ["CHECK_IN"]
+    # The photo is the whole reason the audit row exists; if it is missing the
+    # test would pass without ever exercising the branch that broke.
+    assert body["id_image_url"], "no ID photo reached the door"
+
+
 async def test_refreshing_a_departed_pass_makes_it_scannable_again(
     client, db_session, scanner_staff, issued_pass, token
 ):
