@@ -1,19 +1,25 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useSession } from "../../lib/session";
-import { getNotifications, usePolled } from "../../lib/opsApi";
 import styles from "./OpsShell.module.css";
 
 /**
  * The staff area (`/ops`).
  *
- * A rail, not a header: five destinations that people move between all night,
+ * A rail, not a header: three destinations that people move between all night,
  * where a header would push the work down the page on the laptop this is
  * actually used on. The shape follows Primus IQ's workspace pattern, in this
  * app's own palette.
  *
  * It exists because staff navigation did not. An ADMIN on the review queue had
- * no link to anything and had to know URLs — and two things the system already
- * recorded, the ingestion tray and the mail outbox, had no screen at all.
+ * no link to anything and had to know URLs.
+ *
+ * It used to carry five. **Alerts** went because every fact it derived — mail
+ * dead, mail queued, IDs waiting and their age, sheet rows stuck, refusals,
+ * occupancy — is already a number on Tonight, so it was a second rendering of
+ * one screen and a second place to keep in sync. **Sheet rows** went with it:
+ * a stuck row is fixed in the spreadsheet, and `scripts/ingest.py --dry-run`
+ * names every failing row and why, which is the tool for that desk. Tonight
+ * still shows the count, so nobody has to remember to look.
  *
  * Participant screens deliberately do NOT get this chrome: three screens do not
  * need a rail, and nav furniture around somebody's pass makes the pass worse.
@@ -29,21 +35,11 @@ interface Destination {
 const DESTINATIONS: Destination[] = [
   { to: "/ops", label: "Tonight", end: true },
   { to: "/ops/ids", label: "ID review" },
-  { to: "/ops/ingestion", label: "Sheet rows" },
   { to: "/ops/mail", label: "Mail" },
-  { to: "/ops/notifications", label: "Alerts" },
 ];
 
 export function OpsShell() {
   const { user } = useSession();
-  // The badge is the reason the rail is worth having: it is how somebody
-  // notices a dead email from the ID queue. Polled with everything else.
-  const feed = usePolled(getNotifications);
-  const alerts = feed.kind === "ready" ? feed.data.items.length : 0;
-  const loudest =
-    feed.kind === "ready"
-      ? feed.data.items.find((item) => item.severity === "CRITICAL")
-      : undefined;
 
   return (
     <div className={styles.ops}>
@@ -59,9 +55,6 @@ export function OpsShell() {
             }
           >
             {destination.label}
-            {destination.label === "Alerts" && alerts > 0 && (
-              <span className={loudest ? styles.badgeLoud : styles.badge}>{alerts}</span>
-            )}
           </NavLink>
         ))}
 

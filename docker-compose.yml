@@ -54,6 +54,30 @@ services:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
 
+  # The outbox worker. Same image and same environment as `api` — it imports
+  # the same services and must see the same database — but it serves no HTTP
+  # and publishes no port.
+  #
+  # It exists because the queue had nothing draining it: rows went into
+  # `email_outbox` at ingest and sat there until somebody remembered to run
+  # the script by hand. CLAUDE.md rules out Cloud Tasks and a second cloud
+  # service, so the choice was a loop in a container or a cron entry; this is
+  # the loop, and it is one `docker compose` away from being off.
+  mailer:
+    build: ./apps/api
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://unigate:unigate@postgres:5432/unigate
+      REDIS_URL: redis://redis:6379/0
+      PYTHONPATH: /srv/app
+    volumes:
+      - ./apps/api:/srv/app
+      - ./scripts:/srv/scripts
+    command: ["python", "/srv/scripts/mailer.py", "--watch"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
   web:
     image: node:20-alpine
     working_dir: /srv/web

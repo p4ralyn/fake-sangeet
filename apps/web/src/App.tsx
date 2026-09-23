@@ -1,9 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./routes/AppShell";
 import { IdReview } from "./routes/ops/IdReview";
-import { IngestionTray } from "./routes/ops/IngestionTray";
 import { MailHealth } from "./routes/ops/MailHealth";
-import { Notifications } from "./routes/ops/Notifications";
 import { OpsShell } from "./routes/ops/OpsShell";
 import { Tonight } from "./routes/ops/Tonight";
 import { Landing } from "./routes/Landing";
@@ -89,9 +87,7 @@ export function App() {
         >
           <Route index element={<Tonight />} />
           <Route path="ids" element={<IdReview />} />
-          <Route path="ingestion" element={<IngestionTray />} />
           <Route path="mail" element={<MailHealth />} />
-          <Route path="notifications" element={<Notifications />} />
         </Route>
 
         {/* The review queue used to live here and people have it bookmarked. */}

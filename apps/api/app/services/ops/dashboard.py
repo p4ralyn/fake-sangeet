@@ -31,37 +31,17 @@ from app.models import (
     Verification,
 )
 from app.schemas.ops import (
-    SEVERITY_ORDER,
-    IngestionErrorItem,
-    IngestionTray,
     MailHealth,
     MailProblem,
-    Notification,
-    NotificationFeed,
     Occupancy,
     OpsSummary,
     Queues,
     Seats,
-    Severity,
 )
 
 #: How far back "recent" looks on the Tonight panel. Long enough to survive a
 #: lull between arrivals, short enough that a dead gate shows up quickly.
 RECENT_WINDOW_MINUTES = 15
-
-#: An ID waiting longer than this means the review desk is behind. Fifteen
-#: minutes is roughly how long somebody will wait before asking a volunteer
-#: what is happening.
-IDS_STALE_MINUTES = 15
-
-#: Occupancy alert threshold, as LLD-v1 §6's `warn_at_pct`.
-OCCUPANCY_WARN_PCT = 90
-
-
-def plural(count: int, singular: str, many: str | None = None) -> str:
-    """"1 email" / "2 emails". These strings are read at a glance by somebody
-    deciding whether to act, and "1 emails gave up" reads as a broken page."""
-    return f"{count} {singular if count == 1 else (many or singular + 's')}"
 
 
 async def occupancy(db: AsyncSession, *, event_id: UUID) -> Occupancy:
@@ -149,157 +129,6 @@ async def summary(db: AsyncSession, *, event_id: UUID) -> OpsSummary:
         ),
         scans_window_minutes=RECENT_WINDOW_MINUTES,
         generated_at=datetime.now(UTC),
-    )
-
-
-async def notifications(db: AsyncSession, *, event_id: UUID) -> NotificationFeed:
-    """The derived feed. Each rule reads one fact and says what to do about it.
-
-    Ordered worst-first. A feed that buries a dead gate under three information
-    lines is a feed nobody reads twice.
-    """
-    facts = await summary(db, event_id=event_id)
-    items: list[Notification] = []
-
-    if facts.queues.mail_dead:
-        items.append(
-            Notification(
-                kind="MAIL_DEAD",
-                severity=Severity.CRITICAL,
-                title=f"{plural(facts.queues.mail_dead, 'email')} gave up",
-                detail=(
-                    "These people were never told their ticket is ready. "
-                    "Check the error and re-queue or contact them."
-                ),
-                href="/ops/mail",
-                count=facts.queues.mail_dead,
-            )
-        )
-
-    if facts.refusals_recent:
-        items.append(
-            Notification(
-                kind="SCAN_REFUSALS",
-                severity=Severity.WARNING,
-                title=f"{plural(facts.refusals_recent, 'scan')} refused at the gate",
-                detail=(
-                    f"In the last {facts.scans_window_minutes} minutes. Revoked, "
-                    "unknown or superseded passes — worth a look if it keeps climbing."
-                ),
-                count=facts.refusals_recent,
-            )
-        )
-
-    stale = facts.queues.ids_oldest_minutes
-    if facts.queues.ids_waiting and stale is not None and stale >= IDS_STALE_MINUTES:
-        items.append(
-            Notification(
-                kind="IDS_STALE",
-                severity=Severity.WARNING,
-                title=f"An ID has waited {stale} minutes",
-                detail=(
-                    f"{facts.queues.ids_waiting} waiting. Somebody is refreshing a page "
-                    "wondering whether it worked."
-                ),
-                href="/ops/ids",
-                count=facts.queues.ids_waiting,
-            )
-        )
-    elif facts.queues.ids_waiting:
-        items.append(
-            Notification(
-                kind="IDS_WAITING",
-                severity=Severity.INFO,
-                title=f"{plural(facts.queues.ids_waiting, 'ID')} to review",
-                detail="The queue is keeping up.",
-                href="/ops/ids",
-                count=facts.queues.ids_waiting,
-            )
-        )
-
-    if facts.queues.ingestion_unresolved:
-        items.append(
-            Notification(
-                kind="INGESTION_ERRORS",
-                severity=Severity.WARNING,
-                title=(
-                    f"{plural(facts.queues.ingestion_unresolved, 'sheet row')} "
-                    f"{'needs' if facts.queues.ingestion_unresolved == 1 else 'need'} a human"
-                ),
-                detail=(
-                    "These people have no ticket until the row is fixed and the "
-                    "ingester is run again."
-                ),
-                href="/ops/ingestion",
-                count=facts.queues.ingestion_unresolved,
-            )
-        )
-
-    if facts.seats.total:
-        filled_pct = round(100 * facts.occupancy.inside / facts.seats.total)
-        if filled_pct >= OCCUPANCY_WARN_PCT:
-            items.append(
-                Notification(
-                    kind="OCCUPANCY_HIGH",
-                    severity=Severity.WARNING,
-                    title=f"Room is {filled_pct}% full",
-                    detail=(
-                        f"{facts.occupancy.inside} of {facts.seats.total} inside. "
-                        "The cap is a fire limit, not a target."
-                    ),
-                    count=facts.occupancy.inside,
-                )
-            )
-
-    if facts.queues.mail_queued:
-        items.append(
-            Notification(
-                kind="MAIL_QUEUED",
-                severity=Severity.INFO,
-                title=f"{plural(facts.queues.mail_queued, 'email')} waiting to send",
-                detail="Run scripts/mailer.py, or leave it if the worker is running.",
-                href="/ops/mail",
-                count=facts.queues.mail_queued,
-            )
-        )
-
-    items.sort(key=lambda item: SEVERITY_ORDER[item.severity])
-    return NotificationFeed(items=items, generated_at=facts.generated_at)
-
-
-async def ingestion_tray(
-    db: AsyncSession, *, event_id: UUID, limit: int = 100
-) -> IngestionTray:
-    """The rows M3 could not mint. Until this screen existed they sat in a
-    table nobody could see."""
-    rows = (
-        await db.scalars(
-            select(IngestionError)
-            .where(
-                IngestionError.event_id == event_id,
-                IngestionError.resolved_at.is_(None),
-            )
-            .order_by(IngestionError.created_at)
-            .limit(limit)
-        )
-    ).all()
-    return IngestionTray(
-        unresolved=await _count(
-            db,
-            IngestionError,
-            IngestionError.event_id == event_id,
-            IngestionError.resolved_at.is_(None),
-        ),
-        items=[
-            IngestionErrorItem(
-                id=row.id,
-                row_ref=row.row_ref,
-                reason=row.reason,
-                raw=row.raw,
-                created_at=row.created_at,
-            )
-            for row in rows
-        ],
     )
 
 

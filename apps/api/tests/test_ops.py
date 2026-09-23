@@ -9,20 +9,35 @@ from datetime import UTC, datetime, timedelta
 import pytest_asyncio
 from sqlalchemy import text
 
+from app.api.v1.routes import ops as ops_routes
 from app.models import (
     EmailStatus,
     Event,
-    IngestionError,
     Order,
     PassState,
     Ticket,
     TicketStatus,
-    VerifyOutcome,
 )
-from app.schemas.ops import Severity
 from app.services.mailer.outbox import TEMPLATE_TICKET_READY, QueuedEmail, queue_email
 from app.services.ops import dashboard
 from app.services.passes.issue import issue_pass
+
+#: Every path the ops router actually serves, derived from the router rather
+#: than typed out. A hardcoded copy is how an endpoint gets added without the
+#: role tests below ever seeing it — CLAUDE.md has caught that twice already.
+OPS_PATHS = sorted(
+    route.path.removeprefix("/api/v1/ops/")
+    for route in ops_routes.router.routes
+)
+# Without this the role tests below would pass vacuously if the router were
+# ever empty: `for path in []` asserts nothing and still goes green. That is
+# the exact shape of the five tests this project has already had pass for the
+# wrong reason.
+assert OPS_PATHS, "the ops router serves nothing; the role tests below prove nothing"
+
+#: Panels that were removed. Listed so the role tests cannot quietly stop
+#: covering an endpoint that came back without a guard.
+REMOVED_OPS_PATHS = ("notifications", "ingestion-errors")
 
 ADMIN_NET_ID = "zq202"
 OWNER_NET_ID = "pk944owner"
@@ -135,190 +150,6 @@ async def test_the_summary_counts_recent_scans_and_refusals(db_session, event_id
     assert facts.refusals_recent == 1
 
 
-# ── the derived feed ─────────────────────────────────────────────────────────
-async def test_a_quiet_event_produces_an_empty_feed(db_session, event_id):
-    """Nothing wrong means nothing to say. A feed that always has items in it
-    trains people to ignore it."""
-    feed = await dashboard.notifications(db_session, event_id=event_id)
-    assert feed.items == []
-
-
-async def test_a_dead_email_is_the_loudest_thing_on_the_board(db_session, event_id):
-    await queue_email(
-        db_session,
-        event_id=event_id,
-        message=QueuedEmail(
-            to_email="nobody@snu.edu.in",
-            template=TEMPLATE_TICKET_READY,
-            idempotency_key="dead-1",
-        ),
-    )
-    await db_session.execute(
-        text("UPDATE email_outbox SET status = :s, attempts = 6"),
-        {"s": EmailStatus.DEAD.value},
-    )
-    await db_session.flush()
-
-    feed = await dashboard.notifications(db_session, event_id=event_id)
-
-    assert feed.items[0].kind == "MAIL_DEAD"
-    assert feed.items[0].severity is Severity.CRITICAL
-    assert feed.items[0].count == 1
-    assert feed.items[0].href == "/ops/mail"
-
-
-async def test_unresolved_sheet_rows_surface_as_a_warning(db_session, event_id):
-    """Until this feed existed, these four rows sat in a table nobody could
-    see, and the people on them had no ticket."""
-    db_session.add(
-        IngestionError(
-            event_id=event_id,
-            row_ref="EARLY_BIRD/INFERNO:37",
-            reason="buyer identity unreadable",
-            raw={"buyer_raw": "???"},
-        )
-    )
-    await db_session.flush()
-
-    feed = await dashboard.notifications(db_session, event_id=event_id)
-    item = next(item for item in feed.items if item.kind == "INGESTION_ERRORS")
-
-    assert item.severity is Severity.WARNING
-    assert item.count == 1
-    assert item.href == "/ops/ingestion"
-
-
-async def test_a_waiting_id_is_information_but_a_stale_one_is_a_warning(
-    db_session, event_id
-):
-    from app.models import IdImage, Registration, Verification
-
-    registration = Registration(
-        event_id=event_id,
-        ticket_id=(
-            await make_pass(db_session, event_id, seq=9, state=PassState.NOT_ARRIVED)
-        ).ticket_id,
-        user_id=None,
-        full_name="Aarav",
-        net_id=HOLDER,
-        email=f"{HOLDER}@snu.edu.in",
-        consent_version="v1",
-        consented_at=datetime.now(UTC),
-    )
-    # user_id is NOT NULL, so borrow one.
-    await db_session.execute(
-        text("INSERT INTO users (id, net_id, email) VALUES (gen_random_uuid(), :n, :e)"),
-        {"n": HOLDER, "e": f"{HOLDER}@snu.edu.in"},
-    )
-    user_id = await db_session.scalar(
-        text("SELECT id FROM users WHERE net_id = :n"), {"n": HOLDER}
-    )
-    registration.user_id = user_id
-    db_session.add(registration)
-    await db_session.flush()
-    image = IdImage(
-        event_id=event_id,
-        registration_id=registration.id,
-        object_key="k",
-        content_type="image/jpeg",
-        bytes=10,
-        sha256="abc",
-    )
-    db_session.add(image)
-    await db_session.flush()
-    verification = Verification(
-        event_id=event_id,
-        registration_id=registration.id,
-        id_image_id=image.id,
-        attempt_no=1,
-        outcome=VerifyOutcome.MANUAL_REVIEW,
-    )
-    db_session.add(verification)
-    await db_session.flush()
-
-    fresh = await dashboard.notifications(db_session, event_id=event_id)
-    assert next(i for i in fresh.items if i.kind == "IDS_WAITING").severity is Severity.INFO
-
-    # Age it past the threshold.
-    await db_session.execute(
-        text("UPDATE verifications SET created_at = :t"),
-        {"t": datetime.now(UTC) - timedelta(minutes=dashboard.IDS_STALE_MINUTES + 5)},
-    )
-    await db_session.flush()
-
-    stale = await dashboard.notifications(db_session, event_id=event_id)
-    item = next(i for i in stale.items if i.kind == "IDS_STALE")
-    assert item.severity is Severity.WARNING
-    assert "minutes" in item.title
-
-
-async def test_the_feed_is_ordered_worst_first(db_session, event_id):
-    db_session.add(
-        IngestionError(event_id=event_id, row_ref="r", reason="broken", raw={})
-    )
-    await queue_email(
-        db_session,
-        event_id=event_id,
-        message=QueuedEmail(
-            to_email="a@snu.edu.in", template=TEMPLATE_TICKET_READY, idempotency_key="k1"
-        ),
-    )
-    await queue_email(
-        db_session,
-        event_id=event_id,
-        message=QueuedEmail(
-            to_email="b@snu.edu.in", template=TEMPLATE_TICKET_READY, idempotency_key="k2"
-        ),
-    )
-    await db_session.execute(
-        text("UPDATE email_outbox SET status = :s WHERE idempotency_key = 'k2'"),
-        {"s": EmailStatus.DEAD.value},
-    )
-    await db_session.flush()
-
-    feed = await dashboard.notifications(db_session, event_id=event_id)
-    severities = [item.severity for item in feed.items]
-
-    assert severities[0] is Severity.CRITICAL
-    order = ["CRITICAL", "WARNING", "INFO"]
-    assert severities == sorted(severities, key=lambda s: order.index(s.value))
-
-
-# ── the trays ────────────────────────────────────────────────────────────────
-async def test_the_ingestion_tray_shows_the_raw_row_so_it_can_be_fixed(
-    db_session, event_id
-):
-    db_session.add(
-        IngestionError(
-            event_id=event_id,
-            row_ref="PHASE1:97",
-            reason="buyer identity unreadable",
-            raw={"buyer_raw": "Rohan (no id)", "name": "Rohan"},
-        )
-    )
-    await db_session.flush()
-
-    tray = await dashboard.ingestion_tray(db_session, event_id=event_id)
-
-    assert tray.unresolved == 1
-    assert tray.items[0].row_ref == "PHASE1:97"
-    # The whole point: an admin has to read this to repair the sheet.
-    assert tray.items[0].raw["buyer_raw"] == "Rohan (no id)"
-
-
-async def test_a_resolved_row_leaves_the_tray(db_session, event_id):
-    db_session.add(
-        IngestionError(
-            event_id=event_id, row_ref="r", reason="broken", raw={},
-            resolved_at=datetime.now(UTC),
-        )
-    )
-    await db_session.flush()
-
-    tray = await dashboard.ingestion_tray(db_session, event_id=event_id)
-    assert tray.unresolved == 0 and tray.items == []
-
-
 async def test_mail_health_separates_a_queue_from_a_problem(db_session, event_id):
     """A row that has never been tried is a queue, not a problem. Listing it
     as one buries the rows that actually failed."""
@@ -363,7 +194,7 @@ async def test_the_dashboard_needs_a_session(client, event_id):
 
 async def test_a_participant_cannot_see_the_dashboard(client, event_id):
     headers = await login(client, HOLDER)
-    for path in ("summary", "notifications", "ingestion-errors", "mail"):
+    for path in OPS_PATHS:
         assert (await client.get(f"/api/v1/ops/{path}", headers=headers)).status_code == 403
 
 
@@ -372,7 +203,7 @@ async def test_security_cannot_see_the_dashboard(client, staff, event_id):
     their scan response is narrowed on purpose — handing that same device the
     whole queue would undo the narrowing."""
     headers = await login(client, SECURITY_NET_ID)
-    for path in ("summary", "notifications", "ingestion-errors", "mail"):
+    for path in OPS_PATHS:
         assert (await client.get(f"/api/v1/ops/{path}", headers=headers)).status_code == 403
 
 
@@ -384,8 +215,7 @@ async def test_an_admin_sees_every_panel(client, staff, event_id):
     assert summary.json()["seats"]["total"] == 150
     assert summary.json()["scans_window_minutes"] == dashboard.RECENT_WINDOW_MINUTES
 
-    for path in ("notifications", "ingestion-errors", "mail"):
-        assert (await client.get(f"/api/v1/ops/{path}", headers=headers)).status_code == 200
+    assert (await client.get("/api/v1/ops/mail", headers=headers)).status_code == 200
 
 
 async def test_an_owner_sees_every_panel_too(client, staff, event_id):
@@ -394,6 +224,18 @@ async def test_an_owner_sees_every_panel_too(client, staff, event_id):
     and "you are not allowed in" look identical from outside."""
     headers = await login(client, OWNER_NET_ID)
 
-    for path in ("summary", "notifications", "ingestion-errors", "mail"):
+    for path in OPS_PATHS:
         response = await client.get(f"/api/v1/ops/{path}", headers=headers)
         assert response.status_code == 200, path
+
+
+async def test_the_removed_panels_are_gone_not_merely_unlinked(client, staff, event_id):
+    """Alerts and the sheet-row tray were cut because every number they showed
+    is on Tonight. An endpoint left serving after its screen goes is a thing
+    nobody tests and nobody guards, so assert it is actually gone — for an
+    OWNER, the one role that could otherwise reach it."""
+    headers = await login(client, OWNER_NET_ID)
+    for path in REMOVED_OPS_PATHS:
+        response = await client.get(f"/api/v1/ops/{path}", headers=headers)
+        assert response.status_code == 404, path
+        assert path not in OPS_PATHS

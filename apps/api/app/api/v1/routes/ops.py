@@ -1,7 +1,13 @@
 """The ops dashboard (ADMIN/OWNER).
 
-Thin: authorize, call a read, return it. Every rule about what counts as a
-notification lives in `services/ops/dashboard.py`.
+Thin: authorize, call a read, return it. Every rule about what a number means
+lives in `services/ops/dashboard.py`.
+
+Two endpoints were removed rather than left unused. `/notifications` derived a
+feed entirely from numbers `/summary` already returns, so it was a second
+answer that could disagree with the first; `/ingestion-errors` listed rows that
+are repaired in the spreadsheet, where `scripts/ingest.py --dry-run` names them
+better. `/summary` still counts both, so nothing became invisible.
 
 **SECURITY is deliberately not allowed here**, even for notifications. A gate
 volunteer's tool is `/scan`; their phone is often borrowed and their scan
@@ -12,7 +18,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db, require_role
-from app.schemas.ops import IngestionTray, MailHealth, NotificationFeed, OpsSummary
+from app.schemas.ops import MailHealth, OpsSummary
 from app.services.identity.roles import Role, get_current_event
 from app.services.identity.sessions import SessionData
 from app.services.ops import dashboard
@@ -32,24 +38,6 @@ async def summary(
 ) -> OpsSummary:
     event = await get_current_event(db)
     return await dashboard.summary(db, event_id=event.id)
-
-
-@router.get("/notifications", response_model=NotificationFeed)
-async def notifications(
-    session: SessionData = Depends(staff),
-    db: AsyncSession = Depends(get_db),
-) -> NotificationFeed:
-    event = await get_current_event(db)
-    return await dashboard.notifications(db, event_id=event.id)
-
-
-@router.get("/ingestion-errors", response_model=IngestionTray)
-async def ingestion_errors(
-    session: SessionData = Depends(staff),
-    db: AsyncSession = Depends(get_db),
-) -> IngestionTray:
-    event = await get_current_event(db)
-    return await dashboard.ingestion_tray(db, event_id=event.id)
 
 
 @router.get("/mail", response_model=MailHealth)

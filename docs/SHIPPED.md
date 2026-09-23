@@ -347,16 +347,20 @@ API contract: `docs/design/frontend-api-contract.md`
       the real 600 cap; scans and refusals in the last 15 minutes. A gate that
       has gone quiet says so, because quiet at 18:20 is either finished or
       broken
-- [x] **Sheet rows** — the `ingestion_errors` tray, which had existed since M3
-      with **no screen at all**. Shows the normaliser's own view of the broken
-      row, because the fix is to go and repair the workbook
 - [x] **Mail** — outbox health and the rows that need a person. A never-tried
       row is a queue, not a problem, and is counted rather than listed
-- [x] **Alerts** — derived, with no `notifications` table. Computed from the
-      review queue, the ingestion tray, the outbox and the scan log, so it
-      cannot drift out of sync and no service can forget to write to it.
-      Ordered worst-first; an empty feed is the normal state and says so
-- [x] Severity carried by a band, a tag and wording — never colour alone
+- [x] **Alerts and Sheet rows were built, then removed.** Both were real and
+      both worked; they were cut because the rail is read at a glance during a
+      four-hour event and two of its five entries were showing numbers Tonight
+      already showed. Alerts derived every item from facts on Tonight — mail
+      dead, mail queued, IDs waiting and their age, sheet rows stuck,
+      refusals, occupancy — so it was a second answer that could disagree with
+      the first. Sheet rows listed the `ingestion_errors` tray, but a stuck row
+      is repaired in the workbook, and `scripts/ingest.py --dry-run` names
+      every failing row and its reason at the desk where that work happens.
+      Tonight still counts both, so nothing became invisible. The endpoints
+      went with the screens rather than being left unused, and a test asserts
+      they 404
 - [x] **SECURITY is refused the whole area.** Their tool is `/scan`; handing a
       borrowed phone the queue would undo §11.5's narrowing
 - [x] Polled at 10s rather than SSE. LLD-v1 §19 specifies SSE citing Primus

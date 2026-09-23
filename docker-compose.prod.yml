@@ -28,6 +28,12 @@ services:
     ports: []            # reachable only through Caddy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 
+  mailer:
+    # The one service that must come back by itself: nobody is watching a
+    # queue drain at 18:00, and a worker that died quietly at 17:40 looks
+    # exactly like an empty queue on the Mail panel.
+    restart: unless-stopped
+
   web:
     restart: unless-stopped
     ports: []

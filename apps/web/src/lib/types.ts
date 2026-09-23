@@ -467,37 +467,6 @@ export interface OpsSummary {
   generated_at: string;
 }
 
-export type Severity = "CRITICAL" | "WARNING" | "INFO";
-
-export interface Notification {
-  kind: string;
-  severity: Severity;
-  title: string;
-  detail: string;
-  href: string | null;
-  count: number | null;
-}
-
-export interface NotificationFeed {
-  items: Notification[];
-  generated_at: string;
-}
-
-export interface IngestionErrorItem {
-  id: string;
-  row_ref: string | null;
-  reason: string;
-  /** The normaliser's view of the broken row. Carries attendee data on
-   * purpose — an admin has to read it to repair the sheet. */
-  raw: Record<string, unknown> | null;
-  created_at: string;
-}
-
-export interface IngestionTray {
-  unresolved: number;
-  items: IngestionErrorItem[];
-}
-
 export interface MailProblem {
   id: string;
   to_email: string;

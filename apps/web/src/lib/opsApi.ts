@@ -10,9 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "./api";
 import type {
-  IngestionTray,
   MailHealth,
-  NotificationFeed,
   OpsSummary,
 } from "./types";
 
@@ -20,10 +18,6 @@ import type {
 export const POLL_MS = 10_000;
 
 export const getSummary = () => api.get<OpsSummary>("/api/v1/ops/summary");
-export const getNotifications = () =>
-  api.get<NotificationFeed>("/api/v1/ops/notifications");
-export const getIngestionTray = () =>
-  api.get<IngestionTray>("/api/v1/ops/ingestion-errors");
 export const getMailHealth = () => api.get<MailHealth>("/api/v1/ops/mail");
 
 export type Loaded<T> =
