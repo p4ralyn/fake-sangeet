@@ -1,8 +1,13 @@
-/* Gate scanner shell. Fixed and full-bleed: this route is mounted outside
-   the AppShell, so there is no brand header, no mandala corners and no 34rem
-   column. A volunteer at a door needs the camera and three facts, nothing
-   else. Flat fills and hairlines only — the app-wide no-gradient,
-   no-box-shadow rule holds here too. */
+/* Gate scanner shell — the poster identity, at a door.
+
+   Saffron ground, scarlet bands top and bottom, cream reading surfaces, flat
+   fills and hairlines. The route is mounted outside the AppShell so there is
+   no brand header, no mandala corners and no 34rem column: a volunteer needs
+   the camera and three facts.
+
+   The viewport stays black. See the note on the gate tokens — a bright
+   surround washes out a live preview, and the camera has to be the readable
+   thing on screen. */
 
 .gate {
   position: fixed;
@@ -12,8 +17,8 @@
      grid would leave the footer under it, out of thumb reach. */
   grid-template-rows: auto 1fr auto;
   height: 100dvh;
-  background: var(--gate-ground);
-  color: var(--cream);
+  background: var(--saffron);
+  color: var(--maroon);
 }
 
 /* ── header: which door, who is holding it, is it connected ─────────────── */
@@ -22,8 +27,9 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 1rem;
-  background: var(--gate-surface);
-  border-bottom: 1px solid var(--gate-line);
+  background: var(--gate-band);
+  color: var(--cream);
+  border-bottom: 2px solid var(--maroon);
   font-size: var(--text-xs);
 }
 
@@ -37,35 +43,37 @@
 
 .operator {
   margin-left: auto;
-  color: color-mix(in srgb, var(--cream) 70%, transparent);
+  color: color-mix(in srgb, var(--cream) 80%, transparent);
 }
 
 .pillOnline,
 .pillOffline {
   padding: 0.125rem 0.5rem;
   border-radius: 2px;
-  border: 1px solid currentColor;
-  font-weight: 600;
+  border: 2px solid currentColor;
+  font-weight: 700;
   white-space: nowrap;
 }
 
+/* Marigold on the scarlet band: the poster's own high-contrast pairing. */
 .pillOnline {
   color: var(--marigold);
 }
 
-/* Offline is scarlet-on-cream rather than a tinted outline: at a gate it is
-   the difference between "the next scan will fail" and "everything is fine". */
+/* Offline flips to a filled cream chip — at a gate it is the difference
+   between "the next scan will fail" and "everything is fine". */
 .pillOffline {
-  background: var(--scarlet);
-  border-color: var(--scarlet);
-  color: var(--cream);
+  background: var(--cream);
+  border-color: var(--cream);
+  color: var(--scarlet);
 }
 
 /* ── the viewfinder ─────────────────────────────────────────────────────── */
 .viewport {
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: var(--gate-viewport);
+  border-bottom: 2px solid var(--maroon);
 }
 
 .video {
@@ -75,15 +83,15 @@
   display: block;
 }
 
-/* A frame, not a target: the QR goes anywhere inside it. Drawn in marigold
-   so it reads against a phone screen, a dark jacket or a lit lobby alike. */
+/* A frame, not a target: the QR goes anywhere inside it. Marigold reads
+   against a phone screen, a dark jacket or a lit lobby alike. */
 .reticle {
   position: absolute;
   inset: 50% 50%;
   width: min(62vw, 16rem);
   height: min(62vw, 16rem);
   translate: -50% -50%;
-  border: 2px solid var(--marigold);
+  border: 3px solid var(--marigold);
   border-radius: 2px;
 }
 
@@ -99,15 +107,18 @@
   max-width: none;
   padding: 0.625rem 0.875rem;
   border-radius: 2px;
-  background: var(--gate-surface);
-  border: 1px solid var(--gate-line);
+  background: var(--cream);
+  color: var(--maroon);
+  border: 2px solid var(--maroon);
   font-size: var(--text-xs);
+  font-weight: 600;
   text-align: center;
 }
 
 .cameraBlocked {
   background: var(--scarlet);
-  border-color: var(--scarlet);
+  border-color: var(--maroon);
+  color: var(--cream);
   font-size: var(--text-sm);
 }
 
@@ -120,8 +131,9 @@
   padding: 0.75rem 1rem;
   /* Keeps the controls clear of the home indicator on a notched phone. */
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-  background: var(--gate-surface);
-  border-top: 1px solid var(--gate-line);
+  background: var(--gate-band);
+  color: var(--cream);
+  border-top: 2px solid var(--maroon);
   font-size: var(--text-xs);
 }
 
@@ -133,26 +145,26 @@
   border-radius: 2px;
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: background-color var(--motion-fast) ease;
 }
 
 .torch {
   background: transparent;
-  border: 2px solid var(--gate-line);
+  border: 2px solid var(--cream);
   color: var(--cream);
 }
 
 .torchOn {
   background: var(--marigold);
-  border: 2px solid var(--marigold);
+  border: 2px solid var(--maroon);
   color: var(--maroon);
 }
 
 .count,
 .footerNote {
-  color: color-mix(in srgb, var(--cream) 70%, transparent);
+  color: color-mix(in srgb, var(--cream) 80%, transparent);
 }
 
 /* ── overlays: the decision card and the result field ───────────────────── */
@@ -169,32 +181,31 @@
   display: grid;
   place-items: center;
   padding: 1.5rem;
-  background: var(--gate-ground);
-  color: var(--cream);
+  background: var(--saffron);
+  color: var(--maroon);
 }
 
+/* A cream card on saffron, like every other reading surface in the app. */
 .setupForm {
   width: min(100%, 24rem);
+  padding: 1.5rem;
+  background: var(--cream);
+  border: 2px solid var(--maroon);
+  border-radius: 2px;
 }
 
-/* Overrides the global h1 (scarlet fill + hard maroon extrusion), which is
-   specified for cream cards only — see the note in base.css. On the gate's
-   dark ground the maroon extrusion is invisible and the scarlet fill is
-   unreadable, so display type here is marigold and flat. Same local-override
-   pattern Pass.module.css already uses for headings off the cream card. */
+/* The global h1 rule (scarlet fill + hard maroon extrusion) is specified for
+   cream cards, and this is one — so it applies as written, no override. */
 .setupTitle {
   margin: 0 0 0.5rem;
-  font-family: var(--font-display);
   font-size: var(--text-xl);
-  line-height: 1.1;
-  color: var(--marigold);
-  text-shadow: none;
 }
 
 .setupNote {
   margin: 0 0 1.25rem;
+  max-width: none;
   font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--cream) 72%, transparent);
+  color: var(--muted);
 }
 
 .setupInput {
@@ -202,30 +213,34 @@
   min-height: 48px;
   padding: 0.625rem 0.75rem;
   margin-bottom: 0.75rem;
-  border: 2px solid var(--gate-line);
+  border: 2px solid var(--maroon);
   border-radius: 2px;
-  background: var(--gate-surface);
-  color: var(--cream);
+  background: var(--cream);
+  color: var(--maroon);
   font-family: var(--font-body);
   font-size: var(--text-md);
 }
 
 .setupInput:focus-visible {
-  outline: 2px solid var(--marigold);
+  outline: 2px solid var(--magenta);
   outline-offset: 2px;
 }
 
 .setupSubmit {
   width: 100%;
   min-height: 48px;
-  border: 2px solid var(--marigold);
+  border: 2px solid var(--maroon);
   border-radius: 2px;
-  background: var(--marigold);
-  color: var(--maroon);
+  background: var(--scarlet);
+  color: var(--cream);
   font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;
+}
+
+.setupSubmit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--scarlet) 85%, var(--maroon));
 }
 
 .setupSubmit:disabled {

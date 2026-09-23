@@ -1,7 +1,8 @@
 # unigate — shipped checkpoint
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
-Last updated: M1–M4 complete, gate scanner built, M6 part-done. 301 tests.
+Last updated: M1–M4 complete, scanner built, M6 part-done, transfer shipped,
+selling switched off. 331 tests.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -299,6 +300,43 @@ API contract: `docs/design/frontend-api-contract.md`
 - [ ] Offline scanning — still needs a server-issued, gate-scoped verification
       key, which nothing mints yet
 - [ ] Occupancy dashboard, paper fallback export
+
+## Pass transfer
+
+- [x] A holder types a NetID; the ticket moves and the recipient starts the ID
+      check from the beginning, because the check exists to match a face to a
+      pass and the face just changed
+- [x] **Closes at 15:00 IST on 15 October** — three hours before doors,
+      enforced on every request, derived from `events.starts_at` minus a
+      configured lead time so moving the event moves the deadline with it
+- [x] The old holder's QR dies on the spot: the pass is revoked AND its
+      `serial` is bumped, so every token already on their phone stops working
+      without needing them to cooperate
+- [x] The previous holder's registration is **superseded, not deleted** — a
+      partial unique index (migration 0005) keeps "one LIVE registration per
+      ticket" while the verification history accumulates underneath
+- [x] Reissue revives the same `passes` row with a higher serial rather than
+      minting a second one, because `passes.ticket_id` is UNIQUE
+- [x] One person still holds at most one live ticket; refused as a sentence
+      rather than a constraint violation
+- [x] Two-step confirm that repeats the NetID back, since transfer is
+      irreversible from the holder's side; a pasted email is accepted
+- [x] Audit row naming both sides, **hashed** — an audit log is not a place to
+      keep a plaintext list of who gave their ticket to whom
+- [x] **28 tests**, including the stale QR being refused at the gate end to end
+
+## The app is now security-only
+
+- [x] Booking flow moved to **`feature/booking-flow`**, not deleted: buy
+      screens, the mock adapter, UPI assets, the payments admin placeholder,
+      the hold/intent storage and the now-unused Stepper/Countdown
+- [x] Landing offers **View your pass** / **Verify your ID**, never "Reserve
+      your seat"; no availability poll, because there is nothing to sell
+- [x] No mock layer left on `main` — every screen talks to the real API
+- [x] The poster theme now covers **every** screen: the scanner's chrome is
+      saffron and scarlet, the decision card is a cream card, and the result
+      fields are green / scarlet / marigold. The camera viewport stays black,
+      which is the one deliberate exception
 
 ## Not started
 

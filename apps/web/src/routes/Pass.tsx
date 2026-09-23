@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Sparkle } from "../components/Sparkle";
 import { ZariRule } from "../components/ZariRule";
-import { hasSeenPassReveal, markPassRevealSeen } from "../lib/holdStore";
-import { getMyPass } from "../lib/mock";
-import type { PassTicket, TicketState } from "../lib/types";
+import { hasSeenPassReveal, markPassRevealSeen } from "../lib/passReveal";
+import { getMyPass } from "../lib/passApi";
+import { TransferPanel } from "./TransferPanel";
+import type { MyPassResponse, PassTicket, TicketState } from "../lib/types";
 import styles from "./Pass.module.css";
 
 const STATE_COPY: Record<TicketState, { label: string; glyph: string; className: string }> = {
@@ -87,18 +87,19 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
  * under prefers-reduced-motion: reduce (enforced globally in base.css).
  */
 export function Pass() {
-  const navigate = useNavigate();
-  const [tickets, setTickets] = useState<PassTicket[] | null>(null);
+  const [pass, setPass] = useState<MyPassResponse | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [animate] = useState(() => !hasSeenPassReveal());
+  const [transferredTo, setTransferredTo] = useState<string | null>(null);
+  const tickets = pass?.tickets ?? null;
 
   useEffect(() => {
     let cancelled = false;
     setLoadFailed(false);
     getMyPass()
       .then((result) => {
-        if (!cancelled) setTickets(result.tickets);
+        if (!cancelled) setPass(result);
       })
       .catch(() => {
         if (!cancelled) setLoadFailed(true);
@@ -113,6 +114,22 @@ export function Pass() {
       markPassRevealSeen();
     }
   }, [tickets]);
+
+  if (transferredTo) {
+    // Shown instead of the pass, not underneath it: the QR above is dead the
+    // moment the transfer lands, and a live-looking QR next to "sent" is a
+    // person trying to scan it at a door.
+    return (
+      <Card>
+        <h1>Sent to {transferredTo}</h1>
+        <p>
+          This pass isn&rsquo;t yours any more and the QR on this phone has stopped
+          working. {transferredTo} signs in with their own SNU account and uploads their
+          own ID before they get a pass.
+        </p>
+      </Card>
+    );
+  }
 
   if (loadFailed) {
     return (
@@ -135,13 +152,15 @@ export function Pass() {
   }
 
   if (tickets.length === 0) {
+    // Selling is closed and this branch no longer has a buy flow, so the only
+    // honest thing to say is "we can't find you" plus where to go next.
     return (
       <Card>
-        <h1>Your pass</h1>
-        <p>No pass yet. Reserve a seat and complete payment to get one.</p>
-        <Button variant="primary" onClick={() => navigate("/buy")}>
-          Reserve your seat
-        </Button>
+        <h1>No pass on this account</h1>
+        <p>
+          We can&rsquo;t find a ticket for the account you signed in with. If you have one,
+          it may be under a different SNU account &mdash; or ask at the desk.
+        </p>
       </Card>
     );
   }
@@ -153,8 +172,21 @@ export function Pass() {
         Your pass
       </h1>
       {tickets.map((ticket) => (
-        <PassCard key={ticket.short_code} ticket={ticket} animate={animate} />
+        <PassCard
+          // short_code is empty until a pass is issued, so it cannot be the key
+          // on its own — a transferred ticket has none yet.
+          key={`${ticket.seat_index}-${ticket.short_code}`}
+          ticket={ticket}
+          animate={animate}
+        />
       ))}
+
+      {tickets.some((ticket) => ticket.state !== "REVOKED") && (
+        <TransferPanel
+          window={pass?.transfer ?? null}
+          onTransferred={setTransferredTo}
+        />
+      )}
       <Card className={styles.addToHomeCard}>
         <p className={styles.addToHomeTitle}>Add to home screen</p>
         <p>

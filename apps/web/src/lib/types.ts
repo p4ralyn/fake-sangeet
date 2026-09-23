@@ -232,6 +232,22 @@ export interface PassTicket {
 
 export interface MyPassResponse {
   tickets: PassTicket[];
+  /** Null when there is nothing transferable. */
+  transfer: TransferWindow | null;
+}
+
+/** When transfer stops. Three hours before doors, decided by the server. */
+export interface TransferWindow {
+  open: boolean;
+  /** ISO 8601. */
+  closes_at: string;
+}
+
+export interface TransferResponse {
+  ticket_ref: string;
+  to_net_id: string;
+  /** Always true: the new holder starts the ID check again. */
+  verification_required: boolean;
 }
 
 // ---------------------------------------------------------------------------

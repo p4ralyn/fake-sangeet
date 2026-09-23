@@ -135,8 +135,12 @@ async def ticket_for_user(db: AsyncSession, *, event_id: UUID, user: User) -> Ti
 async def get_registration(
     db: AsyncSession, *, ticket_id: UUID
 ) -> Registration | None:
+    """The CURRENT registration. A transferred ticket keeps the previous
+    holder's as history, and history must never answer "who holds this"."""
     return await db.scalar(
-        select(Registration).where(Registration.ticket_id == ticket_id)
+        select(Registration).where(
+            Registration.ticket_id == ticket_id, Registration.superseded_at.is_(None)
+        )
     )
 
 

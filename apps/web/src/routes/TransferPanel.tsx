@@ -1,0 +1,149 @@
+import { useState } from "react";
+import { Card } from "../components/Card";
+import { ApiError } from "../lib/api";
+import { transferPass } from "../lib/passApi";
+import type { TransferWindow } from "../lib/types";
+import styles from "./TransferPanel.module.css";
+
+/**
+ * Give your pass to somebody else.
+ *
+ * Deliberately two steps. Transfer is irreversible from this side — the moment
+ * it goes through, the QR on this phone stops working and the ticket belongs
+ * to a NetID the person typed from memory. A single tap next to a text field
+ * is not enough friction for that, so the confirm step repeats the NetID back
+ * and says plainly what is about to happen.
+ *
+ * The deadline is the server's. This screen reads `window.open` rather than
+ * comparing clocks itself: a phone with a wrong clock must not be able to talk
+ * itself into a transfer the API will refuse, or out of one it would allow.
+ */
+
+function formatDeadline(iso: string): string {
+  const when = new Date(iso);
+  return when.toLocaleString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+export interface TransferPanelProps {
+  window: TransferWindow | null;
+  /** Hands the recipient up so the page can show what happened. The panel
+   * deliberately does not own that screen: the pass above it is stale the
+   * instant a transfer lands, and leaving a dead QR on display while a small
+   * card underneath says "sent" is the wrong thing to show anybody. */
+  onTransferred: (toNetId: string) => void;
+}
+
+export function TransferPanel({ window: transferWindow, onTransferred }: TransferPanelProps) {
+  const [netId, setNetId] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!transferWindow) {
+    return null;
+  }
+
+  if (!transferWindow.open) {
+    return (
+      <Card className={styles.panel}>
+        <p className={styles.title}>Transfers are closed</p>
+        <p className={styles.note}>
+          Passes stopped moving at {formatDeadline(transferWindow.closes_at)}, three hours
+          before doors. Talk to the desk if something needs sorting out.
+        </p>
+      </Card>
+    );
+  }
+
+  async function send() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await transferPass(netId.trim());
+      onTransferred(result.to_net_id);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "That didn’t go through. Check your connection and try again.",
+      );
+      setConfirming(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className={styles.panel}>
+      <p className={styles.title}>Give this pass to someone else</p>
+      <p className={styles.note}>
+        They sign in with their own SNU account and upload their own ID. Your QR stops
+        working straight away. Transfers close at{" "}
+        {formatDeadline(transferWindow.closes_at)}.
+      </p>
+
+      {!confirming ? (
+        <>
+          <label className={styles.label} htmlFor="transfer-net-id">
+            Their NetID
+          </label>
+          <input
+            id="transfer-net-id"
+            className={styles.input}
+            value={netId}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="zq202"
+            onChange={(event) => {
+              setNetId(event.target.value);
+              setError(null);
+            }}
+          />
+          {error && <p className={styles.error}>{error}</p>}
+          <button
+            type="button"
+            className={styles.action}
+            disabled={netId.trim().length < 3}
+            onClick={() => setConfirming(true)}
+          >
+            Continue
+          </button>
+        </>
+      ) : (
+        <>
+          <p className={styles.confirm}>
+            Send this pass to <strong>{netId.trim().toLowerCase()}</strong>? You can&rsquo;t
+            undo this yourself.
+          </p>
+          {error && <p className={styles.error}>{error}</p>}
+          <div className={styles.confirmRow}>
+            <button
+              type="button"
+              className={styles.back}
+              disabled={busy}
+              onClick={() => setConfirming(false)}
+            >
+              Go back
+            </button>
+            <button
+              type="button"
+              className={styles.action}
+              disabled={busy}
+              onClick={() => void send()}
+            >
+              {busy ? "Sending…" : "Yes, send it"}
+            </button>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}

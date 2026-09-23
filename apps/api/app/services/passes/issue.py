@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Event, Pass, Ticket
+from app.models import Event, Pass, PassState, Ticket
 
 # Crockford-ish: no I, L, O, U, 0 or 1. A volunteer reads these off a printed
 # list at a dark door and types them into a phone.
@@ -37,6 +37,22 @@ async def issue_pass(
     passes, two QR codes and two headcounts — never one shared pass."""
     existing = await db.scalar(select(Pass).where(Pass.ticket_id == ticket.id))
     if existing is not None:
+        if existing.current_state is PassState.REVOKED:
+            # A transferred ticket left its pass revoked. `passes.ticket_id` is
+            # UNIQUE, so reissuing means reviving this row rather than minting
+            # a second one -- which is exactly what `serial` is for (§10.1):
+            # the pass id survives, every token issued against the old serial
+            # does not. The short code is deliberately kept: it is printed on
+            # the paper fallback list against this ticket.
+            existing.serial += 1
+            existing.current_state = PassState.NOT_ARRIVED
+            existing.breaks_used = 0
+            existing.revoked_at = None
+            existing.revoked_reason = None
+            existing.first_checkin_at = None
+            existing.last_exit_at = None
+            existing.checked_out_at = None
+            await db.flush()
         return existing
 
     for _ in range(8):

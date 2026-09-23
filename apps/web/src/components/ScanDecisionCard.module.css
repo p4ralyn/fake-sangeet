@@ -10,8 +10,8 @@
   gap: 0.75rem;
   padding: 1rem;
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  background: var(--gate-ground);
-  color: var(--cream);
+  background: var(--saffron);
+  color: var(--maroon);
   overflow-y: auto;
 }
 
@@ -20,9 +20,9 @@
   place-items: center;
   min-height: 0;
   padding: 0.75rem;
-  border: 2px solid var(--gate-line);
+  border: 2px solid var(--maroon);
   border-radius: 2px;
-  background: var(--gate-surface);
+  background: var(--cream);
 }
 
 .photo {
@@ -38,7 +38,8 @@
   max-width: 22rem;
   text-align: center;
   font-size: var(--text-sm);
-  color: var(--marigold);
+  font-weight: 600;
+  color: var(--scarlet);
 }
 
 /* The global `p { max-width: 66ch }` measure cap makes these narrower than
@@ -60,14 +61,14 @@
   font-family: var(--font-display);
   font-size: var(--text-xl);
   line-height: 1.1;
-  color: var(--cream);
+  color: var(--maroon);
   text-shadow: none;
 }
 
 .state {
   margin: 0.25rem 0 0;
   font-size: var(--text-sm);
-  color: color-mix(in srgb, var(--cream) 78%, transparent);
+  font-weight: 600;
 }
 
 /* Its own line, not appended to the state: "Inside 0 of 1 breaks used" reads
@@ -75,7 +76,7 @@
 .breaks {
   margin: 0.125rem 0 0;
   font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--cream) 62%, transparent);
+  color: var(--muted);
 }
 
 /* Flex, not an auto-fit grid: `repeat(auto-fit, minmax(…, 1fr))` leaves the
@@ -91,7 +92,7 @@
    card after the photo, and they sit at the bottom edge. */
 .action {
   min-height: 56px;
-  border: 2px solid var(--marigold);
+  border: 2px solid var(--maroon);
   border-radius: 2px;
   background: var(--marigold);
   color: var(--maroon);
@@ -111,10 +112,10 @@
    outlined, quieter, and the same height so it is still thumb-sized. */
 .dismiss {
   min-height: 48px;
-  border: 2px solid var(--gate-line);
+  border: 2px solid var(--maroon);
   border-radius: 2px;
   background: transparent;
-  color: var(--cream);
+  color: var(--maroon);
   font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -128,7 +129,7 @@
 
 .action:focus-visible,
 .dismiss:focus-visible {
-  outline: 2px solid var(--cream);
+  outline: 2px solid var(--magenta);
   outline-offset: 2px;
 }
 

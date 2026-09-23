@@ -30,6 +30,7 @@ class SeedConfig(BaseSettings):
     event_seats_total: int = 150
     event_gate_name: str = "Main Gate"
     event_max_breaks: int = 1
+    event_transfer_closes_before: int = 180
 
     seed_owner_net_ids: list[str] = Field(default_factory=list)
     seed_admin_net_ids: list[str] = Field(default_factory=list)
@@ -63,6 +64,11 @@ class SeedConfig(BaseSettings):
             # details self-claims; one that does not stays proxied to the buyer.
             # See docs/design/cohort-and-verification.md.
             "couple_partner_mode": "PER_TICKET",
+            # Transfer closes this many minutes before doors. Derived from
+            # `starts_at`, never written as a timestamp, so moving the event
+            # moves the deadline with it. 180 against an 18:00 start is the
+            # 15:00 cut-off the client asked for.
+            "transfer": {"closes_before_minutes": self.event_transfer_closes_before},
         }
 
     def staff_grants(self) -> list[tuple[str, StaffRole]]:

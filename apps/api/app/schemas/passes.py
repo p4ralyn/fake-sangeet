@@ -9,9 +9,10 @@ Renaming it matters more than the churn costs. A bearer credential in a field
 called `qr_url` is a thing people log, paste into a bug report and forward,
 because the name says it is an address. `qr_token` says what it is.
 """
+from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.access import PassState
 from app.models.ticketing import TicketStatus
@@ -62,7 +63,36 @@ assert set(_FROM_TICKET_STATUS) == set(TicketStatus)
 assert set(_FROM_PASS_STATE) == set(PassState)
 
 
+# Ticket statuses that mean "still working through the ID check". Derived from
+# the map above rather than listed again, so adding a status decides this too.
+_IN_ID_FUNNEL: frozenset[TicketStatus] = frozenset(
+    status
+    for status, view in _FROM_TICKET_STATUS.items()
+    if view
+    in {
+        TicketViewState.ID_PENDING,
+        TicketViewState.MANUAL_REVIEW,
+        TicketViewState.ID_VERIFIED,
+    }
+)
+
+
 def view_state(ticket_status: TicketStatus, pass_state: PassState | None) -> TicketViewState:
+    """What this person should be told they are.
+
+    The pass wins wherever it has an opinion — once somebody is through the
+    door, "inside" is the only fact that matters to them.
+
+    The exception is a REVOKED pass on a ticket that is back in the ID funnel.
+    That is the residue of a transfer: the pass was killed on purpose when the
+    ticket changed hands, and a new one is issued once the new holder is
+    verified. Letting the dead pass speak there would tell the new holder their
+    ticket was revoked, which is both alarming and wrong. A pass revoked by an
+    admin on a ticket that still says PASS_ISSUED is a different thing, and
+    still reads as REVOKED.
+    """
+    if pass_state is PassState.REVOKED and ticket_status in _IN_ID_FUNNEL:
+        return _FROM_TICKET_STATUS[ticket_status]
     if pass_state is not None:
         return _FROM_PASS_STATE[pass_state]
     return _FROM_TICKET_STATUS[ticket_status]
@@ -81,3 +111,27 @@ class PassTicket(BaseModel):
 
 class MyPassResponse(BaseModel):
     tickets: list[PassTicket]
+    #: Null when nothing here is transferable.
+    transfer: "TransferWindow | None" = None
+
+
+class TransferRequest(BaseModel):
+    """The whole form: one NetID. Nothing here identifies the ticket — which
+    ticket moves is derived from who is asking, so there is nothing to tamper
+    with."""
+
+    to_net_id: str = Field(min_length=1, max_length=64)
+
+
+class TransferWindow(BaseModel):
+    """Whether transfer is open, and when it stops. The screen shows the
+    deadline; the server is what enforces it."""
+
+    open: bool
+    closes_at: datetime
+
+
+class TransferResponse(BaseModel):
+    ticket_ref: str
+    to_net_id: str
+    verification_required: bool

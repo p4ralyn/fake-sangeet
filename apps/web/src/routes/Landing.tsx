@@ -1,84 +1,30 @@
-import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Sparkle } from "../components/Sparkle";
 import { ZariRule } from "../components/ZariRule";
 import { EVENT_DATE_LABEL, EVENT_NAME_FALLBACK, EVENT_VENUE } from "../lib/event";
-import { getAvailability } from "../lib/mock";
 import { usePersonStatus } from "../lib/personStatus";
 import { useSession } from "../lib/session";
-import { useMyVerification } from "../lib/verificationApi";
-import type { AvailabilityResponse } from "../lib/types";
 import styles from "./Landing.module.css";
-
-const POLL_MS = 15_000;
 
 /**
  * Invitation (`/`) — the ceremonial landing. See
- * docs/design/participant-screens.md §1. Availability is polled every 15s;
- * while the very first fetch is in flight we show nothing rather than a
- * stale or zeroed count.
+ * docs/design/participant-screens.md §1.
  *
- * The primary action branches on what THIS person already holds
- * (usePersonStatus — myPass, then any remembered in-progress intent), never
- * on availability alone and never on role. A pass holder must see "View your
- * pass", not an invitation to buy a second ticket the server would refuse.
+ * **The event is sold out and selling is closed.** There is no availability
+ * poll and no "Reserve your seat" here any more; the buy flow lives on
+ * `feature/booking-flow` for whenever phase-3 selling comes back. What is left
+ * is the door: do you hold a pass, and is your ID checked.
  *
- * One branch outranks all of that: a real, server-confirmed ticket that still
- * needs an ID check (M4). Cohort A's ~441 people arrive here holding a ticket
- * they bought offline, and the only thing standing between them and a pass is
- * a photograph. That answer comes from the API, not from `mock.ts`, so it wins
- * over anything the mock commerce adapter has to say.
+ * The primary action branches on what THIS person actually holds, never on
+ * role — a pass holder must see "View your pass", and somebody mid-ID-check
+ * must be sent to finish it rather than shown a dead end.
  */
 export function Landing() {
   const { user, signIn } = useSession();
   const navigate = useNavigate();
   const personStatus = usePersonStatus();
-  const verification = useMyVerification();
-  // A real ticket that hasn't cleared ID review yet. `none` covers "no ticket
-  // on this account", which is every demo identity and every visitor.
-  const needsId =
-    verification.kind === "ready" &&
-    verification.verification.ticket_status !== "PASS_ISSUED" &&
-    verification.verification.ticket_status !== "VERIFIED";
-  const [availability, setAvailability] = useState<AvailabilityResponse | undefined>(undefined);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const result = await getAvailability();
-        if (!cancelled) setAvailability(result);
-      } catch {
-        // Availability is a display cache, never load-bearing for safety —
-        // a failed poll just leaves the last known value on screen.
-      }
-    }
-
-    void poll();
-    const interval = window.setInterval(poll, POLL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, []);
-
-  const soldOut = availability?.seats_available === 0;
-  const singlesOnly = availability?.seats_available === 1;
-
-  function handleReserve() {
-    if (soldOut) {
-      navigate("/waitlist");
-      return;
-    }
-    if (!user) {
-      signIn("/buy");
-      return;
-    }
-    navigate("/buy");
-  }
 
   return (
     <Card className={styles.hero}>
@@ -97,22 +43,18 @@ export function Landing() {
       <ZariRule />
 
       <div className={styles.action}>
-        {needsId ? (
+        {!user ? (
           <>
-            <Button variant="primary" onClick={() => navigate("/verify")}>
-              {verification.kind === "ready" && verification.verification.outcome === "MANUAL_REVIEW"
-                ? "Check your ID status"
-                : "Verify your ID"}
+            <Button variant="primary" onClick={() => signIn("/pass")}>
+              Sign in to see your pass
             </Button>
             <p className={styles.availabilityLine}>
-              You&rsquo;re on the list. One step left before your pass.
+              Use the SNU account your ticket was bought with.
             </p>
           </>
         ) : personStatus.kind === "loading" ? (
-          // Reserves the same space a real button takes so nothing shifts
-          // once we know which one to show — and, critically, never shows
-          // "Reserve your seat" to someone we haven't yet confirmed doesn't
-          // already hold a pass.
+          // Reserves the same space a real button takes so nothing shifts once
+          // we know which one to show.
           <Button variant="primary" disabled>
             Checking&hellip;
           </Button>
@@ -120,34 +62,30 @@ export function Landing() {
           <Button variant="primary" onClick={() => navigate("/pass")}>
             View your pass
           </Button>
-        ) : personStatus.kind === "in_progress" ? (
-          <Button variant="primary" onClick={() => navigate(personStatus.target)}>
-            {personStatus.state === "HOLD" ? "Continue to payment" : "View payment status"}
-          </Button>
+        ) : personStatus.kind === "needs_id" ? (
+          <>
+            <Button variant="primary" onClick={() => navigate("/verify")}>
+              {personStatus.verification.outcome === "MANUAL_REVIEW"
+                ? "Check your ID status"
+                : "Verify your ID"}
+            </Button>
+            <p className={styles.availabilityLine}>
+              You&rsquo;re on the list. One step left before your pass.
+            </p>
+          </>
         ) : (
           <>
-            <Button variant="primary" onClick={handleReserve}>
-              {soldOut ? "Join the waitlist" : "Reserve your seat"}
+            <Button variant="primary" onClick={() => navigate("/pass")}>
+              View your pass
             </Button>
-            {availability && (
-              <p className={styles.availabilityLine}>
-                {soldOut ? (
-                  <>All {availability.seats_total} seats are taken.</>
-                ) : singlesOnly ? (
-                  <>Only 1 seat left — singles only</>
-                ) : (
-                  <>
-                    <span className="tabular-nums">{availability.seats_available}</span> of{" "}
-                    <span className="tabular-nums">{availability.seats_total}</span> seats left
-                  </>
-                )}
-              </p>
-            )}
+            <p className={styles.availabilityLine}>
+              Sold out. If you have a ticket it&rsquo;s under your SNU account.
+            </p>
           </>
         )}
       </div>
 
-      {!needsId && (personStatus.kind === "none" || personStatus.kind === "loading") && (
+      {personStatus.kind !== "has_pass" && (
         <Link className={styles.passLink} to="/pass">
           Already have a pass?
         </Link>

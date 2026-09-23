@@ -14,7 +14,6 @@
   gap: 0.5rem;
   padding: 2rem 1.5rem;
   text-align: center;
-  color: var(--cream);
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
@@ -22,16 +21,20 @@
 
 .admitted {
   background: var(--gate-admit);
+  color: var(--cream);
 }
 
 .refused {
   background: var(--scarlet);
+  color: var(--cream);
 }
 
-/* Deliberately neither field: a double-tap is not a success to celebrate and
-   not a refusal to act on. */
+/* Marigold, and deliberately neither of the other two: a double-tap is not a
+   success to celebrate and not a refusal to act on. Maroon text, because
+   cream on marigold is unreadable. */
 .duplicate {
   background: var(--gate-repeat);
+  color: var(--maroon);
 }
 
 .glyph {
@@ -48,7 +51,9 @@
   font-family: var(--font-display);
   font-size: clamp(var(--text-xl), 9vw, var(--text-3xl));
   line-height: 1;
-  color: var(--cream);
+  /* Inherits the field's own text colour rather than the global h1 scarlet,
+     which would vanish into the refused field. */
+  color: inherit;
   text-shadow: none;
 }
 
@@ -70,5 +75,5 @@
 .hint {
   margin: 1.5rem 0 0;
   font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--cream) 72%, transparent);
+  opacity: 0.78;
 }

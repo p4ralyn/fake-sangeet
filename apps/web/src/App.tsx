@@ -1,32 +1,28 @@
 import { Route, Routes } from "react-router-dom";
 import { AdminIdsScreen } from "./routes/AdminIds";
-import { AdminPaymentsScreen } from "./routes/admin";
 import { AppShell } from "./routes/AppShell";
-import { BuyDetails } from "./routes/BuyDetails";
-import { BuyTicketType } from "./routes/BuyTicketType";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
 import { Pass } from "./routes/Pass";
-import { Payment } from "./routes/Payment";
-import { Proof } from "./routes/Proof";
 import { RequireRole } from "./routes/RequireRole";
 import { Scan } from "./routes/Scan";
-import { Status } from "./routes/Status";
 import { VerifyId } from "./routes/VerifyId";
-import { Waitlist } from "./routes/Waitlist";
 
 /**
  * Routing and the app shell. Deny by default: every gated route explicitly
  * lists the roles that may see it. `roles` always comes from the session
  * context, which mirrors GET /api/v1/me — never a client-side flag.
  *
- * Flow order is binding (addendum §A2): choose type -> details -> hold ->
- * payment -> proof -> status -> pass.
+ * **This is a security ticketing app, not a ticket shop.** The event sold out,
+ * so the buy flow (choose type -> details -> hold -> payment -> proof ->
+ * status -> waitlist) has moved to `feature/booking-flow` rather than being
+ * deleted. What is left is the door: hold a pass, verify an ID, review IDs,
+ * scan at the gate.
  *
  * /scan sits OUTSIDE the AppShell on purpose. It is an operator tool held at
- * a dark door, not a participant screen: no brand header, no mandala
- * corners, no 34rem column — the camera fills the viewport and the scanner
- * paints its own ground (LLD-v1 §11.5).
+ * a dark door, not a participant screen: no brand header, no mandala corners,
+ * no 34rem column — the camera fills the viewport and the scanner paints its
+ * own ground (LLD-v1 §11.5).
  */
 export function App() {
   return (
@@ -44,42 +40,10 @@ export function App() {
         <Route index element={<Landing />} />
 
         <Route
-          path="buy"
+          path="verify"
           element={
             <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
-              <BuyTicketType />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="buy/details"
-          element={
-            <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
-              <BuyDetails />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="buy/pay/:intentId"
-          element={
-            <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
-              <Payment />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="buy/proof/:intentId"
-          element={
-            <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
-              <Proof />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="status/:intentId"
-          element={
-            <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
-              <Status />
+              <VerifyId />
             </RequireRole>
           }
         />
@@ -91,24 +55,7 @@ export function App() {
             </RequireRole>
           }
         />
-        <Route
-          path="verify"
-          element={
-            <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
-              <VerifyId />
-            </RequireRole>
-          }
-        />
-        <Route path="waitlist" element={<Waitlist />} />
 
-        <Route
-          path="admin"
-          element={
-            <RequireRole allow={["OWNER", "ADMIN"]}>
-              <AdminPaymentsScreen />
-            </RequireRole>
-          }
-        />
         <Route
           path="admin/ids"
           element={

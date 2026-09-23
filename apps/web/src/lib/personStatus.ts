@@ -1,38 +1,29 @@
 /**
  * Resolves what the signed-in person already holds, so screens can branch on
  * fact rather than role. Roles cannot make this distinction: a sheet-ingested
- * or already-approved holder is PARTICIPANT in production, but in the
- * current mock a demo pre-purchased identity (e.g. zq204) is still VISITOR,
- * so role-based branching gives the wrong answer today and would silently
- * rot once M3 lands. This is why the landing page kept offering "Reserve
- * your seat" to someone who already had a pass.
+ * holder is a VISITOR until their ticket is found, and an OWNER can be holding
+ * a ticket like anybody else.
  *
- * "In progress" covers every state that still counts as this person's one
- * live intent — HOLD, PENDING_APPROVAL, REJECTED (addendum §A1/§A2: HOLD +
- * PENDING_APPROVAL + APPROVED all count against the seat cap, and
- * pi_one_live_per_user allows only one live intent per person). A terminal
- * state (EXPIRED, CANCELLED, CLOSED) or an intent the server no longer
- * recognises clears the remembered id and resolves to "none" — the person is
- * free to start over.
+ * Selling is closed and the booking flow has moved to `feature/booking-flow`,
+ * so this no longer tracks payment intents. There are three answers now, and
+ * they come from two real endpoints rather than a mock adapter:
+ *
+ *   has_pass   — a pass exists; show it
+ *   needs_id   — a ticket exists but the ID check is not finished
+ *   none       — this account holds nothing
  */
 import { useEffect, useState } from "react";
-import { clearCurrentIntent, getCurrentIntentId } from "./holdStore";
-import { getMyPass, getPaymentStatus } from "./mock";
+import { ApiError } from "./api";
+import { getMyPass } from "./passApi";
 import { useSession } from "./session";
-import type { PassTicket, PaymentState } from "./types";
+import type { MyVerification, PassTicket } from "./types";
+import { getMyVerification } from "./verificationApi";
 
 export type PersonStatus =
   | { kind: "loading" }
   | { kind: "has_pass"; tickets: PassTicket[] }
-  | { kind: "in_progress"; intentId: string; state: PaymentState; target: string }
+  | { kind: "needs_id"; verification: MyVerification }
   | { kind: "none" };
-
-/** Where the primary action should send this person, for a live intent. */
-function targetFor(intentId: string, state: PaymentState): string | null {
-  if (state === "HOLD") return `/buy/pay/${intentId}`;
-  if (state === "PENDING_APPROVAL" || state === "REJECTED") return `/status/${intentId}`;
-  return null;
-}
 
 export function usePersonStatus(): PersonStatus {
   const { user, loading: sessionLoading } = useSession();
@@ -51,45 +42,39 @@ export function usePersonStatus(): PersonStatus {
 
     let cancelled = false;
     setStatus({ kind: "loading" });
-    const netId = user.net_id;
 
     async function resolve() {
+      // The verification endpoint is the one that knows whether a ticket
+      // exists at all, so it is asked first. A 404 there means this account
+      // holds nothing, which is an answer rather than a failure.
+      let verification: MyVerification | null = null;
+      try {
+        verification = await getMyVerification();
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 404) {
+          // Anything other than "no ticket" leaves us unsure; say nothing
+          // rather than claim they hold nothing.
+          if (!cancelled) setStatus({ kind: "none" });
+          return;
+        }
+        if (!cancelled) setStatus({ kind: "none" });
+        return;
+      }
+      if (cancelled) return;
+
       try {
         const pass = await getMyPass();
         if (cancelled) return;
-        if (pass.tickets.length > 0) {
-          clearCurrentIntent(netId);
+        const usable = pass.tickets.filter((ticket) => ticket.qr_token);
+        if (usable.length > 0) {
           setStatus({ kind: "has_pass", tickets: pass.tickets });
           return;
         }
       } catch {
-        // myPass failing isn't fatal here — fall through and check for an
-        // in-progress intent, same as "no pass yet".
+        // A ticket exists even if the pass call failed — fall through to the
+        // ID step rather than telling them they hold nothing.
       }
-      if (cancelled) return;
-
-      const intentId = getCurrentIntentId(netId);
-      if (!intentId) {
-        setStatus({ kind: "none" });
-        return;
-      }
-
-      try {
-        const result = await getPaymentStatus(intentId);
-        if (cancelled) return;
-        const target = targetFor(intentId, result.state);
-        if (target) {
-          setStatus({ kind: "in_progress", intentId, state: result.state, target });
-        } else {
-          clearCurrentIntent(netId);
-          setStatus({ kind: "none" });
-        }
-      } catch {
-        // The intent is gone or unreachable (e.g. HOLD_REQUIRED) — nothing
-        // to resume.
-        clearCurrentIntent(netId);
-        if (!cancelled) setStatus({ kind: "none" });
-      }
+      if (!cancelled) setStatus({ kind: "needs_id", verification });
     }
 
     void resolve();

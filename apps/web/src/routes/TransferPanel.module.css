@@ -1,0 +1,107 @@
+/* Transfer. Sits under the pass, in the same cream-card register as the rest
+   of the participant flow — quieter than the pass itself, because it is the
+   thing you do once and mostly never. */
+
+.panel {
+  margin-top: 1.25rem;
+}
+
+.title {
+  margin: 0 0 0.375rem;
+  max-width: none;
+  font-weight: 700;
+  font-size: var(--text-md);
+}
+
+.note {
+  margin: 0 0 1rem;
+  max-width: none;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border: 2px solid var(--maroon);
+  border-radius: 2px;
+  background: var(--cream);
+  color: var(--maroon);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+}
+
+/* The confirm step repeats the NetID back. Magenta, not scarlet: this is a
+   "are you sure" for something irreversible, not an error. */
+.confirm {
+  margin: 0 0 0.875rem;
+  max-width: none;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  padding: 0.625rem 0.75rem;
+  border: 2px solid var(--magenta);
+  border-radius: 2px;
+  color: var(--magenta);
+}
+
+.confirmRow {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.action,
+.back {
+  flex: 1 1 9rem;
+  min-height: 48px;
+  padding: 0.625rem 1.25rem;
+  border-radius: 2px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.action {
+  background: var(--scarlet);
+  color: var(--cream);
+  border: 2px solid var(--maroon);
+}
+
+.action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--scarlet) 85%, var(--maroon));
+}
+
+.action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.back {
+  background: transparent;
+  color: var(--maroon);
+  border: 2px solid var(--maroon);
+}
+
+.back:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--maroon) 12%, transparent);
+}
+
+.error {
+  margin: 0 0 0.75rem;
+  max-width: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--scarlet);
+}

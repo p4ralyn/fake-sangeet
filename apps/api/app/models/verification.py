@@ -38,6 +38,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, CITEXT, ENUM
 from sqlalchemy.orm import Mapped, mapped_column
@@ -82,7 +83,17 @@ class Registration(UUIDPk, EventScoped, Timestamps, Base):
 
     __tablename__ = "registrations"
     __table_args__ = (
-        UniqueConstraint("ticket_id", name="registrations_ticket_key"),
+        # One LIVE registration per ticket, not one ever. A transferred ticket
+        # keeps the previous holder's registration -- and their verification
+        # history -- as a superseded row, because deleting it would destroy the
+        # record that somebody's ID was checked. The partial index is what lets
+        # both facts be true at once.
+        Index(
+            "registrations_ticket_key",
+            "ticket_id",
+            unique=True,
+            postgresql_where=text("superseded_at IS NULL"),
+        ),
         CheckConstraint("attempts >= 0", name="registrations_attempts_non_negative"),
         Index("ix_registrations_event_net_id", "event_id", "net_id"),
     )
@@ -108,6 +119,10 @@ class Registration(UUIDPk, EventScoped, Timestamps, Base):
     email_deliverable: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="true"
     )
+    #: Set when the ticket moved to somebody else. A superseded registration is
+    #: history: it is never the answer to "who holds this ticket", and the
+    #: partial unique index above stops it blocking the new holder's row.
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class IdImage(UUIDPk, EventScoped, Base):

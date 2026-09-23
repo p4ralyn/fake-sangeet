@@ -127,6 +127,7 @@ async def _approved_id_image(db: AsyncSession, ticket_id: UUID) -> IdImage | Non
         .join(IdImage, IdImage.id == Verification.id_image_id)
         .where(
             Registration.ticket_id == ticket_id,
+            Registration.superseded_at.is_(None),
             Verification.outcome == VerifyOutcome.APPROVED,
             IdImage.purged_at.is_(None),
         )
@@ -149,7 +150,13 @@ async def _participant_name(db: AsyncSession, ticket_id: UUID) -> str | None:
     signed in behind it.
     """
     registered = await db.scalar(
-        select(Registration.full_name).where(Registration.ticket_id == ticket_id)
+        select(Registration.full_name).where(
+            Registration.ticket_id == ticket_id,
+            # A superseded registration belongs to whoever held this ticket
+            # before it was transferred. Showing their name at the door would
+            # point a volunteer at the wrong face.
+            Registration.superseded_at.is_(None),
+        )
     )
     if registered:
         return registered

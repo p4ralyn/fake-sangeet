@@ -16,7 +16,6 @@ import {
 import type { ReactNode } from "react";
 import { ApiError, SignedOutError, api, setCsrfToken } from "./api";
 import type { MeResponse, Role } from "./types";
-import { rememberIdentity } from "./mock";
 
 export interface SessionState {
   /** undefined while the initial /me call is in flight. */
@@ -59,12 +58,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       const me = await loadMe();
       setUser(me);
-      // Let the mock layer attribute a purchase to whoever is signed in, so a
-      // demo identity's pass carries their own name. Dead code in production:
-      // the mock module is stripped from the build.
-      if (import.meta.env.DEV && me) {
-        rememberIdentity(me.net_id, me.display_name);
-      }
     } catch (err) {
       setUser(undefined);
       setError(err instanceof ApiError ? err : new ApiError(0, "INTERNAL", "Could not reach the server.", null, null));
