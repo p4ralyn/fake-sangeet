@@ -401,8 +401,9 @@ API contract: `docs/design/frontend-api-contract.md`
 - [x] `deploy/bootstrap-vm.sh`, `deploy.sh`, `rollback.sh`
 - [x] Firewall 80/443 only; 5432 deliberately shut
 - [x] Dedicated service account, so M3 reads the Sheet with no key file on disk
-- [ ] Domain — **not bought yet**, blocking TLS and DNS propagation
-- [ ] Google OAuth client — credentials not yet created
+- [x] TLS live via `nip.io` + Let's Encrypt
+- [ ] Domain — **not bought yet**; `nip.io` covers it
+- [x] Google OAuth client — **credentials are set on the VM**; sign-in works
 
 ## Carry-forward
 
