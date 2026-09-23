@@ -343,6 +343,60 @@ async def test_a_superseded_serial_is_refused(
     assert response.json()["error"]["code"] == "PASS_SUPERSEDED"
 
 
+async def test_refreshing_a_departed_pass_makes_it_scannable_again(
+    client, db_session, scanner_staff, issued_pass, token
+):
+    """The rehearsal case. Check-out is binding, so a pass walked all the way
+    through is finished — which is correct on the night and useless when the
+    same pass is the only thing available to test a camera with.
+
+    `refresh_in_place` winds it back AND bumps the serial, so the old QR dies
+    in the same breath as the new one is born. Both halves are asserted: a
+    refresh that left the old token working would quietly hand somebody a
+    second, parallel way through the door.
+    """
+    from app.services.passes.issue import refresh_in_place
+
+    headers = await login(client, SECURITY_NET_ID)
+
+    issued_pass.current_state = PassState.DEPARTED
+    issued_pass.breaks_used = 1
+    issued_pass.first_checkin_at = datetime.now(UTC) - timedelta(hours=2)
+    issued_pass.checked_out_at = datetime.now(UTC)
+    await db_session.commit()
+
+    # A departed pass has nothing left to offer.
+    refused = await scan(client, headers, token)
+    assert refused.status_code == 409, refused.text
+
+    stale_token = token
+    refresh_in_place(issued_pass)
+    # Snapshot before the commit: committing expires every ORM attribute, and
+    # reading one back afterwards is lazy IO in a sync context (MissingGreenlet).
+    event_id, pass_id, serial = issued_pass.event_id, issued_pass.id, issued_pass.serial
+    await db_session.commit()
+
+    # The QR that was on the screen a moment ago is dead.
+    superseded = await scan(client, headers, stale_token)
+    assert superseded.status_code == 409
+    assert superseded.json()["error"]["code"] == "PASS_SUPERSEDED"
+
+    # And the pass itself is a clean slate: a fresh token checks in normally.
+    fresh = mint_pass_token(
+        event_id=event_id,
+        pass_id=pass_id,
+        serial=serial,
+        expires_at=datetime.now(UTC) + timedelta(hours=2),
+    )
+    presented = await scan(client, headers, fresh)
+    assert presented.status_code == 200, presented.text
+    assert presented.json()["legal_actions"] == ["CHECK_IN"]
+
+    refreshed = await db_session.get(Pass, pass_id)
+    assert refreshed.breaks_used == 0
+    assert refreshed.checked_out_at is None
+
+
 async def test_a_revoked_pass_denies_every_scan(
     client, db_session, scanner_staff, issued_pass, token
 ):

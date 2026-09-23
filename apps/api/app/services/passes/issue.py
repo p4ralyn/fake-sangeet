@@ -30,6 +30,32 @@ def generate_short_code() -> str:
     return "-".join(groups)
 
 
+def refresh_in_place(pass_: Pass) -> Pass:
+    """Bump the serial and wind the pass back to "not arrived".
+
+    `serial` is what makes this a refresh rather than a reset (§10.1): the pass
+    id and short code survive, and **every token ever minted against the old
+    serial stops verifying**. A QR already on somebody's screen, screenshotted,
+    or forwarded is dead the moment this runs. That is the point.
+
+    The short code is deliberately kept — it is printed on the paper fallback
+    list against this ticket, and changing it would silently invalidate a sheet
+    somebody is holding.
+
+    The caller flushes; the caller also decides whether this deserves an audit
+    row (it does, everywhere it is used).
+    """
+    pass_.serial += 1
+    pass_.current_state = PassState.NOT_ARRIVED
+    pass_.breaks_used = 0
+    pass_.revoked_at = None
+    pass_.revoked_reason = None
+    pass_.first_checkin_at = None
+    pass_.last_exit_at = None
+    pass_.checked_out_at = None
+    return pass_
+
+
 async def issue_pass(
     db: AsyncSession, *, event: Event, ticket: Ticket, expires_at: datetime | None = None
 ) -> Pass:
@@ -40,18 +66,8 @@ async def issue_pass(
         if existing.current_state is PassState.REVOKED:
             # A transferred ticket left its pass revoked. `passes.ticket_id` is
             # UNIQUE, so reissuing means reviving this row rather than minting
-            # a second one -- which is exactly what `serial` is for (§10.1):
-            # the pass id survives, every token issued against the old serial
-            # does not. The short code is deliberately kept: it is printed on
-            # the paper fallback list against this ticket.
-            existing.serial += 1
-            existing.current_state = PassState.NOT_ARRIVED
-            existing.breaks_used = 0
-            existing.revoked_at = None
-            existing.revoked_reason = None
-            existing.first_checkin_at = None
-            existing.last_exit_at = None
-            existing.checked_out_at = None
+            # a second one -- which is exactly what `serial` is for.
+            refresh_in_place(existing)
             await db.flush()
         return existing
 
