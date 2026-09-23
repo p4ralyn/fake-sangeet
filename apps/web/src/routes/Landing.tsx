@@ -4,6 +4,7 @@ import { Card } from "../components/Card";
 import { Sparkle } from "../components/Sparkle";
 import { ZariRule } from "../components/ZariRule";
 import { EVENT_DATE_LABEL, EVENT_NAME_FALLBACK, EVENT_VENUE } from "../lib/event";
+import { homeFor, isOpsStaff } from "../lib/home";
 import { usePersonStatus } from "../lib/personStatus";
 import { useSession } from "../lib/session";
 import styles from "./Landing.module.css";
@@ -22,7 +23,7 @@ import styles from "./Landing.module.css";
  * must be sent to finish it rather than shown a dead end.
  */
 export function Landing() {
-  const { user, signIn } = useSession();
+  const { user, roles, signIn } = useSession();
   const navigate = useNavigate();
   const personStatus = usePersonStatus();
 
@@ -52,6 +53,13 @@ export function Landing() {
               Use the SNU account your ticket was bought with.
             </p>
           </>
+        ) : isOpsStaff(roles) ? (
+          // Staff who run the event hold no ticket in that capacity. Asking
+          // them to "view your pass" would send them to a screen that
+          // redirects — so say what actually happens.
+          <Button variant="primary" onClick={() => navigate(homeFor(roles))}>
+            Open the dashboard
+          </Button>
         ) : personStatus.kind === "loading" ? (
           // Reserves the same space a real button takes so nothing shifts once
           // we know which one to show.

@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "../components/Button";
 import { MandalaCorner } from "../components/MandalaCorner";
+import { isGateStaff, isOpsStaff } from "../lib/home";
 import { useSession } from "../lib/session";
 import styles from "./AppShell.module.css";
 
@@ -44,10 +45,12 @@ export function AppShell() {
   const isStaffArea =
     location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin");
   // Derived from the roles the SERVER put in the session, never a client-side
-  // flag. It only decides whether a link is drawn: /ops is guarded by
-  // RequireRole and every endpoint behind it by require_role, so drawing it
+  // flag, and from one shared definition rather than a copy per component.
+  // These only decide whether a link is drawn: /ops and /scan are guarded by
+  // RequireRole and every endpoint behind them by require_role, so drawing one
   // for the wrong person would be untidy rather than unsafe.
-  const isStaff = roles.includes("OWNER") || roles.includes("ADMIN");
+  const isStaff = isOpsStaff(roles);
+  const isGate = isGateStaff(roles);
 
   return (
     <>
@@ -89,6 +92,15 @@ export function AppShell() {
             )}
             <span className={styles.name}>{user.display_name}</span>
             <span className={styles.role}>{user.roles.join(", ")}</span>
+            {isGate && (
+              // SECURITY's whole staff surface. They walk the participant
+              // screens for their own pass like anybody else, so without this
+              // the door tool is reachable only by typing the URL — and they
+              // get this ONE link, never the rest of /ops (LLD-v1 §11.5).
+              <Link className={styles.staffLink} to="/scan">
+                Scan
+              </Link>
+            )}
             {isStaff && !isStaffArea && (
               // The way INTO /ops. Without this a staff member lands on a
               // participant screen with no route to the dashboard except

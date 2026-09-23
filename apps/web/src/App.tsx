@@ -8,6 +8,7 @@ import { OpsShell } from "./routes/ops/OpsShell";
 import { Tonight } from "./routes/ops/Tonight";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
+import { ParticipantRoute } from "./routes/ParticipantRoute";
 import { Pass } from "./routes/Pass";
 import { RequireRole } from "./routes/RequireRole";
 import { Scan } from "./routes/Scan";
@@ -27,6 +28,12 @@ import { VerifyId } from "./routes/VerifyId";
  * Staff live under /ops, which has its own rail (see OpsShell). Participant
  * screens deliberately do not get that chrome: three screens do not need a
  * rail, and nav furniture around somebody's pass makes the pass worse.
+ *
+ * RequireRole says who MAY enter; ParticipantRoute says who BELONGS here.
+ * Ops staff carry VISITOR/PARTICIPANT like everyone else (PART 3, "Roles"),
+ * so the role guard alone would happily show an ADMIN an empty pass screen.
+ * The second guard sends them to their dashboard, and sends everyone else
+ * through the ID check before the QR.
  *
  * /scan sits OUTSIDE the AppShell on purpose. It is an operator tool held at
  * a dark door, not a participant screen: no brand header, no mandala corners,
@@ -52,7 +59,9 @@ export function App() {
           path="verify"
           element={
             <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
-              <VerifyId />
+              <ParticipantRoute>
+                <VerifyId />
+              </ParticipantRoute>
             </RequireRole>
           }
         />
@@ -60,7 +69,9 @@ export function App() {
           path="pass"
           element={
             <RequireRole allow={["VISITOR", "PARTICIPANT"]}>
-              <Pass />
+              <ParticipantRoute requireIdCheck>
+                <Pass />
+              </ParticipantRoute>
             </RequireRole>
           }
         />
