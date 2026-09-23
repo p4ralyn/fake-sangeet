@@ -117,9 +117,20 @@ async def test_the_token_this_endpoint_mints_actually_scans(client, db_session, 
     )
 
     assert scanned.status_code == 200
-    assert scanned.json()["status"] == "DONE"
-    assert scanned.json()["action"] == "CHECK_IN"
-    assert scanned.json()["state"] == "INSIDE"
+    assert scanned.json()["status"] == "ACTION_REQUIRED"
+    assert scanned.json()["legal_actions"] == ["CHECK_IN"]
+
+    # The door still has to say yes — the ID photo only reaches the phone on
+    # the decision card, so a check-in is never applied without one.
+    confirmed = await client.post(
+        "/api/v1/scans/confirm",
+        headers=guard,
+        json={"decision_token": scanned.json()["decision_token"], "action": "CHECK_IN"},
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["status"] == "DONE"
+    assert confirmed.json()["action"] == "CHECK_IN"
+    assert confirmed.json()["state"] == "INSIDE"
 
 
 async def test_signing_in_is_required(client, issued):

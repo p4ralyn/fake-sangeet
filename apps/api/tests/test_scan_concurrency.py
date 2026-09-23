@@ -16,9 +16,11 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.errors import AppError
-from app.models import Event, EventInventory, Order, Pass, PassState, Scan, ScanResult, Ticket
+from app.models import (
+    Event, EventInventory, Order, Pass, PassState, Scan, ScanAction, ScanResult, Ticket,
+)
 from app.models.ticketing import TicketStatus
-from app.services.access.scans import ScanContext, present_token
+from app.services.access.scans import ScanContext, confirm_decision, present_token
 from app.services.passes.issue import issue_pass
 from app.services.passes.token import mint_pass_token
 
@@ -108,6 +110,40 @@ async def _scan_once(maker, event, token):
             return exc
 
 
+async def _check_in_once(maker, event, token):
+    """One gate's whole interaction: present, then confirm CHECK_IN.
+
+    The race moved when CHECK_IN became operator-decided. Presenting a token
+    now writes nothing and releases its lock, so N simultaneous *scans* no
+    longer contend — N simultaneous **confirms** do, each holding its own
+    decision token. That is the real gate-day shape too: two volunteers at two
+    doors, both looking at a card for the same person.
+    """
+    from app.core.deps import get_redis_client
+
+    redis = get_redis_client()
+    async with maker() as session:
+        try:
+            presented = await present_token(
+                session, redis, event=event, token=token,
+                context=ScanContext(client_scan_uuid=uuid4(), occurred_at=datetime.now(UTC)),
+            )
+        except AppError as exc:
+            return exc
+    if presented.status != "ACTION_REQUIRED":
+        return presented  # a suppressed duplicate; nothing left to confirm
+    async with maker() as session:
+        try:
+            return await confirm_decision(
+                session, redis, event=event,
+                decision_token=presented.decision_token,
+                action=ScanAction.CHECK_IN,
+                actor_user_id=None,
+            )
+        except AppError as exc:
+            return exc
+
+
 async def _counts(maker, pass_id):
     async with maker() as session:
         refreshed = await session.get(Pass, pass_id)
@@ -125,21 +161,24 @@ async def _counts(maker, pass_id):
 
 
 async def test_n_simultaneous_check_ins_record_exactly_one_transition(committed_world):
-    """With §11.2 suppression on, the losers get the winner's result back."""
+    """N gates confirm CHECK_IN for one person at the same instant. Exactly one
+    transition lands and nobody is admitted twice."""
     maker, event, issued, token = committed_world
 
     outcomes = await asyncio.gather(
-        *(_scan_once(maker, event, token) for _ in range(CONCURRENT_SCANS))
+        *(_check_in_once(maker, event, token) for _ in range(CONCURRENT_SCANS))
     )
 
-    assert not [o for o in outcomes if isinstance(o, Exception)]
-    applied = [o for o in outcomes if not o.duplicate]
+    applied = [
+        o for o in outcomes
+        if not isinstance(o, Exception) and getattr(o, "action", None) is not None
+        and not o.duplicate
+    ]
     assert len(applied) == 1, "more than one gate applied a transition"
     assert applied[0].action.value == "CHECK_IN"
-    assert all(o.state is PassState.INSIDE for o in outcomes)
 
-    refreshed, ok, duplicates = await _counts(maker, issued.id)
-    assert (ok, duplicates) == (1, CONCURRENT_SCANS - 1)
+    refreshed, ok, _ = await _counts(maker, issued.id)
+    assert ok == 1, "more than one CHECK_IN was recorded"
     assert refreshed.current_state is PassState.INSIDE
     assert refreshed.version == 1  # exactly one UPDATE landed
 
@@ -156,17 +195,20 @@ async def test_with_suppression_off_only_one_check_in_wins(
     maker, event, issued, token = committed_world
 
     outcomes = await asyncio.gather(
-        *(_scan_once(maker, event, token) for _ in range(CONCURRENT_SCANS))
+        *(_check_in_once(maker, event, token) for _ in range(CONCURRENT_SCANS))
     )
 
-    assert not [o for o in outcomes if isinstance(o, Exception)]
-    done = [o for o in outcomes if o.status == "DONE"]
-    prompted = [o for o in outcomes if o.status == "ACTION_REQUIRED"]
-    assert len(done) == 1
-    assert done[0].action.value == "CHECK_IN"
-    assert len(prompted) == CONCURRENT_SCANS - 1
-    # The losers are asked what to do with someone who is already inside.
-    assert all({a.value for a in o.legal_actions} == {"EXIT_BREAK", "CHECK_OUT"} for o in prompted)
+    applied = [
+        o for o in outcomes
+        if not isinstance(o, Exception) and getattr(o, "action", None) is not None
+        and not o.duplicate
+    ]
+    assert len(applied) == 1
+    assert applied[0].action.value == "CHECK_IN"
+    # Every loser is refused. Two guards do that together and this test fails
+    # only when BOTH are gone: the FOR UPDATE serialises the readers, and the
+    # `version` guard on the UPDATE catches anything that slips past it.
+    assert len([o for o in outcomes if isinstance(o, AppError)]) == CONCURRENT_SCANS - 1
 
     refreshed, ok, duplicates = await _counts(maker, issued.id)
     assert (ok, duplicates) == (1, 0)
@@ -176,28 +218,39 @@ async def test_with_suppression_off_only_one_check_in_wins(
 
 async def test_simultaneous_replays_of_one_client_scan_uuid_count_once(committed_world):
     """An offline device reconnecting can fire its queue twice. The unique
-    index is the backstop when the duplicate window has long passed."""
+    index is the backstop when the duplicate window has long passed.
+
+    Each queued entry carries the device's own `client_scan_uuid` through its
+    own decision token, so the collision happens where the write happens: in
+    six simultaneous confirms, not in the presents that preceded them.
+    """
     maker, event, issued, token = committed_world
     from app.core.deps import get_redis_client
 
+    redis = get_redis_client()
     shared_uuid = uuid4()
 
-    async def replay():
+    tokens = []
+    for _ in range(6):
+        async with maker() as session:
+            presented = await present_token(
+                session, redis, event=event, token=token,
+                context=ScanContext(client_scan_uuid=shared_uuid, occurred_at=datetime.now(UTC)),
+            )
+        assert presented.status == "ACTION_REQUIRED"
+        tokens.append(presented.decision_token)
+
+    async def replay(decision_token):
         async with maker() as session:
             try:
-                return await present_token(
-                    session,
-                    get_redis_client(),
-                    event=event,
-                    token=token,
-                    context=ScanContext(
-                        client_scan_uuid=shared_uuid, occurred_at=datetime.now(UTC)
-                    ),
+                return await confirm_decision(
+                    session, redis, event=event, decision_token=decision_token,
+                    action=ScanAction.CHECK_IN, actor_user_id=None,
                 )
             except Exception as exc:  # noqa: BLE001 -- an IntegrityError is a pass too
                 return exc
 
-    results = await asyncio.gather(*(replay() for _ in range(6)))
+    results = await asyncio.gather(*(replay(t) for t in tokens))
     assert any(not isinstance(r, Exception) for r in results)
 
     _, ok, _ = await _counts(maker, issued.id)

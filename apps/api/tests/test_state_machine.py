@@ -100,8 +100,21 @@ def test_revoked_is_refused_with_its_own_reason():
     assert departed.value.reason is TransitionRefusal.ALREADY_DEPARTED
 
 
-def test_check_in_is_the_only_action_applied_without_asking():
-    assert auto_action(legal_actions(PassState.NOT_ARRIVED, breaks_used=0)) is ScanAction.CHECK_IN
+def test_check_in_asks_too_because_the_id_photo_only_arrives_on_a_card():
+    """The first scan is where a volunteer compares a face to an uploaded ID,
+    and that photo only reaches the phone on an ACTION_REQUIRED response.
+    Auto-applying CHECK_IN admitted people without anybody ever seeing it."""
+    actions = legal_actions(PassState.NOT_ARRIVED, breaks_used=0)
+    assert actions == (ScanAction.CHECK_IN,)
+    assert auto_action(actions) is None
+
+
+def test_nothing_is_applied_without_a_person_deciding():
+    """Every reachable state, from both break budgets. There is no scan that
+    opens the door on a valid QR alone."""
+    for state in PassState:
+        for used in (0, 1):
+            assert auto_action(legal_actions(state, breaks_used=used)) is None
 
 
 def test_check_out_is_never_applied_automatically_even_when_it_is_the_only_option():

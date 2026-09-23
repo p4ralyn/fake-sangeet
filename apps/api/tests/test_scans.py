@@ -123,6 +123,21 @@ async def scan(client, headers, token, *, gate_id=None, client_scan_uuid=None):
     )
 
 
+async def check_in(client, headers, token, *, gate_id=None, client_scan_uuid=None):
+    """Scan, then confirm CHECK_IN.
+
+    Every transition is operator-decided now, including the first: the ID photo
+    only reaches the phone on an ACTION_REQUIRED response, so admitting someone
+    without a card meant admitting them without anybody seeing the face.
+    """
+    presented = await scan(
+        client, headers, token, gate_id=gate_id, client_scan_uuid=client_scan_uuid
+    )
+    assert presented.json()["status"] == "ACTION_REQUIRED", presented.text
+    assert presented.json()["legal_actions"] == ["CHECK_IN"]
+    return await confirm(client, headers, presented.json()["decision_token"], "CHECK_IN")
+
+
 async def confirm(client, headers, decision_token, action):
     return await client.post(
         "/api/v1/scans/confirm",
@@ -163,8 +178,9 @@ async def test_the_full_four_scan_lifecycle(
 ):
     headers = await login(client, SECURITY_NET_ID)
 
-    # 1. CHECK_IN — the only legal action, applied without asking.
-    first = await scan(client, headers, token, gate_id=gate_id)
+    # 1. CHECK_IN — a card, because this is where the volunteer compares the
+    #    face in front of them to the uploaded ID.
+    first = await check_in(client, headers, token, gate_id=gate_id)
     assert first.status_code == 200
     assert first.json()["status"] == "DONE"
     assert first.json()["state"] == "INSIDE"
@@ -216,7 +232,7 @@ async def test_a_pass_with_no_break_is_scanned_twice(
     client, db_session, scanner_staff, issued_pass, token, no_duplicate_window
 ):
     headers = await login(client, SECURITY_NET_ID)
-    await scan(client, headers, token)
+    await check_in(client, headers, token)
     second = await scan(client, headers, token)
     out = await confirm(client, headers, second.json()["decision_token"], "CHECK_OUT")
 
@@ -232,7 +248,7 @@ async def test_a_double_tap_returns_the_previous_result_not_an_error(
 ):
     """Operators double-tap constantly; an error screen makes them rescan."""
     headers = await login(client, SECURITY_NET_ID)
-    first = await scan(client, headers, token)
+    first = await check_in(client, headers, token)
     second = await scan(client, headers, token)
 
     assert second.status_code == 200
@@ -260,7 +276,7 @@ async def test_replaying_one_client_scan_uuid_cannot_double_count(
     stops a replayed CHECK_IN counting twice even with the window off."""
     headers = await login(client, SECURITY_NET_ID)
     scan_uuid = uuid4()
-    first = await scan(client, headers, token, client_scan_uuid=scan_uuid)
+    first = await check_in(client, headers, token, client_scan_uuid=scan_uuid)
     replay = await scan(client, headers, token, client_scan_uuid=scan_uuid)
 
     assert replay.status_code == 200
@@ -373,7 +389,7 @@ async def test_a_decision_token_is_single_use(
     client, scanner_staff, issued_pass, token, no_duplicate_window
 ):
     headers = await login(client, SECURITY_NET_ID)
-    await scan(client, headers, token)
+    await check_in(client, headers, token)
     decision = (await scan(client, headers, token)).json()["decision_token"]
 
     assert (await confirm(client, headers, decision, "EXIT_BREAK")).status_code == 200
@@ -411,7 +427,7 @@ async def test_confirm_refuses_an_action_that_was_not_offered(
     client, scanner_staff, issued_pass, token, no_duplicate_window
 ):
     headers = await login(client, SECURITY_NET_ID)
-    await scan(client, headers, token)
+    await check_in(client, headers, token)
     decision = (await scan(client, headers, token)).json()["decision_token"]
 
     response = await confirm(client, headers, decision, "CHECK_IN")
@@ -445,7 +461,7 @@ async def test_a_security_response_carries_only_the_11_5_fields(
 
 async def test_an_owner_gets_the_full_record(client, scanner_staff, issued_pass, token):
     headers = await login(client, OWNER_NET_ID)
-    body = (await scan(client, headers, token)).json()
+    body = (await check_in(client, headers, token)).json()
 
     assert SECURITY_FIELDS < set(body)
     assert body["pass_id"] == str(issued_pass.id)
@@ -458,7 +474,7 @@ async def test_the_scan_row_records_who_scanned_and_where(
     client, db_session, scanner_staff, gate_id, issued_pass, token
 ):
     headers = await login(client, SECURITY_NET_ID)
-    await scan(client, headers, token, gate_id=gate_id)
+    await check_in(client, headers, token, gate_id=gate_id)
 
     row = (
         await db_session.execute(select(Scan).where(Scan.pass_id == issued_pass.id))

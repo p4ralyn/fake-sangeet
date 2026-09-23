@@ -34,8 +34,15 @@ TRANSITIONS: dict[PassState, dict[ScanAction, PassState]] = {
 # is never applied automatically even when it is the only legal one: a pass that
 # has used its break has CHECK_OUT as its sole legal action, and auto-applying
 # that would mark someone departed for walking past a scanner.
+#
+# CHECK_IN is on this list, which means **every** transition in this machine is
+# operator-decided and `auto_action` can never fire. That is deliberate: the ID
+# photo only reaches the volunteer's phone on an ACTION_REQUIRED response, so
+# auto-applying the first scan admitted people without anyone ever seeing the
+# face the pass belongs to. Verifying identity at the door is the entire point
+# of the product; a turnstile that opens on a valid QR is not this product.
 OPERATOR_DECIDED_ACTIONS: frozenset[ScanAction] = frozenset(
-    {ScanAction.EXIT_BREAK, ScanAction.CHECK_OUT}
+    {ScanAction.CHECK_IN, ScanAction.EXIT_BREAK, ScanAction.CHECK_OUT}
 )
 
 # Actions that consume one of the pass's breaks.
@@ -86,9 +93,14 @@ def legal_actions(
 def auto_action(actions: tuple[ScanAction, ...]) -> ScanAction | None:
     """The action to apply without asking, or None to raise ACTION_REQUIRED.
 
-    Exactly one legal action AND that action is not operator-decided. §11.1
-    marks RE_ENTRY "auto", but from ON_BREAK it shares the card with CHECK_OUT,
-    so the operator still has a choice to make and still gets one.
+    Exactly one legal action AND that action is not operator-decided.
+
+    As every action is currently operator-decided, this always returns None and
+    every scan shows the card. The function stays because the *rule* is what
+    matters, not today's answer: it is the one place that decides whether a
+    transition may happen without a person, and a future action that genuinely
+    needs no human (a re-entry at an exit-only gate, say) plugs in here rather
+    than growing a second code path.
     """
     if len(actions) == 1 and actions[0] not in OPERATOR_DECIDED_ACTIONS:
         return actions[0]
