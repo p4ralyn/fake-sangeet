@@ -17,7 +17,15 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.errors import AppError
 from app.models import (
-    Event, EventInventory, Order, Pass, PassState, Scan, ScanAction, ScanResult, Ticket,
+    Event,
+    EventInventory,
+    Order,
+    Pass,
+    PassState,
+    Scan,
+    ScanAction,
+    ScanResult,
+    Ticket,
 )
 from app.models.ticketing import TicketStatus
 from app.services.access.scans import ScanContext, confirm_decision, present_token
