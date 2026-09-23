@@ -2,7 +2,7 @@
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
 Last updated: M1–M4 complete, scanner built, M6 part-done, transfer shipped,
-selling switched off. 331 tests.
+selling switched off, ops dashboard. 346 tests.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -337,6 +337,33 @@ API contract: `docs/design/frontend-api-contract.md`
       saffron and scarlet, the decision card is a cream card, and the result
       fields are green / scarlet / marigold. The camera viewport stays black,
       which is the one deliberate exception
+
+## Ops dashboard
+
+- [x] **`/ops`, a staff area with a rail.** It exists because staff navigation
+      did not: an ADMIN on the review queue had no link to anything and had to
+      know URLs. Primus IQ's workspace pattern, in this app's palette
+- [x] **Tonight** — in the room, on a break, not arrived, left; seats against
+      the real 600 cap; scans and refusals in the last 15 minutes. A gate that
+      has gone quiet says so, because quiet at 18:20 is either finished or
+      broken
+- [x] **Sheet rows** — the `ingestion_errors` tray, which had existed since M3
+      with **no screen at all**. Shows the normaliser's own view of the broken
+      row, because the fix is to go and repair the workbook
+- [x] **Mail** — outbox health and the rows that need a person. A never-tried
+      row is a queue, not a problem, and is counted rather than listed
+- [x] **Alerts** — derived, with no `notifications` table. Computed from the
+      review queue, the ingestion tray, the outbox and the scan log, so it
+      cannot drift out of sync and no service can forget to write to it.
+      Ordered worst-first; an empty feed is the normal state and says so
+- [x] Severity carried by a band, a tag and wording — never colour alone
+- [x] **SECURITY is refused the whole area.** Their tool is `/scan`; handing a
+      borrowed phone the queue would undo §11.5's narrowing
+- [x] Polled at 10s rather than SSE. LLD-v1 §19 specifies SSE citing Primus
+      IQ's EventSource hook — still the right answer if this feels laggy, but
+      not worth the reconnect logic for a four-hour event
+- [x] `/admin/ids` redirects, because people have it bookmarked
+- [x] **15 tests**, each creating a real condition rather than stubbing a feed
 
 ## Not started
 

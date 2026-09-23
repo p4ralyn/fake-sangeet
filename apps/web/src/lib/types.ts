@@ -421,3 +421,91 @@ export interface ReviewDecisionRequest {
   /** Only consulted on a refusal. */
   allow_resubmit?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Ops dashboard — ADMIN/OWNER. Source of truth: apps/api/app/schemas/ops.py.
+// There is no notifications table: every item is derived from rows that
+// already exist, so the feed cannot drift out of sync with reality.
+// ---------------------------------------------------------------------------
+
+export interface Occupancy {
+  inside: number;
+  on_break: number;
+  departed: number;
+  not_arrived: number;
+  revoked: number;
+}
+
+export interface Seats {
+  committed: number;
+  /** The venue cap, always — never "what's left on sale". */
+  total: number;
+}
+
+export interface Queues {
+  ids_waiting: number;
+  ids_oldest_minutes: number | null;
+  ingestion_unresolved: number;
+  mail_queued: number;
+  mail_dead: number;
+}
+
+export interface OpsSummary {
+  occupancy: Occupancy;
+  seats: Seats;
+  queues: Queues;
+  scans_recent: number;
+  scans_window_minutes: number;
+  refusals_recent: number;
+  generated_at: string;
+}
+
+export type Severity = "CRITICAL" | "WARNING" | "INFO";
+
+export interface Notification {
+  kind: string;
+  severity: Severity;
+  title: string;
+  detail: string;
+  href: string | null;
+  count: number | null;
+}
+
+export interface NotificationFeed {
+  items: Notification[];
+  generated_at: string;
+}
+
+export interface IngestionErrorItem {
+  id: string;
+  row_ref: string | null;
+  reason: string;
+  /** The normaliser's view of the broken row. Carries attendee data on
+   * purpose — an admin has to read it to repair the sheet. */
+  raw: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface IngestionTray {
+  unresolved: number;
+  items: IngestionErrorItem[];
+}
+
+export interface MailProblem {
+  id: string;
+  to_email: string;
+  template: string;
+  status: string;
+  attempts: number;
+  last_error: string | null;
+  next_attempt_at: string | null;
+}
+
+export interface MailHealth {
+  queued: number;
+  sending: number;
+  sent: number;
+  failed: number;
+  dead: number;
+  problems: MailProblem[];
+}

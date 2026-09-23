@@ -1,6 +1,11 @@
-import { Route, Routes } from "react-router-dom";
-import { AdminIdsScreen } from "./routes/AdminIds";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./routes/AppShell";
+import { IdReview } from "./routes/ops/IdReview";
+import { IngestionTray } from "./routes/ops/IngestionTray";
+import { MailHealth } from "./routes/ops/MailHealth";
+import { Notifications } from "./routes/ops/Notifications";
+import { OpsShell } from "./routes/ops/OpsShell";
+import { Tonight } from "./routes/ops/Tonight";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
 import { Pass } from "./routes/Pass";
@@ -18,6 +23,10 @@ import { VerifyId } from "./routes/VerifyId";
  * status -> waitlist) has moved to `feature/booking-flow` rather than being
  * deleted. What is left is the door: hold a pass, verify an ID, review IDs,
  * scan at the gate.
+ *
+ * Staff live under /ops, which has its own rail (see OpsShell). Participant
+ * screens deliberately do not get that chrome: three screens do not need a
+ * rail, and nav furniture around somebody's pass makes the pass worse.
  *
  * /scan sits OUTSIDE the AppShell on purpose. It is an operator tool held at
  * a dark door, not a participant screen: no brand header, no mandala corners,
@@ -56,14 +65,27 @@ export function App() {
           }
         />
 
+        {/* The staff area. One guard on the parent, so a panel added later
+            cannot be reached by forgetting to wrap it. SECURITY is absent on
+            purpose — their tool is /scan (LLD-v1 §11.5). */}
         <Route
-          path="admin/ids"
+          path="ops"
           element={
             <RequireRole allow={["OWNER", "ADMIN"]}>
-              <AdminIdsScreen />
+              <OpsShell />
             </RequireRole>
           }
-        />
+        >
+          <Route index element={<Tonight />} />
+          <Route path="ids" element={<IdReview />} />
+          <Route path="ingestion" element={<IngestionTray />} />
+          <Route path="mail" element={<MailHealth />} />
+          <Route path="notifications" element={<Notifications />} />
+        </Route>
+
+        {/* The review queue used to live here and people have it bookmarked. */}
+        <Route path="admin/ids" element={<Navigate to="/ops/ids" replace />} />
+        <Route path="admin" element={<Navigate to="/ops" replace />} />
 
         <Route path="*" element={<NotFound />} />
       </Route>

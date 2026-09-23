@@ -1,0 +1,144 @@
+/* The staff area. Poster palette, working register: saffron ground, a scarlet
+   rail, cream panels. Denser than the participant screens because this is a
+   thing people read for four hours, not a ceremony. */
+
+.ops {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.rail {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 0.75rem;
+  background: var(--scarlet);
+  border: 2px solid var(--maroon);
+  border-radius: 2px;
+  color: var(--cream);
+}
+
+.railTitle {
+  margin: 0 0 0.5rem;
+  max-width: none;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid color-mix(in srgb, var(--cream) 35%, transparent);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  color: var(--marigold);
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 0.375rem 0.625rem;
+  border-radius: 2px;
+  color: var(--cream);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.link:hover {
+  background: color-mix(in srgb, var(--cream) 16%, transparent);
+}
+
+/* Marigold fill for the active destination — the poster's own accent, and
+   unmistakable at a glance across a room. */
+.linkActive {
+  background: var(--marigold);
+  color: var(--maroon);
+}
+
+.badge,
+.badgeLoud {
+  margin-left: auto;
+  min-width: 1.35rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  text-align: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  background: var(--cream);
+  color: var(--maroon);
+}
+
+/* A critical item makes the badge magenta rather than just bigger: the rail
+   has to carry "something is actually wrong" without being read. */
+.badgeLoud {
+  background: var(--magenta);
+  color: var(--cream);
+}
+
+.scannerLink {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  border: 2px solid var(--cream);
+  border-radius: 2px;
+  color: var(--cream);
+  text-decoration: none;
+  text-align: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.scannerLink:hover {
+  background: color-mix(in srgb, var(--cream) 16%, transparent);
+}
+
+.who {
+  margin: 1rem 0 0;
+  max-width: none;
+  padding-top: 0.75rem;
+  border-top: 2px solid color-mix(in srgb, var(--cream) 35%, transparent);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.role {
+  color: color-mix(in srgb, var(--cream) 75%, transparent);
+}
+
+.panel {
+  min-width: 0;
+}
+
+/* Phone: the rail becomes a scrolling strip above the panel. A 13rem column
+   next to content on a 400px screen is two unusable columns. */
+@media (max-width: 52rem) {
+  .ops {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .railTitle,
+  .who {
+    display: none;
+  }
+
+  .link {
+    flex: 0 0 auto;
+  }
+
+  .scannerLink {
+    margin-top: 0;
+    margin-left: auto;
+  }
+}

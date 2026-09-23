@@ -39,7 +39,10 @@ function SnuphoriaMark() {
 export function AppShell() {
   const { user, signOut } = useSession();
   const location = useLocation();
-  const isAdmin = location.pathname.startsWith("/admin");
+  // The staff area needs the wide column; participant screens keep the 34rem
+  // one. /admin is kept because its redirects render for a frame.
+  const isStaffArea =
+    location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin");
 
   return (
     <>
@@ -76,7 +79,7 @@ export function AppShell() {
           </div>
         )}
       </header>
-      <main className={isAdmin ? styles.mainWide : styles.mainNarrow}>
+      <main className={isStaffArea ? styles.mainWide : styles.mainNarrow}>
         <Outlet />
       </main>
     </>

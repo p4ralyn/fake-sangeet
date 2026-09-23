@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError } from "../lib/api";
-import { decideReview, getReviewQueue } from "../lib/verificationApi";
-import type { ReviewItem } from "../lib/types";
-import styles from "./AdminIds.module.css";
+import { ApiError } from "../../lib/api";
+import { decideReview, getReviewQueue } from "../../lib/verificationApi";
+import type { ReviewItem } from "../../lib/types";
+import styles from "./IdReview.module.css";
 
 /**
  * The ID review queue (M4). One card at a time, not a table.
@@ -24,7 +24,7 @@ import styles from "./AdminIds.module.css";
 
 const SHORTCUTS = "A approves · R asks for another photo · X refuses";
 
-export function AdminIdsScreen() {
+export function IdReview() {
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [pending, setPending] = useState(0);
   const [cursor, setCursor] = useState(0);
