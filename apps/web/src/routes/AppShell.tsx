@@ -37,12 +37,17 @@ function SnuphoriaMark() {
  * goes wide under /admin, per the design spec's layout rule.
  */
 export function AppShell() {
-  const { user, signOut } = useSession();
+  const { user, roles, signOut } = useSession();
   const location = useLocation();
   // The staff area needs the wide column; participant screens keep the 34rem
   // one. /admin is kept because its redirects render for a frame.
   const isStaffArea =
     location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin");
+  // Derived from the roles the SERVER put in the session, never a client-side
+  // flag. It only decides whether a link is drawn: /ops is guarded by
+  // RequireRole and every endpoint behind it by require_role, so drawing it
+  // for the wrong person would be untidy rather than unsafe.
+  const isStaff = roles.includes("OWNER") || roles.includes("ADMIN");
 
   return (
     <>
@@ -84,6 +89,15 @@ export function AppShell() {
             )}
             <span className={styles.name}>{user.display_name}</span>
             <span className={styles.role}>{user.roles.join(", ")}</span>
+            {isStaff && !isStaffArea && (
+              // The way INTO /ops. Without this a staff member lands on a
+              // participant screen with no route to the dashboard except
+              // typing the URL — a rail inside /ops is no use to somebody who
+              // cannot get there. Hidden once inside, where the rail navigates.
+              <Link className={styles.staffLink} to="/ops">
+                Dashboard
+              </Link>
+            )}
             <Button variant="quiet" onClick={() => void signOut()}>
               Sign out
             </Button>

@@ -25,6 +25,7 @@ from app.services.ops import dashboard
 from app.services.passes.issue import issue_pass
 
 ADMIN_NET_ID = "zq202"
+OWNER_NET_ID = "pk944owner"
 SECURITY_NET_ID = "zq203"
 HOLDER = "pk944"
 
@@ -44,9 +45,15 @@ async def staff(db_session, event_id):
         text(
             "INSERT INTO event_staff (id, event_id, net_id, role) VALUES "
             "(gen_random_uuid(), :e, :admin, 'ADMIN'), "
+            "(gen_random_uuid(), :e, :owner, 'OWNER'), "
             "(gen_random_uuid(), :e, :sec, 'SECURITY')"
         ),
-        {"e": event_id, "admin": ADMIN_NET_ID, "sec": SECURITY_NET_ID},
+        {
+            "e": event_id,
+            "admin": ADMIN_NET_ID,
+            "owner": OWNER_NET_ID,
+            "sec": SECURITY_NET_ID,
+        },
     )
     await db_session.commit()
 
@@ -379,3 +386,14 @@ async def test_an_admin_sees_every_panel(client, staff, event_id):
 
     for path in ("notifications", "ingestion-errors", "mail"):
         assert (await client.get(f"/api/v1/ops/{path}", headers=headers)).status_code == 200
+
+
+async def test_an_owner_sees_every_panel_too(client, staff, event_id):
+    """The role ladder, end to end: OWNER and ADMIN in, SECURITY and everybody
+    else out. Asserted rather than assumed, because "the dashboard is empty"
+    and "you are not allowed in" look identical from outside."""
+    headers = await login(client, OWNER_NET_ID)
+
+    for path in ("summary", "notifications", "ingestion-errors", "mail"):
+        response = await client.get(f"/api/v1/ops/{path}", headers=headers)
+        assert response.status_code == 200, path
