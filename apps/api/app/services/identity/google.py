@@ -40,6 +40,18 @@ JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 # Pinning only one causes intermittent, spurious rejections.
 VALID_ISSUERS = frozenset({"https://accounts.google.com", "accounts.google.com"})
 
+# Claims a Google ID token must carry, and it is a SHORT list on purpose.
+#
+# There is deliberately no `nbf` here. Google does not issue one -- its
+# discovery document advertises exactly
+# `aud, email, email_verified, exp, family_name, given_name, iat, iss, name,
+# picture, sub` -- so requiring it rejects every real sign-in with
+# `MissingRequiredClaimError`, which surfaces as a generic "we could not verify
+# that sign-in" and looks like an intermittent fault rather than a total one.
+# This module was adapted from `entra.py`, where `nbf` IS correct because
+# Microsoft issues it; the claim came along with the copy. Do not add it back.
+REQUIRED_CLAIMS = ["exp", "iat", "aud", "iss", "sub"]
+
 
 class JwksCache:
     """Caches Google's signing keys; refreshes on a `kid` miss."""
@@ -156,12 +168,20 @@ class GoogleAuthProvider:
                 audience=settings.google_client_id,
                 issuer=list(VALID_ISSUERS),
                 leeway=CLOCK_SKEW_SECONDS,
-                options={"require": ["exp", "nbf", "iat", "aud", "iss", "sub"]},
+                options={"require": REQUIRED_CLAIMS},
             )
         except AppError:
             raise
         except Exception as exc:
-            log.warning("google_id_token_invalid", error_type=type(exc).__name__)
+            # `claim` names WHICH claim was missing. Without it this log says
+            # only "MissingRequiredClaimError" and the next person has to go
+            # and read Google's discovery document to find out which -- which
+            # is exactly what happened the first time.
+            log.warning(
+                "google_id_token_invalid",
+                error_type=type(exc).__name__,
+                claim=getattr(exc, "claim", None),
+            )
             raise AppError(
                 ErrorCode.OIDC_TOKEN_INVALID,
                 "We could not verify that sign-in. Try again.",
