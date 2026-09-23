@@ -1,7 +1,7 @@
 # unigate — shipped checkpoint
 
 Repo: https://github.com/p4ralyn/unigatev1 (private)
-Last updated: M1–M4 complete, gate scanner built. 279 tests.
+Last updated: M1–M4 complete, gate scanner built, M6 part-done. 301 tests.
 
 Legend: `[x]` shipped and verified · `[~]` in progress · `[ ]` not started
 
@@ -250,12 +250,63 @@ API contract: `docs/design/frontend-api-contract.md`
       reviewed as the admin, pass issued, both audit rows written
 - [x] **49 tests** (279 total), every negative one proven by breaking its guard
 
+## M6 — pass delivery (part done)
+
+- [x] **`GET /api/v1/me/pass`** — the participant's own tickets, with a QR
+      token minted per request. `mock.ts`'s `myPass` switch is flipped to
+      `"real"`, so the pass screen is no longer fake
+- [x] **The token is never stored.** `passes.qr_object` stays NULL: keeping a
+      bearer credential in a row so it can be served again is a place for it
+      to leak, and minting costs one HMAC
+- [x] Renamed the wire field `qr_url` -> `qr_token`. It carries the token the
+      scanner decodes, and a bearer credential in a field called "url" is a
+      thing people log, paste into bug reports and forward
+- [x] Served under `/api/v1`, not the contract's bare `/my/pass`: the dev
+      server proxies only `/api` and `/auth`, so the bare path would have been
+      answered by Vite with index.html
+- [x] A ticket with no pass yet still appears, with its real state and a line
+      saying the QR arrives once the ID is checked — hiding it reads as a lost
+      ticket
+- [x] **A PROXY couple's second pass now reaches the buyer.** It is minted
+      unbound by design, so the obvious identity filter dropped it and the
+      buyer would have arrived at the door with one QR for two people. A
+      SELF_CLAIM partner's ticket stays off the buyer's account, tested both
+      ways
+- [x] **The outbox worker** — `FOR UPDATE SKIP LOCKED`, so two workers never
+      send the same row; claim committed *before* the send, because a rare
+      duplicate beats a missing "your ticket is ready"
+- [x] **A claim lease, because `SKIP LOCKED` alone is not enough.** The row
+      lock dies with the claiming transaction, and the claim must commit before
+      the send — so a second worker was free to re-claim a `SENDING` row.
+      Claiming now pushes `next_attempt_at` 5 minutes out, which also lets a
+      killed worker's rows recover by themselves. **Caught by a concurrency
+      test, not by reading the code**: four workers against twelve rows sent
+      twenty-one messages before the fix
+- [x] Exponential backoff to a cap, `DEAD` after 6 tries with `last_error`
+      kept; an unrenderable row dies on attempt 1 instead of retrying six
+      times to fail identically
+- [x] The mail links to the site and carries **no QR and no claim code** —
+      LLD-v2 §5's "log in here" is the security design, not a turn of phrase
+- [x] `scripts/mailer.py`, one pass or `--watch`
+- [x] **Fixed a real PII leak**: standalone scripts never called
+      `configure_logging()`, so structlog ran without the `redact_pii`
+      processor and `scripts/mailer.py` logged every recipient address in the
+      clear. Proven by watching an address change to `sha256:...`
+- [x] **Sent for real through mailpit** and read back off the wire: subject,
+      text and HTML parts, correct link
+- [x] **24 tests** (303 total), the negative ones each proven by breaking
+      their guard
+- [ ] Offline scanning — still needs a server-issued, gate-scoped verification
+      key, which nothing mints yet
+- [ ] Occupancy dashboard, paper fallback export
+
 ## Not started
+
 - [ ] **M5** — phase 3 purchase (holds, UPI proof, approval, reconciliation).
       **Recommended to cut**: 50 seats sold by hand into the sheet removes the
       largest remaining chunk of work for 8% of attendees.
-- [ ] **M6 remainder** — QR render, confirmation email, offline scanning,
-      dashboard, paper fallback export, and the dress rehearsal at a real door
+- [ ] **The dress rehearsal at a real door.** Still the milestone that matters,
+      and still the only thing that has never been done.
 
 ## Deployed
 

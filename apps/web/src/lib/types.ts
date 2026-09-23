@@ -212,8 +212,18 @@ export type TicketState =
   | "REVOKED";
 
 export interface PassTicket {
+  /** Empty string until a pass is issued. */
   short_code: string;
-  qr_url: string;
+  /**
+   * The QR payload — the exact string the scanner decodes and posts to
+   * /api/v1/scans. Named `qr_token`, not the contract's original `qr_url`:
+   * that name was written when a server-rendered PNG was assumed, and a
+   * bearer credential in a field called "url" is a thing people log, paste
+   * into bug reports and forward. Null until a pass exists.
+   *
+   * Never log it, never store it, never put it in a URL.
+   */
+  qr_token: string | null;
   holder_name: string;
   seat_index: number;
   seats: number;

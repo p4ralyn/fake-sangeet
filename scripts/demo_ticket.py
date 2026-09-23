@@ -18,6 +18,7 @@ from sqlalchemy import select
 from app.db.session import session_factory
 from app.models import Event, LedgerReason, Order, Ticket, TicketStatus
 from app.services.inventory import commit_seats
+from app.services.mailer.outbox import TEMPLATE_TICKET_READY, QueuedEmail, queue_email
 
 
 async def main(net_id: str) -> int:
@@ -56,8 +57,20 @@ async def main(net_id: str) -> int:
         await commit_seats(
             session, event_id=event.id, seats=1, reason=LedgerReason.INGEST, order_id=order.id
         )
+        # Queued exactly as the ingester does, so `scripts/mailer.py` has
+        # something real to send and the whole path can be walked by hand.
+        await queue_email(
+            session,
+            event_id=event.id,
+            message=QueuedEmail(
+                to_email=f"{net_id}@snu.edu.in",
+                template=TEMPLATE_TICKET_READY,
+                idempotency_key=f"{TEMPLATE_TICKET_READY}:{ticket.ticket_ref}",
+                payload={"ticket_ref": ticket.ticket_ref, "name": net_id.upper()},
+            ),
+        )
         await session.commit()
-        print(f"{net_id} now holds {ticket.ticket_ref}")  # noqa: T201
+        print(f"{net_id} now holds {ticket.ticket_ref}, mail queued")  # noqa: T201
         return 0
 
 

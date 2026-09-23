@@ -53,7 +53,7 @@ const ENDPOINT_MODE: Record<EndpointName, "real" | "mock"> = {
   requestProofUpload: "mock",
   submitProof: "mock",
   paymentStatus: "mock",
-  myPass: "mock",
+  myPass: "real",
   adminListPayments: "mock",
   adminApprovePayment: "mock",
   adminRejectPayment: "mock",
@@ -575,7 +575,7 @@ function buildEngine(): MockEngine | null {
       for (let seatIndex = 1; seatIndex <= intent.seats; seatIndex += 1) {
         tickets.push({
           short_code: `${intent.referenceCode.replace("UG-", "")}${seatIndex}`,
-          qr_url: `/mock/qr/${intent.id}-${seatIndex}.png`,
+          qr_token: `UG1.mock-${intent.id}-${seatIndex}`,
           holder_name: seatIndex === 1 ? intent.payerName : "Partner",
           seat_index: seatIndex,
           seats: intent.seats,
@@ -672,7 +672,10 @@ export function getPaymentStatus(intentId: string): Promise<PaymentStatusRespons
 
 export function getMyPass(): Promise<MyPassResponse> {
   return ENDPOINT_MODE.myPass === "real"
-    ? api.get<MyPassResponse>("/my/pass")
+    // /api/v1/me/pass, not the contract's bare /my/pass: the dev server
+    // proxies only /api and /auth, so the bare path would be answered by
+    // Vite with index.html. See apps/api/app/api/v1/routes/me.py.
+    ? api.get<MyPassResponse>("/api/v1/me/pass")
     : requireEngine().myPass();
 }
 

@@ -1,0 +1,217 @@
+"""The outbox worker and its templates (M6).
+
+M3 queued 441 "your ticket is ready" rows and nothing sent them. This is what
+sends them, and the thing it must never do is send one twice.
+"""
+from datetime import UTC, datetime, timedelta
+
+import pytest
+import pytest_asyncio
+from sqlalchemy import select
+
+from app.models import EmailOutbox, EmailStatus
+from app.services.mailer.outbox import TEMPLATE_TICKET_READY, QueuedEmail, queue_email
+from app.services.mailer.provider import EmailMessage
+from app.services.mailer.templates import UnknownTemplate, render
+from app.services.mailer.worker import (
+    BACKOFF_BASE,
+    MAX_ATTEMPTS,
+    backoff_for,
+    drain,
+    drain_once,
+)
+
+
+class FakeMailer:
+    """Records what it was asked to send. Optionally fails."""
+
+    def __init__(self, *, fail_times: int = 0, error: str = "smtp is down") -> None:
+        self.sent: list[EmailMessage] = []
+        self.remaining_failures = fail_times
+        self.error = error
+
+    async def send(self, message: EmailMessage) -> None:
+        if self.remaining_failures > 0:
+            self.remaining_failures -= 1
+            raise RuntimeError(self.error)
+        self.sent.append(message)
+
+
+async def enqueue(db, event_id, *, to="pk944@snu.edu.in", key="k1", payload=None):
+    await queue_email(
+        db,
+        event_id=event_id,
+        message=QueuedEmail(
+            to_email=to,
+            template=TEMPLATE_TICKET_READY,
+            idempotency_key=key,
+            payload=payload or {"name": "Aarav Sharma", "ticket_ref": "FS26-1"},
+        ),
+    )
+    await db.commit()
+
+
+@pytest_asyncio.fixture
+async def queued(db_session, event_id):
+    await enqueue(db_session, event_id)
+    return await db_session.scalar(select(EmailOutbox))
+
+
+# ── templates ────────────────────────────────────────────────────────────────
+def test_the_ticket_ready_mail_links_to_the_site_and_carries_no_qr():
+    """LLD-v2 §5 says "log in here", and that is the security design: a pass
+    token in an inbox is one forward away from being somebody else's."""
+    message = render(TEMPLATE_TICKET_READY, {"name": "Aarav Sharma", "ticket_ref": "FS26-1"})
+
+    assert "Aarav Sharma" in message.text_body
+    assert "/pass" in message.text_body
+    assert message.html_body and "/pass" in message.html_body
+    # No token, no QR, no image of one.
+    assert "UG1." not in message.text_body
+    assert "qr" not in message.text_body.lower()
+    assert "<img" not in (message.html_body or "")
+
+
+def test_a_partner_is_told_why_they_are_getting_this():
+    """The only recipient who did not buy the ticket themselves."""
+    plain = render(TEMPLATE_TICKET_READY, {"name": "Isha"})
+    partner = render(TEMPLATE_TICKET_READY, {"name": "Isha", "claim_code": "abc123"})
+
+    assert "couple ticket" in partner.text_body
+    assert "couple ticket" not in plain.text_body
+    # The claim code itself is a credential and never appears in the body.
+    assert "abc123" not in partner.text_body
+    assert "abc123" not in (partner.html_body or "")
+
+
+def test_a_missing_name_does_not_produce_hi_none():
+    message = render(TEMPLATE_TICKET_READY, {})
+    assert message.text_body.startswith("Hi,")
+    assert "None" not in message.text_body
+
+
+def test_an_unknown_template_raises_rather_than_silently_skipping():
+    with pytest.raises(UnknownTemplate):
+        render("no_such_template", {})
+
+
+# ── sending ──────────────────────────────────────────────────────────────────
+async def test_a_queued_row_is_sent_once_and_marked_sent(db_session, event_id, queued):
+    mailer = FakeMailer()
+
+    report = await drain(db_session, mailer)
+
+    assert (report.sent, report.failed, report.dead) == (1, 0, 0)
+    assert len(mailer.sent) == 1
+    assert mailer.sent[0].to == "pk944@snu.edu.in"
+
+    await db_session.refresh(queued)
+    assert queued.status == EmailStatus.SENT.value
+    assert queued.sent_at is not None
+    assert queued.last_error is None
+
+
+async def test_draining_twice_sends_nothing_the_second_time(db_session, event_id, queued):
+    mailer = FakeMailer()
+    await drain(db_session, mailer)
+    second = await drain(db_session, mailer)
+
+    assert second.claimed == 0
+    assert len(mailer.sent) == 1  # nobody gets a second "your ticket is ready"
+
+
+async def test_a_failure_retries_later_rather_than_immediately(db_session, event_id, queued):
+    mailer = FakeMailer(fail_times=1)
+    before = datetime.now(UTC)
+
+    report = await drain_once(db_session, mailer)
+
+    assert (report.sent, report.failed, report.dead) == (0, 1, 0)
+    await db_session.refresh(queued)
+    assert queued.status == EmailStatus.QUEUED.value
+    assert queued.attempts == 1
+    assert queued.last_error and "smtp is down" in queued.last_error
+    # Backed off into the future — a retry loop that fires instantly is a
+    # denial of service against your own mail server.
+    assert queued.next_attempt_at > before + BACKOFF_BASE / 2
+
+    # ...and it is not claimable again until then.
+    assert (await drain_once(db_session, mailer)).claimed == 0
+
+
+async def test_a_row_that_keeps_failing_is_given_up_on_and_says_why(
+    db_session, event_id, queued
+):
+    mailer = FakeMailer(fail_times=MAX_ATTEMPTS)
+
+    for _ in range(MAX_ATTEMPTS):
+        # Make the row due again rather than waiting out the real backoff.
+        queued.next_attempt_at = datetime.now(UTC) - timedelta(seconds=1)
+        await db_session.commit()
+        await drain_once(db_session, mailer)
+
+    await db_session.refresh(queued)
+    assert queued.status == EmailStatus.DEAD.value
+    assert queued.attempts == MAX_ATTEMPTS
+    assert queued.last_error  # the question an admin asks is "why didn't it go"
+    # Dead is terminal: it is never claimed again.
+    queued.next_attempt_at = datetime.now(UTC) - timedelta(seconds=1)
+    await db_session.commit()
+    assert (await drain_once(db_session, FakeMailer())).claimed == 0
+
+
+async def test_an_unrenderable_row_dies_immediately_instead_of_retrying_six_times(
+    db_session, event_id
+):
+    await queue_email(
+        db_session,
+        event_id=event_id,
+        message=QueuedEmail(
+            to_email="pk944@snu.edu.in",
+            template="not_a_real_template",
+            idempotency_key="bad-template",
+        ),
+    )
+    await db_session.commit()
+
+    report = await drain_once(db_session, FakeMailer())
+
+    assert (report.failed, report.dead, report.sent) == (1, 1, 0)
+    row = await db_session.scalar(select(EmailOutbox))
+    assert row.status == EmailStatus.DEAD.value
+    assert row.attempts == 1  # not six
+
+
+async def test_one_bad_row_does_not_stop_the_others(db_session, event_id):
+    await enqueue(db_session, event_id, to="a@snu.edu.in", key="good-1")
+    await queue_email(
+        db_session,
+        event_id=event_id,
+        message=QueuedEmail(
+            to_email="b@snu.edu.in", template="nope", idempotency_key="bad-1"
+        ),
+    )
+    await db_session.commit()
+    await enqueue(db_session, event_id, to="c@snu.edu.in", key="good-2")
+
+    mailer = FakeMailer()
+    report = await drain(db_session, mailer)
+
+    assert report.sent == 2
+    assert report.dead == 1
+    assert {m.to for m in mailer.sent} == {"a@snu.edu.in", "c@snu.edu.in"}
+
+
+async def test_a_row_scheduled_for_the_future_is_left_alone(db_session, event_id, queued):
+    queued.next_attempt_at = datetime.now(UTC) + timedelta(hours=1)
+    await db_session.commit()
+
+    assert (await drain_once(db_session, FakeMailer())).claimed == 0
+
+
+def test_the_backoff_grows_and_then_stops_growing():
+    first = backoff_for(1)
+    second = backoff_for(2)
+    assert second > first
+    # Capped, so a long outage doesn't schedule a retry after the event.
+    assert backoff_for(99) == backoff_for(100)

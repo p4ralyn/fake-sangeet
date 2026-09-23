@@ -54,9 +54,22 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
 
         <div className={styles.passStub}>
           <div className={`${styles.qrWrap} ${animate ? styles.qrResolving : ""}`}>
-            <QRCodeSVG value={ticket.qr_url} size={140} bgColor="#FFF3DC" fgColor="#5E0C18" level="M" />
+            {ticket.qr_token ? (
+              <QRCodeSVG
+                value={ticket.qr_token}
+                size={140}
+                bgColor="#FFF3DC"
+                fgColor="#5E0C18"
+                level="M"
+              />
+            ) : (
+              // A ticket whose ID check hasn't cleared has no pass and so no
+              // token. Showing a QR-shaped placeholder would be worse than
+              // saying so: somebody would try to scan it at the door.
+              <p className={styles.qrPending}>Your QR appears once your ID is checked.</p>
+            )}
           </div>
-          <p className={`${styles.shortCode} tabular-nums`}>{ticket.short_code}</p>
+          <p className={`${styles.shortCode} tabular-nums`}>{ticket.short_code || "—"}</p>
         </div>
       </div>
 

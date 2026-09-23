@@ -17,6 +17,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.core.logging import configure_logging
 from app.db.session import session_factory
 from app.models import Event, EventInventory
 from app.services.ingestion.service import (
@@ -88,6 +89,9 @@ async def dry_run(session, event, source) -> IngestReport:
 
 async def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    # Installs the `redact_pii` processor. A script does not get the API's
+    # startup hook, and this one walks 295 rows of attendee data.
+    configure_logging()
     async with session_factory() as session:
         event = await session.scalar(select(Event).where(Event.slug == args.event_slug))
         if event is None:
