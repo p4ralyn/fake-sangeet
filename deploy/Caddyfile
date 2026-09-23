@@ -1,9 +1,45 @@
-# TLS terminates here. The hostname is wildcard DNS pointing at the static IP,
-# which exists because Google OAuth refuses a bare IP as a redirect URI and our
-# own Settings refuses APP_ENV=prod without secure cookies. Swap in the real
-# domain later by changing this line and APP_BASE_URL -- nothing else moves.
+# TLS terminates here.
+#
+# `SITE_HOST` is the one name this site answers to, and it is declared to Caddy
+# and to `vite preview` from the same variable so the two cannot drift. Today it
+# is wildcard DNS onto the static IP (Google OAuth refuses a bare IP as a
+# redirect URI, and Settings refuses APP_ENV=prod without secure cookies).
+#
+# **Swapping in a real domain is this line plus APP_BASE_URL.** Point an A
+# record at the static IP, set both variables, restart: Caddy provisions a fresh
+# Let's Encrypt certificate on the first request. See
+# docs/runbooks/domain-cutover.md.
+
 {$SITE_HOST} {
 	encode zstd gzip
+
+	header {
+		# HSTS. After one successful visit the browser refuses to speak plain
+		# HTTP to this host at all, which closes the window where a redirect
+		# can be intercepted. No `preload`, and no `includeSubDomains` while
+		# the host is a shared nip.io suffix -- claiming subdomains of somebody
+		# else's zone is not ours to do. Both get added on the real domain.
+		Strict-Transport-Security "max-age=31536000"
+
+		# Never let a browser second-guess a declared Content-Type. The ID
+		# images this app serves are user-supplied bytes behind a signed URL;
+		# sniffing one into something executable is the attack this prevents.
+		X-Content-Type-Options "nosniff"
+
+		# Nothing here should ever be framed. A pass, a scanner decision and an
+		# ID review queue are all things worth clickjacking.
+		X-Frame-Options "DENY"
+
+		# Referrers leak. A signed ID-image URL in a Referer header would hand
+		# a third party a live credential.
+		Referrer-Policy "strict-origin-when-cross-origin"
+
+		# The camera is the scanner's whole purpose; geolocation and microphone
+		# are not, so they are refused rather than merely unused.
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+
+		-Server
+	}
 
 	# Everything the API owns. /auth is the OIDC dance, so it must reach the
 	# API directly rather than the SPA.
@@ -24,4 +60,19 @@
 	handle {
 		reverse_proxy web:5173
 	}
+}
+
+# Somebody who types the bare IP.
+#
+# `http://` is not decoration: it tells Caddy to serve this over plain HTTP and
+# NOT to try to provision a certificate, which it cannot do for an IP address.
+# Without this block that visit lands on the site's certificate, which is issued
+# for the hostname, and the browser says "not secure" about a server that is
+# perfectly healthy.
+#
+# There is no equivalent fix for `https://<ip>` — the handshake fails before any
+# HTTP is spoken, so nothing can redirect it. The answer to that is to stop
+# handing out the IP and hand out the hostname instead.
+http://{$SITE_IP:203.0.113.10} {
+	redir https://{$SITE_HOST}{uri} permanent
 }
