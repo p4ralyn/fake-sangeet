@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Sparkle } from "../components/Sparkle";
@@ -85,11 +85,6 @@ export function Landing() {
         )}
       </div>
 
-      {personStatus.kind !== "has_pass" && (
-        <Link className={styles.passLink} to="/pass">
-          Already have a pass?
-        </Link>
-      )}
     </Card>
   );
 }

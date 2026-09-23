@@ -39,6 +39,7 @@ from app.services.passes.transfer import (
 )
 
 HOLDER = "pk944"
+THIRD = "ms101"
 RECIPIENT = "zq202"
 
 
@@ -502,3 +503,84 @@ async def test_the_transferred_pass_is_refused_at_the_gate(
 
     assert scanned.status_code in (403, 409)
     assert scanned.json()["error"]["code"] in ("PASS_REVOKED", "PASS_SUPERSEDED")
+
+
+# ── one transfer, ever ───────────────────────────────────────────────────────
+async def test_a_ticket_can_only_be_transferred_once(db_session, event, holder, ticket):
+    """Each transfer sends a new person back through ID review. A ticket that
+    keeps moving is one nobody at the desk can account for."""
+    from app.models import MAX_TRANSFERS_PER_TICKET
+
+    assert MAX_TRANSFERS_PER_TICKET == 1
+
+    await transfer_ticket(
+        db_session, event=event, holder=holder, ticket=ticket, to_net_id=RECIPIENT
+    )
+    await db_session.refresh(ticket)
+    assert ticket.transfer_count == 1
+
+    recipient = await _user(db_session, RECIPIENT)
+    with pytest.raises(TransferRefused) as refused:
+        await transfer_ticket(
+            db_session, event=event, holder=recipient, ticket=ticket, to_net_id=THIRD
+        )
+    assert "only be transferred once" in str(refused.value)
+
+    # ...and nothing moved on the refusal.
+    await db_session.refresh(ticket)
+    assert ticket.bound_net_id == RECIPIENT
+    assert ticket.transfer_count == 1
+
+
+async def test_the_database_refuses_a_second_transfer_even_if_the_service_does_not(
+    db_session, event, holder, ticket
+):
+    """The service check is for the message; the CHECK constraint is the
+    guarantee. If the Python guard were ever edited around or lost to a race,
+    this is what still holds."""
+    from sqlalchemy.exc import IntegrityError
+
+    ticket.transfer_count = 2  # what a bypassed guard would write
+    with pytest.raises(IntegrityError) as refused:
+        await db_session.flush()
+    assert "tickets_transfer_limit" in str(refused.value)
+    await db_session.rollback()
+
+
+async def test_a_fresh_ticket_starts_with_no_transfers(db_session, ticket):
+    assert ticket.transfer_count == 0
+
+
+async def test_the_pass_view_reports_the_transfer_budget(client, committed_ticket):
+    headers = await login(client, HOLDER)
+    body = (await client.get("/api/v1/me/pass", headers=headers)).json()
+
+    assert body["transfer"]["transfers_used"] == 0
+    assert body["transfer"]["max_transfers"] == 1
+
+    await client.post(
+        "/api/v1/me/pass/transfer", headers=headers, json={"to_net_id": RECIPIENT}
+    )
+    client.cookies.clear()
+
+    # The NEW holder must be told they cannot pass it on.
+    theirs = await login(client, RECIPIENT)
+    after = (await client.get("/api/v1/me/pass", headers=theirs)).json()
+    assert after["transfer"]["transfers_used"] == 1
+    assert after["transfer"]["max_transfers"] == 1
+
+
+async def test_the_second_transfer_is_refused_over_http(client, committed_ticket):
+    headers = await login(client, HOLDER)
+    await client.post(
+        "/api/v1/me/pass/transfer", headers=headers, json={"to_net_id": RECIPIENT}
+    )
+    client.cookies.clear()
+
+    theirs = await login(client, RECIPIENT)
+    response = await client.post(
+        "/api/v1/me/pass/transfer", headers=theirs, json={"to_net_id": THIRD}
+    )
+
+    assert response.status_code == 409
+    assert "only be transferred once" in response.json()["error"]["message"]

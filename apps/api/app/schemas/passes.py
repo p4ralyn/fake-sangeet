@@ -15,7 +15,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from app.models.access import PassState
-from app.models.ticketing import TicketStatus
+from app.models.ticketing import MAX_TRANSFERS_PER_TICKET, TicketStatus
 
 
 class TicketViewState(StrEnum):
@@ -124,11 +124,19 @@ class TransferRequest(BaseModel):
 
 
 class TransferWindow(BaseModel):
-    """Whether transfer is open, and when it stops. The screen shows the
-    deadline; the server is what enforces it."""
+    """Whether transfer is open, when it stops, and whether this ticket has any
+    move left in it. The screen shows all three; the server enforces them.
+
+    `open` is the time window ONLY. Whether this particular ticket may still
+    move is `transfers_used` against `max_transfers` — kept separate so the
+    screen can say which of the two stopped it, since "come back later" and
+    "this can never move again" are very different sentences.
+    """
 
     open: bool
     closes_at: datetime
+    transfers_used: int = 0
+    max_transfers: int = MAX_TRANSFERS_PER_TICKET
 
 
 class TransferResponse(BaseModel):

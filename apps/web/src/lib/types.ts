@@ -240,9 +240,14 @@ export interface MyPassResponse {
 
 /** When transfer stops. Three hours before doors, decided by the server. */
 export interface TransferWindow {
+  /** The time window ONLY. Whether THIS ticket may still move is
+   * `transfers_used` against `max_transfers` — the two are separate because
+   * "come back later" and "this can never move again" are different answers. */
   open: boolean;
   /** ISO 8601. */
   closes_at: string;
+  transfers_used: number;
+  max_transfers: number;
 }
 
 export interface TransferResponse {

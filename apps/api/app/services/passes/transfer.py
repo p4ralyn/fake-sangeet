@@ -5,6 +5,12 @@ the new holder starts the ID check from the beginning — because the whole poin
 of the ID check is that the face at the door matches the person the pass says
 it is, and transfer changes that person.
 
+**A ticket may be transferred once, and once only.** Each transfer sends a new
+person back through ID review, and a ticket that can keep moving is a ticket
+nobody can be held to — by the third hop, nobody at the desk can say who is
+supposed to be holding it. The cap lives on `tickets.transfer_count` as a CHECK
+constraint, so it survives a bug in this file.
+
 **Transfer closes three hours before doors.** Not as a reminder for somebody to
 switch off at 3pm on the day, but as a rule the server enforces on every
 request. The cutoff is derived from `events.starts_at` minus a configured lead
@@ -34,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import hash_pii
 from app.models import (
+    MAX_TRANSFERS_PER_TICKET,
     TICKET_LIVE_STATUSES,
     Event,
     Pass,
@@ -130,6 +137,13 @@ async def transfer_ticket(
         raise TransferRefused("That’s your own NetID.")
     if ticket.status not in TICKET_LIVE_STATUSES:
         raise TransferRefused("This ticket can’t be transferred.")
+    # One transfer, ever. Refused here so the holder reads a sentence; the
+    # CHECK on `tickets.transfer_count` is what actually guarantees it.
+    if ticket.transfer_count >= MAX_TRANSFERS_PER_TICKET:
+        raise TransferRefused(
+            "This pass has already been passed on once, and a pass can only be "
+            "transferred once. Talk to the desk."
+        )
     # One person, one pass — the same invariant `tickets_one_per_net_id`
     # enforces in the database, checked here so the refusal is a sentence
     # rather than a constraint violation.
@@ -163,6 +177,7 @@ async def transfer_ticket(
     ticket.bound_net_id = recipient
     ticket.user_id = None
     ticket.bound_at = now
+    ticket.transfer_count += 1
     ticket.status = TicketStatus.PURCHASED
     await db.flush()
 
@@ -178,6 +193,10 @@ async def transfer_ticket(
         # Hashed on both sides: an audit row is not a place to keep a list of
         # who gave their ticket to whom in plain text.
         before={"net_id": hash_pii(from_net_id)},
-        after={"net_id": hash_pii(recipient), "pass_revoked": issued is not None},
+        after={
+            "net_id": hash_pii(recipient),
+            "pass_revoked": issued is not None,
+            "transfer_count": ticket.transfer_count,
+        },
     )
     return TransferResult(ticket_ref=ticket.ticket_ref, to_net_id=recipient)

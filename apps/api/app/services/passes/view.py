@@ -133,7 +133,15 @@ async def my_pass_view(db: AsyncSession, *, event: Event, user: User) -> MyPassR
         # Only offered when there is something to transfer. A window on an
         # empty list is a button that cannot do anything.
         transfer=(
-            TransferWindow(open=is_open(event), closes_at=closes_at(event))
+            TransferWindow(
+                open=is_open(event),
+                closes_at=closes_at(event),
+                # The most-moved ticket in the set decides. A PROXY couple
+                # travels together, so one number covers both seats.
+                transfers_used=max(
+                    (row[0].transfer_count for row in rows), default=0
+                ),
+            )
             if tickets
             else None
         ),

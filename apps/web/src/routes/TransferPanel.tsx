@@ -50,6 +50,21 @@ export function TransferPanel({ window: transferWindow, onTransferred }: Transfe
     return null;
   }
 
+  // Checked before the time window: a ticket that has already been passed on
+  // can never move again, so "transfers close at 3pm" would be the wrong thing
+  // to tell somebody holding one.
+  if (transferWindow.transfers_used >= transferWindow.max_transfers) {
+    return (
+      <Card className={styles.panel}>
+        <p className={styles.title}>This pass can&rsquo;t be passed on again</p>
+        <p className={styles.note}>
+          A pass can only be transferred once, and this one already has been. If something
+          needs sorting out, talk to the desk.
+        </p>
+      </Card>
+    );
+  }
+
   if (!transferWindow.open) {
     return (
       <Card className={styles.panel}>
@@ -83,6 +98,10 @@ export function TransferPanel({ window: transferWindow, onTransferred }: Transfe
   return (
     <Card className={styles.panel}>
       <p className={styles.title}>Give this pass to someone else</p>
+      <p className={styles.note}>
+        <strong>A pass can only be transferred once.</strong> Once you send this, it
+        can&rsquo;t be passed on again &mdash; not by you, and not by them.
+      </p>
       <p className={styles.note}>
         They sign in with their own SNU account and upload their own ID. Your QR stops
         working straight away. Transfers close at{" "}
@@ -120,8 +139,8 @@ export function TransferPanel({ window: transferWindow, onTransferred }: Transfe
       ) : (
         <>
           <p className={styles.confirm}>
-            Send this pass to <strong>{netId.trim().toLowerCase()}</strong>? You can&rsquo;t
-            undo this yourself.
+            Send this pass to <strong>{netId.trim().toLowerCase()}</strong>? You
+            can&rsquo;t undo this, and it can&rsquo;t be transferred again after this.
           </p>
           {error && <p className={styles.error}>{error}</p>}
           <div className={styles.confirmRow}>

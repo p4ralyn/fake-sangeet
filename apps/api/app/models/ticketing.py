@@ -72,6 +72,18 @@ TICKETS_ONE_PER_NET_ID_WHERE = (
     "bound_net_id IS NOT NULL AND status NOT IN (" + _DEAD_STATUS_SQL + ")"
 )
 
+#: A ticket may change hands this many times, ever. One, deliberately: each
+#: transfer sends a new person back through ID review, and a ticket that can
+#: keep moving is a ticket nobody can be held to. Rendered into a CHECK below
+#: rather than only enforced in Python — CLAUDE.md: a rule that matters gets a
+#: constraint, not a comment asking nicely. Raising it needs a migration, which
+#: is the right amount of friction for a policy like this.
+MAX_TRANSFERS_PER_TICKET = 1
+
+TRANSFER_COUNT_CHECK = (
+    f"transfer_count >= 0 AND transfer_count <= {MAX_TRANSFERS_PER_TICKET}"
+)
+
 ticket_status_enum = ENUM(TicketStatus, name="ticket_status", create_type=False)
 partner_mode_enum = ENUM(PartnerMode, name="partner_mode", create_type=False)
 
@@ -122,6 +134,7 @@ class Ticket(UUIDPk, EventScoped, Timestamps, Base):
         ),
         CheckConstraint("partner_of IS NULL OR partner_of <> id", name="tickets_partner_not_self"),
         CheckConstraint("seq_in_order >= 1", name="tickets_seq_positive"),
+        CheckConstraint(TRANSFER_COUNT_CHECK, name="tickets_transfer_limit"),
         # One identity ↔ one live ticket per event (CLAUDE.md invariant).
         Index(
             "tickets_one_per_identity",
@@ -159,6 +172,10 @@ class Ticket(UUIDPk, EventScoped, Timestamps, Base):
     # list, not a table, in the single-event edition.
     phase_id: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id"))
+    #: How many times this ticket has changed hands. The CHECK above is what
+    #: actually stops a second transfer; the service refuses first so the
+    #: person gets a sentence rather than a constraint violation.
+    transfer_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     bound_net_id: Mapped[str | None] = mapped_column(CITEXT)
     bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_reason: Mapped[str | None] = mapped_column(Text)
