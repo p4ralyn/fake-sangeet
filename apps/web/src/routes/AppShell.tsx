@@ -73,7 +73,12 @@ export function AppShell() {
         </Link>
 
         <div className={styles.wordmarkBlock}>
-          <p className={styles.wordmark}>FAKE SANGEET</p>
+          {/* The event's own wordmark, replacing the type treatment that stood
+              in for it. On the maroon plaque its marigold fill reads properly;
+              bare on the saffron ground it all but disappeared. */}
+          <span className={styles.wordmarkPlaque}>
+            <img className={styles.wordmark} src="/logo/event.svg" alt="Fake Sangeet" />
+          </span>
           <p className={styles.tagline}>band baaja no baarat</p>
         </div>
 

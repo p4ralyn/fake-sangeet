@@ -35,7 +35,17 @@ export function Landing() {
         You&rsquo;re invited
         <Sparkle />
       </p>
-      <h1 className={styles.eventName}>{user?.event.name ?? EVENT_NAME_FALLBACK}</h1>
+      {/* The wordmark IS the event's name, so it carries the h1 rather than
+          sitting beside one. The alt text is the name the server knows, which
+          keeps the heading truthful to a screen reader even if the event is
+          ever renamed under a logo that has not caught up. */}
+      <h1 className={styles.eventName}>
+        <img
+          className={styles.eventLogo}
+          src="/logo/event.svg"
+          alt={user?.event.name ?? EVENT_NAME_FALLBACK}
+        />
+      </h1>
       <p className={styles.dateVenue}>
         {EVENT_DATE_LABEL}
         <br />

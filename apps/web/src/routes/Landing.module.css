@@ -17,6 +17,16 @@
   margin: 0 0 1rem;
 }
 
+.eventLogo {
+  /* Caps rather than a fixed height: the mark should fill a narrow phone but
+     must not outgrow the card on a desktop, and 20rem is where it stops
+     looking like a hero and starts looking like a banner. */
+  display: block;
+  width: min(100%, 20rem);
+  height: auto;
+  margin: 0 auto;
+}
+
 .dateVenue {
   font-size: var(--text-sm);
   line-height: 1.6;
