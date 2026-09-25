@@ -198,13 +198,30 @@ async def test_a_participant_cannot_see_the_dashboard(client, event_id):
         assert (await client.get(f"/api/v1/ops/{path}", headers=headers)).status_code == 403
 
 
-async def test_security_cannot_see_the_dashboard(client, staff, event_id):
-    """A gate volunteer's tool is /scan. Their phone is often borrowed, and
-    their scan response is narrowed on purpose — handing that same device the
-    whole queue would undo the narrowing."""
+#: What SECURITY may read here: counts, and nothing that names anybody.
+GATE_READABLE = frozenset({"summary"})
+assert GATE_READABLE <= set(OPS_PATHS), "GATE_READABLE names a path the router does not serve"
+
+
+async def test_security_sees_the_counts_and_nothing_that_names_anybody(
+    client, staff, event_id
+):
+    """The line is per-attendee data, not the area.
+
+    A volunteer needs to know the room is filling and the door is alive, so
+    `/summary` is open to them. `/mail` names people who never got their
+    ticket, which is the 600-attendee state §11.5 keeps off a borrowed phone.
+    """
     headers = await login(client, SECURITY_NET_ID)
     for path in OPS_PATHS:
-        assert (await client.get(f"/api/v1/ops/{path}", headers=headers)).status_code == 403
+        response = await client.get(f"/api/v1/ops/{path}", headers=headers)
+        expected = 200 if path in GATE_READABLE else 403
+        assert response.status_code == expected, f"{path}: {response.status_code}"
+
+    # Named explicitly as well as by the loop: if `/mail` ever stops naming
+    # people the loop would quietly pass either way, and this is the assertion
+    # that should have to be deleted on purpose.
+    assert (await client.get("/api/v1/ops/mail", headers=headers)).status_code == 403
 
 
 async def test_an_admin_sees_every_panel(client, staff, event_id):

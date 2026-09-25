@@ -53,6 +53,7 @@ from app.services.audit import write_audit, write_funnel_event
 from app.services.passes.issue import issue_pass
 from app.services.storage.provider import ObjectStore
 from app.services.verification.images import InspectedImage, inspect
+from app.services.verification.links import id_image_href
 
 #: `fraud_flags` vocabulary. One entry, because SHA-256 equality is the only
 #: fraud signal that survives OCR being cut. Never auto-rejects — §9.3's rule
@@ -427,20 +428,22 @@ async def pending_count(db: AsyncSession, *, event_id: UUID) -> int:
     ) or 0
 
 
-async def signed_image_url(
+async def image_href(
     db: AsyncSession, store: ObjectStore, *, id_image_id: UUID
 ) -> str | None:
-    """A short-lived URL for one ID photo, or None once the bytes are purged.
+    """Where to fetch one ID photo, or None once the bytes are purged.
 
     The only channel through which anyone — a reviewer or a gate volunteer —
     ever sees one of these images.
+
+    Returns an API path rather than an object-store URL; `links.py` records
+    why. `store` is no longer consulted, and stays in the signature because the
+    callers hand it down and the real backend may want it again.
     """
     image = await db.get(IdImage, id_image_id)
     if image is None or image.purged_at is not None:
         return None
-    return await store.signed_url(
-        image.object_key, expires_seconds=get_settings().id_image_url_ttl_seconds
-    )
+    return id_image_href(image.id)
 
 
 # ── views ───────────────────────────────────────────────────────────────────
@@ -522,7 +525,7 @@ async def review_item_view(
         ticket_status=ticket.status,
         fraud_flags=list(verification.fraud_flags),
         submitted_at=verification.created_at,
-        id_image_url=await signed_image_url(db, store, id_image_id=verification.id_image_id),
+        id_image_url=await image_href(db, store, id_image_id=verification.id_image_id),
     )
 
 

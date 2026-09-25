@@ -47,7 +47,7 @@ from app.services.access.state_machine import (
 )
 from app.services.audit import write_audit
 from app.services.passes.token import PassTokenError, token_fingerprint, verify_pass_token
-from app.services.storage.provider import get_object_store
+from app.services.verification.links import id_image_href
 
 log = structlog.get_logger()
 
@@ -513,8 +513,9 @@ async def present_token(
         # Read the ID row while the transaction is still open, but do NOT sign
         # yet: signing is CPU on a threadpool and the row lock is still held.
         id_image = await _approved_id_image(db, pass_.ticket_id)
+        # Only the id is needed now: the bytes are fetched by the browser from
+        # the API, which looks the key up itself.
         image_id = id_image.id if id_image else None
-        image_key = id_image.object_key if id_image else None
 
         outcome = ScanOutcome(
             status="ACTION_REQUIRED",
@@ -541,10 +542,11 @@ async def present_token(
         # expires every loaded object, and `pass_` is one of them.
         await db.rollback()
 
-        if image_key is not None:
-            outcome.id_image_url = await get_object_store().signed_url(
-                image_key, expires_seconds=get_settings().id_image_url_ttl_seconds
-            )
+        if image_id is not None:
+            # A same-origin API path, not an object-store URL. The store's
+            # local backend cannot sign, and returned its own in-compose
+            # address -- which no browser can fetch. See verification/links.py.
+            outcome.id_image_url = id_image_href(image_id)
             # LLD-v1 §9.2: this is the narrow channel through which SECURITY
             # ever sees PII, and every opening of it is logged with the
             # scanner's identity. Written after the rollback above, which would

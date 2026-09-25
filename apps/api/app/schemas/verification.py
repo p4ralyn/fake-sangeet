@@ -48,8 +48,9 @@ class ReviewItem(BaseModel):
     ticket_status: TicketStatus
     fraud_flags: list[str] = Field(default_factory=list)
     submitted_at: datetime
-    #: A signed URL with a short TTL, or null once the bytes are purged.
-    #: Never cached by the client, never stored, never emailed.
+    #: Same-origin API path to the photo, or null once the bytes are purged.
+    #: Served under the caller's own session and `no-store`; never cached by
+    #: the client, never stored, never emailed.
     id_image_url: str | None = None
 
 

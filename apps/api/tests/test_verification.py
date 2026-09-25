@@ -347,8 +347,10 @@ async def test_the_queue_holds_open_reviews_oldest_first_and_drops_decided_ones(
     assert item.full_name == "Aarav Sharma"
     assert item.net_id == HOLDER_NET_ID
     assert item.ticket_status is TicketStatus.MANUAL_REVIEW
-    # A usable, short-lived link to the actual image.
-    assert item.id_image_url and "http" in item.id_image_url
+    # A same-origin API path, not an object-store URL: the local backend cannot
+    # sign one, and what it returned instead was unreachable from a browser.
+    # test_verification_routes.py proves this path actually serves the bytes.
+    assert item.id_image_url.startswith("/api/v1/id-images/")
 
     await service.review_verification(
         db_session, event=event, verification_id=pending.id, reviewer=reviewer,
@@ -371,8 +373,8 @@ async def test_a_purged_image_yields_no_url_rather_than_a_broken_link(
         {"id": pending.id_image_id},
     )
 
-    url = await service.signed_image_url(db_session, store, id_image_id=pending.id_image_id)
-    assert url is None
+    href = await service.image_href(db_session, store, id_image_id=pending.id_image_id)
+    assert href is None
 
 
 # ── what the person is told ──────────────────────────────────────────────────

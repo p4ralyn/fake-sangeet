@@ -44,6 +44,10 @@ export function AppShell() {
   // one. /admin is kept because its redirects render for a frame.
   const isStaffArea =
     location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin");
+  // /gate is not the staff AREA -- it has no rail and SECURITY cannot enter
+  // /ops -- but it draws the same stat grids, and four stats in a 34rem column
+  // wrap three-and-one. Width is a layout question, not a permission one.
+  const wantsWideColumn = isStaffArea || location.pathname.startsWith("/gate");
   // Derived from the roles the SERVER put in the session, never a client-side
   // flag, and from one shared definition rather than a copy per component.
   // These only decide whether a link is drawn: /ops and /scan are guarded by
@@ -97,13 +101,15 @@ export function AppShell() {
             )}
             <span className={styles.name}>{user.display_name}</span>
             <span className={styles.role}>{user.roles.join(", ")}</span>
-            {isGate && (
+            {isGate && !isStaff && (
               // SECURITY's whole staff surface. They walk the participant
               // screens for their own pass like anybody else, so without this
-              // the door tool is reachable only by typing the URL — and they
+              // the door screen is reachable only by typing the URL — and they
               // get this ONE link, never the rest of /ops (LLD-v1 §11.5).
-              <Link className={styles.staffLink} to="/scan">
-                Scan
+              // Hidden for ops staff, who already have Dashboard and would
+              // otherwise carry two links to overlapping places.
+              <Link className={styles.staffLink} to="/gate">
+                Gate
               </Link>
             )}
             {isStaff && !isStaffArea && (
@@ -121,7 +127,7 @@ export function AppShell() {
           </div>
         )}
       </header>
-      <main className={isStaffArea ? styles.mainWide : styles.mainNarrow}>
+      <main className={wantsWideColumn ? styles.mainWide : styles.mainNarrow}>
         <Outlet />
       </main>
     </>

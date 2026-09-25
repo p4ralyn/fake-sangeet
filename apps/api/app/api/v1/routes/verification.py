@@ -15,12 +15,13 @@ since fake-gcs cannot sign anything.
 """
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import current_session, get_db, require_csrf, require_role
 from app.core.errors import AppError, ErrorCode
 from app.models import User
+from app.models.verification import IdImage
 from app.schemas.verification import (
     MyVerification,
     ReviewDecision,
@@ -37,10 +38,17 @@ from app.services.identity.sessions import SessionData
 from app.services.storage.provider import ObjectStore, get_object_store
 from app.services.verification import service
 from app.services.verification.images import MAX_UPLOAD_BYTES, UnsupportedImage
+from app.services.verification.links import ID_IMAGE_PREFIX
 
 router = APIRouter(prefix="/api/v1", tags=["verification"])
 
 reviewer = require_role(Role.OWNER, Role.ADMIN)
+
+#: Who may fetch the image bytes. SECURITY is included, unlike the review
+#: queue: a gate volunteer has to look at the card to do the job at all, and
+#: the scan response is where they learn an image id in the first place. They
+#: still cannot reach the queue, the decision endpoints or anything else here.
+image_viewer = require_role(Role.OWNER, Role.ADMIN, Role.SECURITY)
 
 #: The queue page size a caller may ask for. A reviewer works a screen at a
 #: time; an unbounded limit would mint a signed URL for every ID at once.
@@ -137,6 +145,47 @@ async def upload_id_image(
     view = await service.my_verification_view(db, event=event, user=user)
     await db.commit()
     return view
+
+
+@router.get(ID_IMAGE_PREFIX.removeprefix("/api/v1") + "/{id_image_id}")
+async def id_image(
+    id_image_id: UUID,
+    session: SessionData = Depends(image_viewer),
+    db: AsyncSession = Depends(get_db),
+    store: ObjectStore = Depends(get_store),
+) -> Response:
+    """Serve one ID photo to the staff member asking for it.
+
+    This is the read path for a PRIVATE bucket. It exists because the store's
+    local backend cannot sign a URL and handed the browser its own in-compose
+    address instead, which no browser can fetch -- see
+    `services/verification/links.py`. Proxying the bytes also means the photo
+    is authorised against a session on every fetch rather than by possession of
+    a URL.
+
+    `no-store` is not decoration: CLAUDE.md forbids these images being cached
+    on a scanner device, and a gate phone is often borrowed.
+    """
+    image = await db.get(IdImage, id_image_id)
+    if image is None or image.purged_at is not None:
+        # Same answer for both, deliberately: whether a purged image once
+        # existed is not something this endpoint should confirm.
+        raise AppError(
+            ErrorCode.NOT_FOUND, "No such image.", http_status=status.HTTP_404_NOT_FOUND
+        )
+
+    return Response(
+        content=await store.get(image.object_key),
+        media_type=image.content_type,
+        headers={
+            "Cache-Control": "no-store, private, max-age=0",
+            "Content-Disposition": "inline",
+            # The bytes are a person's ID card; keep them out of referrers and
+            # off any cross-origin embed.
+            "Referrer-Policy": "no-referrer",
+            "Cross-Origin-Resource-Policy": "same-origin",
+        },
+    )
 
 
 @router.get("/admin/verifications", response_model=ReviewQueue)

@@ -169,14 +169,17 @@ async def test_an_admin_sees_the_queue_with_a_working_image_link(client, staff, 
     item = body["items"][0]
     assert item["net_id"] == HOLDER_NET_ID
     assert item["attempt_no"] == 1
-    assert item["id_image_url"]
+    assert item["id_image_url"].startswith("/api/v1/id-images/")
 
-    # The link actually resolves to the stored bytes.
-    from app.core.http import get_http_client
-
-    fetched = await get_http_client().get(item["id_image_url"], timeout=10)
-    assert fetched.status_code == 200
-    assert fetched.content.startswith(b"\xff\xd8")
+    # The link resolves to the stored bytes, fetched the way a browser fetches
+    # it: same origin, same session. It used to be an object-store URL, which
+    # in production pointed at an in-compose hostname no browser could reach.
+    fetched = await client.get(item["id_image_url"], headers=headers)
+    assert fetched.status_code == 200, fetched.text
+    assert fetched.content.startswith(b"\xff\xd8")  # JPEG magic
+    assert fetched.headers["content-type"].startswith("image/")
+    # A gate phone is often borrowed; these bytes must not linger on it.
+    assert "no-store" in fetched.headers["cache-control"]
 
 
 async def test_approving_over_http_issues_the_pass(client, db_session, staff, ticket):
@@ -377,3 +380,55 @@ async def test_a_security_scan_response_still_carries_no_extra_fields(
     assert "pass_id" not in body
     assert "short_code" not in body
     assert "registration_id" not in body
+
+
+# ── who may fetch the bytes ─────────────────────────────────────────────────
+async def _queued_image_path(client, staff) -> str:
+    """Upload one card and return the path the queue advertises for it."""
+    participant = await login(client, HOLDER_NET_ID)
+    await client.post("/api/v1/me/id-image", headers=participant, **upload_body())
+    await logout(client)
+
+    headers = await login(client, ADMIN_NET_ID)
+    body = (await client.get("/api/v1/admin/verifications", headers=headers)).json()
+    path = body["items"][0]["id_image_url"]
+    await logout(client)
+    return path
+
+
+async def test_security_may_fetch_an_id_card_because_the_gate_cannot_work_without_it(
+    client, staff, ticket
+):
+    """SECURITY is refused the review queue but must see the card itself — the
+    whole four-scan flow is a human comparing a face to a photo."""
+    path = await _queued_image_path(client, staff)
+
+    headers = await login(client, SECURITY_NET_ID)
+    assert (await client.get("/api/v1/admin/verifications", headers=headers)).status_code == 403
+    fetched = await client.get(path, headers=headers)
+    assert fetched.status_code == 200, fetched.text
+    assert fetched.content.startswith(b"\xff\xd8")
+
+
+async def test_a_participant_cannot_fetch_an_id_card(client, staff, ticket):
+    """Including their own. These bytes are for the people checking them, and
+    the endpoint takes an id — no holder-scoped exception to reason about."""
+    path = await _queued_image_path(client, staff)
+
+    headers = await login(client, HOLDER_NET_ID)
+    assert (await client.get(path, headers=headers)).status_code == 403
+
+
+async def test_fetching_an_id_card_needs_a_session_at_all(client, staff, ticket):
+    path = await _queued_image_path(client, staff)
+    client.cookies.clear()
+    assert (await client.get(path)).status_code == 401
+
+
+async def test_an_unknown_image_id_is_a_404_not_a_500(client, staff, ticket):
+    from uuid import uuid4
+
+    headers = await login(client, ADMIN_NET_ID)
+    response = await client.get(f"/api/v1/id-images/{uuid4()}", headers=headers)
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "NOT_FOUND"

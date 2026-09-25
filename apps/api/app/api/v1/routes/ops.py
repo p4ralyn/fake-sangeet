@@ -9,10 +9,17 @@ answer that could disagree with the first; `/ingestion-errors` listed rows that
 are repaired in the spreadsheet, where `scripts/ingest.py --dry-run` names them
 better. `/summary` still counts both, so nothing became invisible.
 
-**SECURITY is deliberately not allowed here**, even for notifications. A gate
-volunteer's tool is `/scan`; their phone is often borrowed and their scan
-response is narrowed on purpose (LLD-v1 §11.5). Handing that same device a
-screen with 600 attendees' queue state would undo the narrowing.
+**SECURITY may read `/summary` and nothing else here.** That amends the
+original "not allowed at all", and the line it draws is per-attendee data, not
+the area: `/summary` is counts — how many are inside, how many scans in the
+last window, seats sold. `/mail` names people who never got their ticket, which
+is exactly the 600-attendee state §11.5 keeps off a borrowed gate phone.
+
+The guard is therefore split per route rather than applied once to the router.
+That was avoided before on the grounds that a split invites someone to widen
+one endpoint without noticing the others; the answer is that the role tests
+enumerate the router itself, so a new endpoint cannot be added without landing
+in them.
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,15 +32,17 @@ from app.services.ops import dashboard
 
 router = APIRouter(prefix="/api/v1/ops", tags=["ops"])
 
-#: One gate for the whole area rather than per-route roles: every panel here
-#: shows the same class of operational data, and a split would invite someone
-#: to widen one endpoint without noticing the others.
+#: Anything that names an attendee.
 staff = require_role(Role.OWNER, Role.ADMIN)
+
+#: Counts only. A gate volunteer needs to know the room is filling and that the
+#: door is alive; neither fact identifies anybody.
+gate_view = require_role(Role.OWNER, Role.ADMIN, Role.SECURITY)
 
 
 @router.get("/summary", response_model=OpsSummary)
 async def summary(
-    session: SessionData = Depends(staff),
+    session: SessionData = Depends(gate_view),
     db: AsyncSession = Depends(get_db),
 ) -> OpsSummary:
     event = await get_current_event(db)

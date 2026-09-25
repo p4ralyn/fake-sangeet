@@ -4,6 +4,7 @@ import { IdReview } from "./routes/ops/IdReview";
 import { MailHealth } from "./routes/ops/MailHealth";
 import { OpsShell } from "./routes/ops/OpsShell";
 import { Tonight } from "./routes/ops/Tonight";
+import { Gate } from "./routes/Gate";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
 import { ParticipantRoute } from "./routes/ParticipantRoute";
@@ -74,9 +75,22 @@ export function App() {
           }
         />
 
+        {/* The gate crew's screen: the room's counts and a way into the
+            scanner, with no rail and nothing that names an attendee. It is
+            inside the AppShell rather than /ops precisely because it should
+            not come with the staff rail. */}
+        <Route
+          path="gate"
+          element={
+            <RequireRole allow={["SECURITY", "ADMIN", "OWNER"]}>
+              <Gate />
+            </RequireRole>
+          }
+        />
+
         {/* The staff area. One guard on the parent, so a panel added later
             cannot be reached by forgetting to wrap it. SECURITY is absent on
-            purpose — their tool is /scan (LLD-v1 §11.5). */}
+            purpose — they get /gate and /scan (LLD-v1 §11.5). */}
         <Route
           path="ops"
           element={

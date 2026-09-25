@@ -74,7 +74,10 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
       </div>
 
       <p className={`${styles.stateLine} ${state.className}`}>
-        <span aria-hidden="true">{state.glyph}</span> {state.label}
+        <span className={styles.stateGlyph} aria-hidden="true">
+          {state.glyph}
+        </span>
+        <span>{state.label}</span>
       </p>
     </div>
   );
