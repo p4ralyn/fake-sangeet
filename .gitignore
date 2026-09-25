@@ -9,3 +9,18 @@ __pycache__/
 .superpowers/
 node_modules/
 apps/web/dist/
+
+# ── AI tooling scratch ───────────────────────────────────────────────────────
+# Agent settings, job scratch dirs, and the git worktrees agents run in. None of
+# it describes the product, and the worktrees are whole checkouts -- committing
+# them would nest the repo inside itself.
+.claude/
+
+# Plans, architecture reviews and other skill output. These are working notes
+# for a session, not project documentation: docs/design/ and docs/runbooks/ are
+# the documents that belong in the repo, and they stay tracked.
+docs/superpowers/
+architecture-review-*.html
+
+# Agent transcripts.
+*.jsonl
