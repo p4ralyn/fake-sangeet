@@ -23,15 +23,6 @@ class SoldOut(Exception):
         self.requested = requested
         self.available = available
         super().__init__(f"requested {requested} seats, {available} available")
-
-
-async def read_inventory(db: AsyncSession, event_id: UUID) -> EventInventory:
-    inventory = await db.get(EventInventory, event_id)
-    if inventory is None:
-        raise LookupError(f"no event_inventory row for event {event_id}")
-    return inventory
-
-
 async def commit_seats(
     db: AsyncSession,
     *,

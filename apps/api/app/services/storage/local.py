@@ -63,7 +63,3 @@ class LocalObjectStore:
         response = await client.delete(self._object_url(key), timeout=10)
         if response.status_code not in (200, 204, 404):
             response.raise_for_status()
-
-    async def signed_url(self, key: str, *, expires_seconds: int = 90) -> str:
-        # Local only: there is no signer. Same shape, no security claim.
-        return f"{self._public}/storage/v1/b/{self._bucket}/o/{quote(key, safe='')}?alt=media"

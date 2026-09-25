@@ -31,19 +31,6 @@ async def test_delete_removes_the_object(store):
 
 async def test_missing_object_is_not_present(store):
     assert await store.exists("test/never-written.txt") is False
-
-
-async def test_signed_url_is_fetchable(store):
-    key = "test/signed.txt"
-    await store.put(key, b"signed payload", "text/plain")
-    url = await store.signed_url(key, expires_seconds=90)
-
-    async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.get(url)
-    assert response.status_code == 200
-    assert response.content == b"signed payload"
-
-
 async def test_gcs_backend_is_selected_when_configured(monkeypatch):
     from app.core.settings import get_settings
     from app.services.storage.gcs import GcsObjectStore

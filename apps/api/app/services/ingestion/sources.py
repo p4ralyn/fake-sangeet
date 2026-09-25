@@ -244,16 +244,19 @@ class Phase1Source(XlsxTicketSource):
         )
 
 
-# Registry, not an if/else chain: a new workbook shape is a class plus one
-# entry here. Order matters only in that the first match wins.
-XLSX_SOURCES: tuple[type[XlsxTicketSource], ...] = (EarlyBirdSource, Phase1Source)
-
-
 def source_for_path(path: str | Path) -> XlsxTicketSource:
     """Pick the adapter by what the workbook actually contains.
 
     Sniffing beats a `--format` flag the operator has to get right at 2 a.m.,
     and beats matching on the filename, which the client renames freely.
+
+    A third workbook shape means a branch here as well as a class. A tuple
+    named XLSX_SOURCES used to sit above this, described as a registry that
+    made adding a source "a class plus one entry" — but this function never
+    read it, so the entry did nothing and the sentence was false. Sniffing is
+    per-adapter (see `EarlyBirdSource.TICKET_SHEETS`), so a real registry needs
+    each class to answer "is this mine?"; worth doing on the third source, not
+    before.
     """
     target = Path(path)
     if not target.is_file():

@@ -338,9 +338,7 @@ async def test_the_queue_holds_open_reviews_oldest_first_and_drops_decided_ones(
 ):
     pending = await upload(db_session, store, event, holder)
 
-    queue = await service.review_queue_view(
-        db_session, store, event_id=event.id, limit=50, offset=0
-    )
+    queue = await service.review_queue_view(db_session, event_id=event.id, limit=50, offset=0)
     assert queue.pending == 1
     item = queue.items[0]
     assert item.verification_id == pending.id
@@ -356,9 +354,7 @@ async def test_the_queue_holds_open_reviews_oldest_first_and_drops_decided_ones(
         db_session, event=event, verification_id=pending.id, reviewer=reviewer,
         reviewer_role="ADMIN", approve=True,
     )
-    after = await service.review_queue_view(
-        db_session, store, event_id=event.id, limit=50, offset=0
-    )
+    after = await service.review_queue_view(db_session, event_id=event.id, limit=50, offset=0)
     assert after.pending == 0 and after.items == []
 
 
@@ -373,7 +369,7 @@ async def test_a_purged_image_yields_no_url_rather_than_a_broken_link(
         {"id": pending.id_image_id},
     )
 
-    href = await service.image_href(db_session, store, id_image_id=pending.id_image_id)
+    href = await service.image_href(db_session, id_image_id=pending.id_image_id)
     assert href is None
 
 

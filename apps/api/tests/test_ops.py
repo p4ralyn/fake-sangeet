@@ -113,7 +113,6 @@ async def test_occupancy_counts_every_pass_state(db_session, event_id):
     assert counts.on_break == 1
     assert counts.departed == 1
     assert counts.not_arrived == 1
-    assert counts.in_the_room == 2
 
 
 async def test_seats_reports_the_real_cap_not_what_is_left_on_sale(db_session, event_id):
@@ -121,7 +120,7 @@ async def test_seats_reports_the_real_cap_not_what_is_left_on_sale(db_session, e
     that number, or the gate headcount means nothing."""
     seats = await dashboard.seats(db_session, event_id=event_id)
     assert seats.total == 150  # the conftest fixture's cap
-    assert seats.free == seats.total - seats.committed
+    assert seats.committed == 0
 
 
 async def test_the_summary_counts_recent_scans_and_refusals(db_session, event_id):

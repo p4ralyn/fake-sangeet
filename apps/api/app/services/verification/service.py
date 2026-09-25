@@ -428,17 +428,17 @@ async def pending_count(db: AsyncSession, *, event_id: UUID) -> int:
     ) or 0
 
 
-async def image_href(
-    db: AsyncSession, store: ObjectStore, *, id_image_id: UUID
-) -> str | None:
+async def image_href(db: AsyncSession, *, id_image_id: UUID) -> str | None:
     """Where to fetch one ID photo, or None once the bytes are purged.
 
     The only channel through which anyone — a reviewer or a gate volunteer —
     ever sees one of these images.
 
     Returns an API path rather than an object-store URL; `links.py` records
-    why. `store` is no longer consulted, and stays in the signature because the
-    callers hand it down and the real backend may want it again.
+    why. It once took an `ObjectStore` and stopped consulting it when signing
+    was abandoned; the parameter is gone rather than kept "in case", because a
+    dependency threaded through four signatures to be ignored reads like a
+    dependency until somebody checks.
     """
     image = await db.get(IdImage, id_image_id)
     if image is None or image.purged_at is not None:
@@ -498,15 +498,15 @@ async def my_verification_view(
 
 async def review_item_view(
     db: AsyncSession,
-    store: ObjectStore,
     *,
     verification: Verification,
     registration: Registration | None = None,
 ) -> ReviewItem:
-    """One queue row, with a freshly signed image URL.
+    """One queue row, carrying the path its ID photo is served from.
 
-    The URL is minted per response and lives 90 seconds, so a queue left open
-    on a laptop stops being a window into anybody's ID.
+    That path is not a credential: the bytes come back only to a caller whose
+    own session passes the role check on the route. A queue left open on a
+    laptop is therefore a window into nobody's ID once the laptop is locked.
     """
     registration = registration or await db.get(Registration, verification.registration_id)
     if registration is None:  # pragma: no cover -- FK ON DELETE CASCADE
@@ -525,18 +525,18 @@ async def review_item_view(
         ticket_status=ticket.status,
         fraud_flags=list(verification.fraud_flags),
         submitted_at=verification.created_at,
-        id_image_url=await image_href(db, store, id_image_id=verification.id_image_id),
+        id_image_url=await image_href(db, id_image_id=verification.id_image_id),
     )
 
 
 async def review_queue_view(
-    db: AsyncSession, store: ObjectStore, *, event_id: UUID, limit: int, offset: int
+    db: AsyncSession, *, event_id: UUID, limit: int, offset: int
 ) -> ReviewQueue:
     rows = await pending_reviews(db, event_id=event_id, limit=limit, offset=offset)
     return ReviewQueue(
         pending=await pending_count(db, event_id=event_id),
         items=[
-            await review_item_view(db, store, verification=verification, registration=registration)
+            await review_item_view(db, verification=verification, registration=registration)
             for verification, registration in rows
         ],
     )

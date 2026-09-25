@@ -20,18 +20,10 @@ class Occupancy(BaseModel):
     not_arrived: int = 0
     revoked: int = 0
 
-    @property
-    def in_the_room(self) -> int:
-        return self.inside
-
 
 class Seats(BaseModel):
     committed: int
     total: int
-
-    @property
-    def free(self) -> int:
-        return max(0, self.total - self.committed)
 
 
 class Queues(BaseModel):

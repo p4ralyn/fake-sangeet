@@ -194,14 +194,12 @@ async def review_queue(
     offset: int = 0,
     session: SessionData = Depends(reviewer),
     db: AsyncSession = Depends(get_db),
-    store: ObjectStore = Depends(get_store),
 ) -> ReviewQueue:
     """The queue, oldest first — somebody who uploaded an hour ago has been
     waiting an hour."""
     event = await get_current_event(db)
     return await service.review_queue_view(
         db,
-        store,
         event_id=event.id,
         limit=min(limit, MAX_QUEUE_LIMIT),
         offset=max(offset, 0),
@@ -218,7 +216,6 @@ async def decide(
     decision: ReviewDecision,
     session: SessionData = Depends(reviewer),
     db: AsyncSession = Depends(get_db),
-    store: ObjectStore = Depends(get_store),
 ) -> ReviewItem:
     """Approve or refuse one ID. Approving issues the pass."""
     event = await get_current_event(db)
@@ -243,6 +240,6 @@ async def decide(
             http_status=status.HTTP_409_CONFLICT,
         ) from exc
 
-    item = await service.review_item_view(db, store, verification=verification)
+    item = await service.review_item_view(db, verification=verification)
     await db.commit()
     return item

@@ -1,6 +1,5 @@
 """Real GCS. The client library is synchronous, so every call goes to a thread —
 CLAUDE.md: blocking work never runs inline in a request."""
-from datetime import timedelta
 
 import anyio
 from google.cloud import storage
@@ -39,13 +38,3 @@ class GcsObjectStore:
                 blob.delete()
 
         await anyio.to_thread.run_sync(_delete)
-
-    async def signed_url(self, key: str, *, expires_seconds: int = 90) -> str:
-        """V4 signed URL. The bucket stays private — this is the only read path."""
-
-        def _sign() -> str:
-            return self._bucket().blob(key).generate_signed_url(
-                version="v4", expiration=timedelta(seconds=expires_seconds), method="GET"
-            )
-
-        return await anyio.to_thread.run_sync(_sign)
