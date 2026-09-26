@@ -50,6 +50,12 @@ services:
     volumes:
       - ./apps/api:/srv/app
       - ./scripts:/srv/scripts
+      # Read-only, and only so one test can compare the frontend's ErrorCode
+      # union against the server's enum. That agreement spans two languages, so
+      # no type checker sees it, and it had drifted in both directions at once.
+      # A contract test that can never see one side would skip forever and
+      # prove nothing.
+      - ./apps/web/src:/srv/web-src:ro
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}

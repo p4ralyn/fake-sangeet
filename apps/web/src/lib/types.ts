@@ -51,20 +51,11 @@ export type ErrorCode =
   | "UNKNOWN_NET_ID"
   | "EVENT_NOT_CONFIGURED"
   | "INTERNAL"
-  // domain codes — mocked until M5 (frontend-api-contract.md)
-  | "SOLD_OUT"
-  | "TYPE_UNAVAILABLE"
-  | "HOLD_REQUIRED"
-  | "HOLD_EXPIRED"
-  | "LATE_NO_SEAT"
-  | "UTR_ALREADY_USED"
-  | "PHASE_CLOSED"
-  | "RESUBMIT_LIMIT"
-  | "PAYMENT_PENDING"
   // access core, M2 — apps/api/app/core/errors.py::ErrorCode (LLD-v1 §13.6).
   // One code per refusal reason: at a gate, "why" decides whether the
   // volunteer waves someone through, sends them to the desk, or calls
   // security, so the UI branches on these by name, never by HTTP status.
+  | "UNKNOWN_PASS"
   | "INVALID_TOKEN"
   | "INVALID_SIGNATURE"
   | "TOKEN_WRONG_EVENT"
@@ -85,117 +76,6 @@ export interface ErrorDetail {
 
 export interface ErrorEnvelope {
   error: ErrorDetail;
-}
-
-// ---------------------------------------------------------------------------
-// Availability — GET /api/v1/availability (poll every 15s)
-// ---------------------------------------------------------------------------
-
-export type TicketTypeCode = "SINGLE" | "COUPLE";
-
-export interface TicketTypeAvailability {
-  code: TicketTypeCode;
-  label: string;
-  /** Rupees, whole units — see LLD-v2 §4 for the UPI amount encoding. */
-  price: number;
-  /** Seats this ticket type consumes: 1 for SINGLE, 2 for COUPLE. */
-  seats: number;
-  /** True only while seats_available >= this type's `seats` (addendum §A1.1). */
-  available: boolean;
-}
-
-export interface AvailabilityResponse {
-  seats_total: number;
-  seats_available: number;
-  types: TicketTypeAvailability[];
-}
-
-// ---------------------------------------------------------------------------
-// Details form — addendum §A2 step [2]. Not its own endpoint; folded into
-// the hold request body.
-// ---------------------------------------------------------------------------
-
-export interface PartnerDetailsSelfClaim {
-  mode: "SELF_CLAIM";
-  partner_name: string;
-  partner_email: string;
-}
-
-export interface PartnerDetailsProxy {
-  mode: "PROXY";
-  partner_name: string;
-}
-
-export interface RegistrationDetails {
-  full_name: string;
-  net_id: string;
-  phone: string;
-  department: string;
-  year: string;
-  /** Present only when ticket_type is COUPLE (addendum §A3). */
-  partner?: PartnerDetailsSelfClaim | PartnerDetailsProxy;
-  consent: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Payments — mocked until M5
-// ---------------------------------------------------------------------------
-
-export interface HoldRequest {
-  ticket_type: TicketTypeCode;
-  details: RegistrationDetails;
-}
-
-export interface HoldResponse {
-  intent_id: string;
-  ticket_type: TicketTypeCode;
-  seats: number;
-  amount: number;
-  hold_expires_at: string;
-  reference_code: string;
-}
-
-export interface PaymentPageResponse {
-  amount: number;
-  upi_vpa: string;
-  upi_qr_url: string;
-  upi_deep_link: string;
-  reference_code: string;
-  hold_expires_at: string;
-}
-
-export interface ProofUrlResponse {
-  upload_url: string;
-  object_key: string;
-}
-
-export interface SubmitProofRequest {
-  utr: string;
-  payer_name: string;
-  payer_phone: string;
-  object_key: string;
-}
-
-export type PaymentState =
-  | "HOLD"
-  | "PENDING_APPROVAL"
-  | "APPROVED"
-  | "REJECTED"
-  | "EXPIRED"
-  | "CANCELLED"
-  | "CLOSED";
-
-export type PaymentFlag = "LATE_NO_SEAT" | (string & {});
-
-export interface SubmitProofResponse {
-  state: PaymentState;
-  flags?: PaymentFlag[];
-}
-
-export interface PaymentStatusResponse {
-  state: PaymentState;
-  reason?: string;
-  flags: PaymentFlag[];
 }
 
 // ---------------------------------------------------------------------------
@@ -254,34 +134,6 @@ export interface TransferResponse {
   to_net_id: string;
   /** Always true: the new holder starts the ID check again. */
   verification_required: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Admin — payments review queue
-// ---------------------------------------------------------------------------
-
-export interface AdminPaymentListItem {
-  id: string;
-  submitted_at: string;
-  payer_name: string;
-  amount: number;
-  utr: string;
-  proof_url: string;
-  flags: PaymentFlag[];
-}
-
-export interface AdminPaymentListResponse {
-  items: AdminPaymentListItem[];
-}
-
-export interface AdminApproveRequest {
-  /** Only meaningful as a query param (`?force=true`) on the approve call. */
-  force?: boolean;
-}
-
-export interface AdminRejectRequest {
-  reason: string;
-  allow_resubmit: boolean;
 }
 
 // ---------------------------------------------------------------------------

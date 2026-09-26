@@ -53,5 +53,8 @@ cat <<'NEXT'
        plus SECRET_KEY, GOOGLE_CLIENT_ID/SECRET, DB and SMTP values.
        APP_ENV=prod makes Settings refuse to boot with the dev auth provider
        or with insecure cookies -- that guard is deliberate.
-    2. ./deploy/deploy.sh
+    2. Deploy from the laptop, NOT from here. There is no git checkout on the
+       VM, so there is no script to run on it -- see "Deploying" in CLAUDE.md
+       for the archive/scp/swap sequence, and check the tarball's md5 on both
+       ends before extracting.
 NEXT
