@@ -24,3 +24,16 @@ architecture-review-*.html
 
 # Agent transcripts.
 *.jsonl
+
+# ── Logo source art ──────────────────────────────────────────────────────────
+# The originals the societies hand over: full-canvas exports with the mark sat
+# in the middle of a lot of empty space. What the app actually serves lives in
+# apps/web/public/logo/ and stays TRACKED — those are cropped, have their
+# viewBox retargeted onto the ink, and are referenced by index.html and
+# AppShell.
+#
+# Anchored with a leading slash to this one directory on purpose. A bare
+# `logo/` or `*.svg` would also match apps/web/public/logo/ and quietly
+# un-track the favicon and the event wordmark, which breaks the site rather
+# than tidying the repo.
+/apps/web/logo/
