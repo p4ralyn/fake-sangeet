@@ -1,32 +1,30 @@
 /* Fixed at a viewport corner, deliberately mostly off-screen — only the
-   quarter nearest the corner shows. This is what makes it a "quarter
-   rosette" without any clip-path: the browser's own viewport edge does the
-   clipping, so the visible slice is always crisp. */
+   quarter nearest the corner shows. The viewport edge does the clipping. */
 .corner {
   position: fixed;
-  width: 220px;
-  height: 220px;
+  width: 240px;
+  height: 240px;
   z-index: 0;
 }
 
 .topLeft {
-  top: -110px;
-  left: -110px;
+  top: -120px;
+  left: -120px;
 }
 
 .topRight {
-  top: -110px;
-  right: -110px;
+  top: -120px;
+  right: -120px;
 }
 
 .bottomLeft {
-  bottom: -110px;
-  left: -110px;
+  bottom: -120px;
+  left: -120px;
 }
 
 .bottomRight {
-  bottom: -110px;
-  right: -110px;
+  bottom: -120px;
+  right: -120px;
 }
 
 @media (max-width: 480px) {

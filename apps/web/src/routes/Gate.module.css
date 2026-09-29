@@ -1,29 +1,15 @@
 .gate {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-6);
 }
 
-/* The job, not a nav item — so it is a target, not a link in a row.
-
-   Full width and tall because of where it is used: one hand, at a dark door,
-   often in a queue. It sits ABOVE the boards for the same reason; the counts
-   are something a volunteer glances at between people, and the scanner is what
-   they came to the screen for. */
+/* The job, not a nav item — so it is a target, not a link in a row. Full
+   width and tall: one hand, at a dark door, often in a queue. It sits ABOVE
+   the boards because the scanner is what the volunteer came here for. */
 .scanLink {
-  display: block;
-  padding: 1rem;
-  background: var(--scarlet);
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  color: var(--cream);
-  text-align: center;
-  text-decoration: none;
+  min-height: 72px;
   font-size: var(--text-lg);
-  font-weight: 700;
-}
-
-.scanLink:hover,
-.scanLink:focus-visible {
-  background: var(--maroon);
+  max-width: 34rem;
+  margin-inline: auto;
 }

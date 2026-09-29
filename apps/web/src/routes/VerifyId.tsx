@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Card } from "../components/Card";
+import { Button, ButtonLink, Checkbox, EmptyState, Loading, Notice, Paper, PhotoPicker } from "../components";
 import { ApiError } from "../lib/api";
 import { uploadIdImage, useMyVerification } from "../lib/verificationApi";
 import type { MyVerification } from "../lib/types";
@@ -27,37 +26,39 @@ export function VerifyId() {
   const state = useMyVerification();
 
   if (state.kind === "loading") {
-    return (
-      <Card>
-        <p>Checking your ticket…</p>
-      </Card>
-    );
+    return <Loading>Checking your ticket…</Loading>;
   }
 
   if (state.kind === "none") {
     return (
-      <Card>
-        <h1>No ticket on this account</h1>
+      <EmptyState
+        title="No ticket on this account"
+        action={
+          <ButtonLink to="/" variant="secondary">
+            Back to the invitation
+          </ButtonLink>
+        }
+      >
         <p>
           We can’t find a ticket for the account you signed in with. If you bought one, it may
           be under a different email — sign in with your SNU account, or talk to the desk.
         </p>
-        <p>
-          <Link to="/">Back to the invitation</Link>
-        </p>
-      </Card>
+      </EmptyState>
     );
   }
 
   if (state.kind === "error") {
     return (
-      <Card>
-        <h1>Couldn’t load your status</h1>
+      <EmptyState
+        title="Couldn’t load your status"
+        action={
+          <Button variant="primary" onClick={state.reload}>
+            Try again
+          </Button>
+        }
+      >
         <p>{state.message}</p>
-        <button type="button" className={styles.retry} onClick={state.reload}>
-          Try again
-        </button>
-      </Card>
+      </EmptyState>
     );
   }
 
@@ -107,13 +108,15 @@ function VerifyCard({
   }
 
   return (
-    <Card>
+    <Paper as="section" pad="lg" tape className={styles.card}>
       <h1>Your student ID</h1>
       <Status verification={verification} />
 
       {done ? (
         <p className={styles.next}>
-          <Link to="/pass">Go to your pass</Link>
+          <ButtonLink to="/pass" variant="primary" size="lg" block>
+            Go to your pass
+          </ButtonLink>
         </p>
       ) : verification.can_upload ? (
         <>
@@ -133,88 +136,128 @@ function VerifyCard({
               const chosen = event.target.files?.[0] ?? null;
               setFile(chosen);
               setError(null);
-              // Shown so they can see what they are about to send. Revoked on
-              // replacement so a long session doesn't leak object URLs.
               setPreview((old) => {
                 if (old) URL.revokeObjectURL(old);
                 return chosen ? URL.createObjectURL(chosen) : null;
               });
             }}
           />
-          <button
-            type="button"
-            className={styles.choose}
-            onClick={() => inputRef.current?.click()}
+          <PhotoPicker
+            preview={preview}
+            previewAlt="The photo you chose"
+            action={
+              <Button
+                variant={file ? "secondary" : "marigold"}
+                block
+                onClick={() => inputRef.current?.click()}
+              >
+                <CameraGlyph />
+                {file ? "Take a different photo" : "Take a photo of your ID"}
+              </Button>
+            }
+          />
+
+          <Checkbox
+            className={styles.consent}
+            checked={consented}
+            onChange={(event) => setConsented(event.target.checked)}
           >
-            {file ? "Take a different photo" : "Take a photo of your ID"}
-          </button>
+            {CONSENT_TEXT}
+          </Checkbox>
 
-          {preview && <img className={styles.preview} src={preview} alt="The photo you chose" />}
+          {error && (
+            <Notice tone="error" live>
+              <p>{error}</p>
+            </Notice>
+          )}
 
-          <label className={styles.consent}>
-            <input
-              type="checkbox"
-              checked={consented}
-              onChange={(event) => setConsented(event.target.checked)}
-            />
-            <span>{CONSENT_TEXT}</span>
-          </label>
-
-          {error && <p className={styles.error}>{error}</p>}
-
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="lg"
+            block
             className={styles.submit}
             disabled={!file || !consented || busy}
             onClick={() => void send()}
           >
             {busy ? "Sending…" : "Send for checking"}
-          </button>
+          </Button>
           <p className={styles.attempts}>
+            <span className={styles.pips} aria-hidden="true">
+              {Array.from(
+                { length: verification.attempts_remaining + verification.attempts_used },
+                (_, i) => (
+                  <span key={i} className={i < verification.attempts_remaining ? styles.pipOn : styles.pip} />
+                ),
+              )}
+            </span>
             {verification.attempts_remaining} of{" "}
             {verification.attempts_remaining + verification.attempts_used} tries left
           </p>
         </>
       ) : statusExplains ? null : (
-        <p className={styles.blocked}>{verification.blocked_reason}</p>
+        <Notice tone="wait" className={styles.blocked}>
+          <p>{verification.blocked_reason}</p>
+        </Notice>
       )}
-    </Card>
+    </Paper>
   );
 }
 
-/** One line saying where this person stands, and the reviewer's note when
- * there is one to act on. */
+/** A small camera, drawn in the button's own colour. */
+function CameraGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" strokeWidth="2.2" />
+    </svg>
+  );
+}
+
 function Status({ verification }: { verification: MyVerification }) {
   if (verification.ticket_status === "PASS_ISSUED" || verification.ticket_status === "VERIFIED") {
-    return <p className={styles.good}>Checked and approved. Your pass is ready.</p>;
+    return (
+      <Notice tone="good">
+        <p>Checked and approved. Your pass is ready.</p>
+      </Notice>
+    );
   }
   if (verification.outcome === "MANUAL_REVIEW") {
     return (
-      <p className={styles.waiting}>
-        Your photo is with the team. You’ll get an email when it’s been looked at.
-      </p>
+      <Notice tone="wait">
+        <p>Your photo is with the team. You’ll get an email when it’s been looked at.</p>
+      </Notice>
     );
   }
   if (verification.outcome === "RETRY_REQUIRED") {
     return (
-      <p className={styles.retryNote}>
-        They need a clearer photo.
-        {verification.review_note ? ` They said: “${verification.review_note}”` : ""}
-      </p>
+      <Notice tone="warn">
+        <p>
+          They need a clearer photo.
+          {verification.review_note ? ` They said: “${verification.review_note}”` : ""}
+        </p>
+      </Notice>
     );
   }
   if (verification.outcome === "REJECTED") {
     return (
-      <p className={styles.refused}>
-        Your ID wasn’t accepted.
-        {verification.review_note ? ` They said: “${verification.review_note}”` : ""} Talk to the
-        desk if you think that’s wrong.
-      </p>
+      <Notice tone="error">
+        <p>
+          Your ID wasn’t accepted.
+          {verification.review_note ? ` They said: “${verification.review_note}”` : ""} Talk to the
+          desk if you think that’s wrong.
+        </p>
+      </Notice>
     );
   }
   return (
-    <p className={styles.guidance}>
-      You’re on the list. One more step before your pass: a photo of your student ID.
-    </p>
+    <Notice tone="info">
+      <p>You’re on the list. One more step before your pass: a photo of your student ID.</p>
+    </Notice>
   );
 }

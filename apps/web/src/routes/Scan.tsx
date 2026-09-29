@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button, Field, Paper, ReelSpinner, cx } from "../components";
 import { ScanDecisionCard } from "../components/ScanDecisionCard";
 import { ScanResultScreen, type ResultTone } from "../components/ScanResultScreen";
 import { ApiError } from "../lib/api";
@@ -143,16 +144,25 @@ export function Scan() {
   return (
     <div className={styles.gate}>
       <header className={styles.header}>
-        <span className={styles.gateName}>{gate}</span>
+        <span className={styles.gateName}>
+          <ReelSpinner className={cx(styles.headerReel, busy && styles.headerReelBusy)} />
+          {gate}
+        </span>
         <span className={styles.operator}>{user?.net_id ?? "Signed out"}</span>
         <span className={online ? styles.pillOnline : styles.pillOffline}>
-          {online ? "Online" : "Offline"}
+          <span aria-hidden="true">{online ? "●" : "✕"}</span> {online ? "Online" : "Offline"}
         </span>
       </header>
 
       <div className={styles.viewport}>
         <video ref={videoRef} className={styles.video} muted playsInline />
-        <div className={styles.reticle} aria-hidden="true" />
+        <div className={styles.reticle} aria-hidden="true">
+          <span className={cx(styles.bracket, styles.tl)} />
+          <span className={cx(styles.bracket, styles.tr)} />
+          <span className={cx(styles.bracket, styles.bl)} />
+          <span className={cx(styles.bracket, styles.br)} />
+          {scanner.status.kind === "scanning" && !busy && <span className={styles.sweep} />}
+        </div>
         {scanner.status.kind === "blocked" && (
           <p className={styles.cameraBlocked}>{scanner.status.reason}</p>
         )}
@@ -162,13 +172,14 @@ export function Scan() {
 
       <footer className={styles.footer}>
         {scanner.torchSupported ? (
-          <button
-            type="button"
-            className={scanner.torchOn ? styles.torchOn : styles.torch}
+          <Button
+            variant={scanner.torchOn ? "marigold" : "secondary"}
+            className={styles.torch}
+            aria-pressed={scanner.torchOn}
             onClick={scanner.toggleTorch}
           >
             {scanner.torchOn ? "Torch on" : "Torch"}
-          </button>
+          </Button>
         ) : (
           <span className={styles.footerNote}>No torch on this device</span>
         )}
@@ -179,7 +190,7 @@ export function Scan() {
           <span className={styles.footerNote}>Slower decoder</span>
         )}
         <span className={styles.count}>
-          {scanCount} {scanCount === 1 ? "scan" : "scans"} this shift
+          <strong className="tabular-nums">{scanCount}</strong> {scanCount === 1 ? "scan" : "scans"} this shift
         </span>
       </footer>
 
@@ -274,35 +285,39 @@ function GateSetup({ onReady }: { onReady: (gate: string) => void }) {
 
   return (
     <div className={styles.setup}>
-      <form
-        className={styles.setupForm}
-        onSubmit={(event) => {
-          event.preventDefault();
-          const gate = value.trim();
-          if (!gate) {
-            return;
-          }
-          setGateLabel(gate);
-          onReady(gate);
-        }}
-      >
-        <h1 className={styles.setupTitle}>Which door is this?</h1>
-        <p className={styles.setupNote}>
-          Shown in the header so you always know which scanner you are holding. Saved on this
-          device.
-        </p>
-        <input
-          ref={inputRef}
-          className={styles.setupInput}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          placeholder="Main gate"
-          aria-label="Gate name"
-        />
-        <button type="submit" className={styles.setupSubmit} disabled={!value.trim()}>
-          Start scanning
-        </button>
-      </form>
+      <Paper as="section" lift="lg" pad="lg" tape className={styles.setupCard}>
+        <form
+          className={styles.setupForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const gate = value.trim();
+            if (!gate) {
+              return;
+            }
+            setGateLabel(gate);
+            onReady(gate);
+          }}
+        >
+          <h1 className={styles.setupTitle}>Which door is this?</h1>
+          <p className={styles.setupNote}>
+            Shown in the header so you always know which scanner you are holding. Saved on this
+            device.
+          </p>
+          <Field
+            ref={inputRef}
+            id="gate-name"
+            label="Gate name"
+            hideLabel
+            inputSize="lg"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder="Main gate"
+          />
+          <Button type="submit" variant="primary" size="lg" block disabled={!value.trim()}>
+            Start scanning
+          </Button>
+        </form>
+      </Paper>
     </div>
   );
 }

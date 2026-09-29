@@ -1,224 +1,76 @@
-/* Shared panel styling for the ops area. Cream surfaces on the saffron
-   ground, maroon ink, flat fills and hairlines — the poster palette in its
-   working register. Denser than the participant screens: this is read for
-   four hours, not admired once. */
+/* Shared by every ops panel and the gate screen. The tiles themselves are the
+   design system's Stat stubs; this file only arranges them. */
 
-.section {
-  margin-bottom: 1.5rem;
-  padding: 1.25rem;
-  background: var(--cream);
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
+.board {
+  display: grid;
+  gap: var(--space-6);
 }
 
-/* Overrides the global h1 (scarlet fill + hard extrusion at --text-3xl). That
-   treatment is for a ceremonial screen; a panel heading read every few minutes
-   should not shout. */
+.section {
+  display: grid;
+  gap: var(--space-4);
+}
+
 .title {
-  margin: 0 0 1rem;
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  color: var(--maroon);
-  text-shadow: none;
+  margin: 0;
 }
 
 .subtitle {
-  margin: 0 0 1rem;
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-  color: var(--maroon);
-  text-shadow: none;
-}
-
-.lede,
-.empty,
-.state,
-.errorState {
-  margin: 0 0 1rem;
-  max-width: none;
-  font-size: var(--text-sm);
-}
-
-.empty,
-.state {
-  color: var(--muted);
-}
-
-.errorState {
-  color: var(--scarlet);
-  font-weight: 600;
+  margin: 0;
 }
 
 .code {
-  padding: 0.05rem 0.3rem;
-  background: color-mix(in srgb, var(--maroon) 10%, transparent);
-  border-radius: 2px;
-  font-size: 0.92em;
+  padding: 0.05rem 0.35rem;
+  background: var(--paper-deep);
+  border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
+  border-radius: 3px;
 }
 
-/* ── stat tiles ─────────────────────────────────────────────────────────── */
-.statRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-  gap: 0.75rem;
-}
-
-.stat {
-  padding: 0.75rem 0.875rem;
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-}
-
-/* The number is the content; everything else labels it. */
-.statValue {
-  margin: 0;
-  max-width: none;
-  font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  line-height: 1;
-  color: var(--maroon);
-}
-
-.statLabel {
-  margin: 0.25rem 0 0;
-  max-width: none;
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
-.statHint {
-  margin: 0.125rem 0 0;
-  max-width: none;
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-
-.good {
-  color: var(--state-good);
-}
-
-/* Magenta for "worth a look", scarlet for "wrong" — the same split the rest
-   of the app uses, so a colour means one thing everywhere. */
-.warn {
-  color: var(--magenta);
-}
-
-.bad {
-  color: var(--scarlet);
-}
-
-/* ── the alert feed ─────────────────────────────────────────────────────── */
-.feed,
+/* Mail problems */
 .rows {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
-.item,
 .row {
-  padding: 0.75rem 0.875rem;
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
 }
 
-/* Severity is carried by a left band AND the tag text, never by colour alone. */
-.itemCritical {
-  border-left-width: 8px;
-  border-left-color: var(--scarlet);
-}
-
-.itemWarning {
-  border-left-width: 8px;
-  border-left-color: var(--magenta);
-}
-
-.itemInfo {
-  border-left-width: 8px;
-  border-left-color: var(--maroon);
-}
-
-.itemTag {
-  margin: 0;
-  max-width: none;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.itemTitle {
-  margin: 0.125rem 0 0;
-  max-width: none;
-  font-size: var(--text-md);
-  font-weight: 700;
-}
-
-.itemDetail {
-  margin: 0.25rem 0 0;
-  max-width: none;
-  font-size: var(--text-sm);
-  line-height: 1.45;
-}
-
-.itemLink {
-  display: inline-block;
-  margin-top: 0.5rem;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--scarlet);
-}
-
-/* ── list rows (sheet errors, mail problems) ────────────────────────────── */
 .rowRef {
   margin: 0;
-  max-width: none;
-  font-weight: 700;
-  font-size: var(--text-sm);
+  font-weight: 800;
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
 }
 
 .rowReason {
-  margin: 0.125rem 0 0;
-  max-width: none;
-  font-size: var(--text-sm);
-  color: var(--magenta);
-  font-weight: 600;
+  justify-self: end;
 }
 
 .rowError {
-  margin: 0.375rem 0 0;
-  max-width: none;
-  padding: 0.375rem 0.5rem;
-  background: color-mix(in srgb, var(--maroon) 8%, transparent);
-  border-radius: 2px;
-  font-size: var(--text-xs);
-  /* Server error text wraps badly and is read character by character. */
-  word-break: break-word;
-}
-
-/* ── the raw sheet row ──────────────────────────────────────────────────── */
-.raw {
-  margin: 0.625rem 0 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 0.375rem 0.75rem;
-  padding-top: 0.625rem;
-  border-top: 1px solid color-mix(in srgb, var(--maroon) 30%, transparent);
-}
-
-.rawPair {
-  min-width: 0;
-}
-
-.rawKey {
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-
-.rawValue {
+  grid-column: 1 / -1;
   margin: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  word-break: break-word;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-deep);
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rowReason {
+    justify-self: start;
+  }
 }

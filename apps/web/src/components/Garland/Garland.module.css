@@ -1,0 +1,40 @@
+/* Positioned against the shell's full-bleed garland layer. */
+.garland {
+  position: absolute;
+  top: 0;
+  height: auto;
+}
+
+.left {
+  left: clamp(0.5rem, 3vw, 2.5rem);
+}
+
+.right {
+  right: clamp(0.5rem, 3vw, 2.5rem);
+}
+
+/* Strings swing down once on load; they do not keep swaying. */
+.string {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: drop 900ms var(--ease-stamp) both;
+}
+
+@keyframes drop {
+  from {
+    transform: scaleY(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* On a phone the margins are a few pixels wide, so the strings would hang
+   over the content. They go. */
+@media (max-width: 760px) {
+  .garland {
+    display: none;
+  }
+}

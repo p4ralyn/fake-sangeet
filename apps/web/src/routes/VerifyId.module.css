@@ -1,135 +1,77 @@
-/* ID upload. A participant screen: cream card, maroon ink, flat fills —
-   the same register as the rest of the invitation flow, not the scanner's. */
-
-.guidance,
-.waiting,
-.good,
-.retryNote,
-.refused,
-.blocked {
-  font-size: var(--text-sm);
-  margin: 0 0 1.25rem;
+.card {
+  display: grid;
+  gap: var(--space-4);
 }
 
-.good {
-  font-weight: 600;
-  color: var(--state-good);
+.card > h1 {
+  margin-bottom: 0;
 }
 
-.waiting {
-  font-weight: 600;
+.card > .guidance {
+  margin: 0;
 }
 
-/* Magenta, not scarlet: "send another photo" is a nudge, not a refusal, and
-   scarlet in this app already means stop. */
-.retryNote {
-  font-weight: 600;
-  color: var(--magenta);
+.guidance {
+  line-height: 1.6;
 }
 
-.refused,
-.error {
-  font-weight: 600;
-  color: var(--scarlet);
-}
-
-.blocked {
-  font-weight: 600;
-}
-
-/* The real input is driven by the button below it: a bare file input reads as
-   a form field, and this is the one action on the screen. */
+/* The native input is driven by the camera button; it stays in the DOM (and
+   out of sight) so `capture` still opens the camera on a phone. */
 .file {
   position: absolute;
   width: 1px;
   height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.choose,
-.submit,
-.retry {
-  display: block;
-  width: 100%;
-  min-height: 48px;
-  padding: 0.625rem 1.25rem;
-  border-radius: 2px;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color var(--motion-fast) ease;
-}
-
-.choose,
-.retry {
-  background: transparent;
-  color: var(--maroon);
-  border: 2px solid var(--maroon);
-}
-
-.choose:hover,
-.retry:hover {
-  background: color-mix(in srgb, var(--maroon) 12%, transparent);
+.consent {
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper-deep);
+  border: 2px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+  border-radius: var(--radius);
 }
 
 .submit {
-  margin-top: 1rem;
-  background: var(--scarlet);
-  color: var(--cream);
-  border: 2px solid var(--maroon);
+  margin-top: var(--space-1);
 }
 
-.submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--scarlet) 85%, var(--maroon));
-}
-
-.submit:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.preview {
-  display: block;
-  max-width: 100%;
-  max-height: 260px;
-  margin: 1rem auto 0;
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-}
-
-/* The consent line is a real gate, not fine print: full size, sitting with
-   the action it governs. */
-.consent {
+.attempts {
   display: flex;
-  gap: 0.625rem;
-  align-items: flex-start;
-  margin-top: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-weight: 600;
   font-size: var(--text-sm);
-  line-height: 1.45;
-  cursor: pointer;
 }
 
-.consent input {
-  /* 20px is the smallest checkbox that is still comfortably tappable next to
-     text this size. */
-  width: 20px;
-  height: 20px;
-  margin-top: 0.15rem;
-  flex: none;
-  accent-color: var(--scarlet);
+/* One reel-hole per try: filled for the ones left. */
+.pips {
+  display: inline-flex;
+  gap: 5px;
 }
 
-.attempts,
+.pip,
+.pipOn {
+  width: 12px;
+  height: 16px;
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+}
+
+.pipOn {
+  background: var(--scarlet);
+}
+
+.pip {
+  background: transparent;
+}
+
 .next {
-  margin: 0.75rem 0 0;
-  font-size: var(--text-xs);
-  color: var(--muted);
-  text-align: center;
+  margin: var(--space-2) 0 0;
 }
 
-.next {
-  font-size: var(--text-sm);
+.blocked {
+  margin: 0;
 }

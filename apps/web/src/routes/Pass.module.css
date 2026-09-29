@@ -1,259 +1,263 @@
+/* Your pass — the one bold element in the product. A length of film cut into
+   a ticket: sprockets top and bottom, the frame with the holder and the QR, a
+   perforation, the stub. Everything else on this screen stays quieter. */
+
 .page {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  display: grid;
+  gap: var(--space-6);
 }
 
-/* The one place a display heading sits directly on bare saffron rather than
-   a cream card: scarlet-on-saffron only clears 2.86:1 (below the 3:1 display
-   floor), so this gets its own scarlet plaque instead of the global h1 rule
-   — marigold-on-scarlet is 3.74:1. See the reskin report. */
 .pageTitle {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0.2rem 0.9rem;
-  background: var(--scarlet);
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  color: var(--marigold);
-  text-shadow: 3px 3px 0 var(--maroon);
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.titleSparkle {
+  width: 34px;
+  height: 34px;
 }
 
 .wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid;
+  justify-items: center;
 }
 
 .passCard {
   position: relative;
-  background: var(--cream);
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  padding: 1.5rem 2.5rem 1.75rem;
+  width: min(100%, 22rem);
+  background: var(--paper);
+  border: var(--line-thick);
+  border-radius: var(--radius);
+  box-shadow: var(--lift-lg);
   overflow: hidden;
 }
 
-/* The film-strip ticket's own reel edges — a permanent part of the pass,
-   not tied to the reveal animation. */
-.railLeft,
-.railRight {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 16px;
-}
-
-.railLeft {
-  left: 0;
-}
-
-.railRight {
-  right: 0;
-}
-
-/* While revealing, the resting border is invisible and four animated edges
-   draw it clockwise from the top-left corner instead. */
-.passCard.revealing {
-  border-color: transparent;
-}
-
-.edgeTop,
-.edgeRight,
-.edgeBottom,
-.edgeLeft {
-  position: absolute;
-  background: var(--maroon);
-  z-index: 2;
-}
-
-.edgeTop {
-  top: -2px;
-  left: -2px;
-  width: calc(100% + 4px);
-  height: 2px;
-  transform-origin: left;
-  animation: growX var(--motion-slow) ease-out forwards;
-}
-
-.edgeRight {
-  top: -2px;
-  right: -2px;
-  width: 2px;
-  height: calc(100% + 4px);
-  transform-origin: top;
-  animation: growY var(--motion-slow) ease-out forwards;
-  animation-delay: calc(var(--motion-slow) * 0.25);
-}
-
-.edgeBottom {
-  bottom: -2px;
-  right: -2px;
-  width: calc(100% + 4px);
-  height: 2px;
-  transform-origin: right;
-  animation: growX var(--motion-slow) ease-out forwards;
-  animation-delay: calc(var(--motion-slow) * 0.5);
-}
-
-.edgeLeft {
-  bottom: -2px;
-  left: -2px;
-  width: 2px;
-  height: calc(100% + 4px);
-  transform-origin: bottom;
-  animation: growY var(--motion-slow) ease-out forwards;
-  animation-delay: calc(var(--motion-slow) * 0.75);
-}
-
-@keyframes growX {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
-@keyframes growY {
-  from {
-    transform: scaleY(0);
-  }
-  to {
-    transform: scaleY(1);
-  }
+.sprockets {
+  border-block: 0;
 }
 
 .passTop {
-  position: relative;
-  z-index: 1;
+  padding: var(--space-4) var(--space-5) var(--space-3);
   text-align: center;
 }
 
 .holderName {
+  margin: 0;
   font-family: var(--font-display);
-  font-size: var(--text-lg);
-  color: var(--maroon);
-  margin: 0 0 0.25rem;
+  font-size: clamp(1.6rem, 7vw, 2rem);
+  line-height: 1.1;
+  color: var(--scarlet);
+  text-shadow: 0.04em 0.04em 0 var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .ticketType {
-  font-size: var(--text-sm);
-  margin: 0;
-}
-
-.seatOf {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  margin: 0.25rem 0 0;
-}
-
-.passStub {
-  position: relative;
-  z-index: 1;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
 }
 
-.qrWrap {
-  padding: 0.5rem;
-  background: var(--cream);
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-}
-
-/* Sized to roughly the 140px QR it stands in for, so the pass stub keeps its
-   shape while somebody's ID is still being checked. */
-.qrPending {
-  margin: 0;
-  width: 140px;
-  min-height: 140px;
-  display: grid;
-  place-items: center;
-  text-align: center;
+.typeChip {
+  padding: 0.05rem 0.7rem;
+  background: var(--ink);
+  color: var(--marigold);
+  border-radius: 999px;
+  font-weight: 800;
   font-size: var(--text-xs);
-  color: var(--muted);
-}
-
-.qrWrap.qrResolving {
-  opacity: 0;
-  transform: scale(0.85);
-  animation: qrResolve calc(var(--motion-slow) * 0.65) ease-out forwards;
-  animation-delay: var(--motion-slow);
-}
-
-@keyframes qrResolve {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.shortCode {
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-  color: var(--maroon);
   letter-spacing: 0.06em;
 }
 
-/* The status under the pass: "Inside", "On a break", "Departed".
-
-   Sized up from --text-xs, which was a footnote. This is the line a holder
-   checks to see whether the door took them, and the line a volunteer reads
-   over their shoulder at arm's length in the dark -- the two situations the
-   pass exists for. It reads as a row now, glyph beside label, rather than a
-   caption under the ticket. */
-.stateLine {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: var(--text-md);
+.seatOf {
   font-weight: 700;
-  line-height: 1.2;
+  font-size: var(--text-sm);
 }
 
-/* Larger again than the words, because it is what carries at a distance and
-   across the states that share a colour. */
-.stateGlyph {
-  font-size: var(--text-lg);
+/* The QR sits in a film frame: a paper well with marigold corner marks. */
+.qrWrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: var(--space-2) var(--space-5) var(--space-5);
+  padding: var(--space-3);
+  min-height: 12rem;
+  background: var(--paper);
+  border: var(--line);
+  border-radius: var(--radius);
+}
+
+.qr {
+  width: 100%;
+  max-width: 232px;
+  height: auto;
+}
+
+.qrPending {
+  margin: 0;
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.frameCorner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 0 solid var(--scarlet);
+}
+
+.tl {
+  top: -7px;
+  left: -7px;
+  border-top-width: 5px;
+  border-left-width: 5px;
+}
+
+.tr {
+  top: -7px;
+  right: -7px;
+  border-top-width: 5px;
+  border-right-width: 5px;
+}
+
+.bl {
+  bottom: -7px;
+  left: -7px;
+  border-bottom-width: 5px;
+  border-left-width: 5px;
+}
+
+.br {
+  bottom: -7px;
+  right: -7px;
+  border-bottom-width: 5px;
+  border-right-width: 5px;
+}
+
+/* Tear line: a dashed rule with a half-circle notch bitten from each side. */
+.perforation {
+  position: relative;
+  height: 0;
+  margin-inline: 14px;
+  border-top: 3px dashed var(--ink);
+}
+
+.perforation::before,
+.perforation::after {
+  content: "";
+  position: absolute;
+  top: -15px;
+  width: 26px;
+  height: 26px;
+  background: var(--ochre);
+  border: var(--line-thick);
+  border-radius: 50%;
+}
+
+.perforation::before {
+  left: -30px;
+}
+
+.perforation::after {
+  right: -30px;
+}
+
+.passStub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+
+.shortCode {
+  margin: 0;
+  font-size: clamp(1.5rem, 7vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
   line-height: 1;
 }
 
-.stateNeutral {
-  color: var(--maroon);
+.stateStamp {
+  font-size: var(--text-sm);
 }
 
-.stateGood {
-  color: var(--state-good);
+/* ---- the reveal: once, on first view ------------------------------------
+   The ticket drops in, the film advances through its sprockets, the QR is
+   projected on from the top, then the state is stamped. Disabled under
+   prefers-reduced-motion by the global rule in base.css. */
+.revealing {
+  animation: drop-in 650ms var(--ease-stamp) both;
 }
 
-.stateWarn {
-  color: var(--magenta);
+.revealing .sprockets > span {
+  animation: advance 1100ms var(--ease-out) both;
 }
 
-.stateBad {
-  color: var(--scarlet);
+.qrResolving > svg,
+.qrResolving > p {
+  animation: project 800ms var(--ease-out) 550ms both;
 }
 
+.revealing .stateStamp {
+  animation-delay: 1250ms;
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    translate: 0 -28px;
+    rotate: -4deg;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    rotate: 0deg;
+  }
+}
+
+@keyframes advance {
+  from {
+    background-position-x: -330px;
+  }
+  to {
+    background-position-x: 0;
+  }
+}
+
+@keyframes project {
+  from {
+    clip-path: inset(0 0 100% 0);
+    opacity: 0.2;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+/* Add to home screen: a quiet note, icon beside it. */
 .addToHomeCard {
-  text-align: left;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.phoneIcon {
+  width: 30px;
+  height: auto;
+  margin-top: 4px;
 }
 
 .addToHomeTitle {
-  font-family: var(--font-display);
+  margin: 0 0 var(--space-1);
+  font-weight: 800;
   font-size: var(--text-md);
-  color: var(--maroon);
-  margin: 0 0 0.5rem;
 }

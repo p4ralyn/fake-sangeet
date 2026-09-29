@@ -1,6 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Button } from "../components/Button";
-import { MandalaCorner } from "../components/MandalaCorner";
+import { Button, FilmStrip, Garland, MandalaCorner, Plaque } from "../components";
 import { isGateStaff, isOpsStaff } from "../lib/home";
 import { useSession } from "../lib/session";
 import styles from "./AppShell.module.css";
@@ -31,11 +30,12 @@ function SnuphoriaMark() {
 }
 
 /**
- * The app shell: the collab lockup (Snuphoria x Inferno), the event
- * wordmark, the signed-in identity, and the four mandala corner rosettes
- * that anchor every screen (docs/design/frontend-design-spec.md, "Header"
- * and "Ornament"). Content is centred at 34rem on participant screens and
- * goes wide under /admin, per the design spec's layout rule.
+ * The app shell: a length of the poster's film reel as the header bar, with
+ * the collab lockup (Snuphoria x Inferno), the event wordmark on a paper
+ * plaque, and the signed-in identity in its frames. Marigold strings hang
+ * below it and mandala rosettes anchor the bottom corners
+ * (docs/design/frontend-design-spec.md, "Header" and "Ornament"). Content is
+ * centred at 34rem on participant screens and goes wide under /ops.
  */
 export function AppShell() {
   const { user, roles, signOut } = useSession();
@@ -58,76 +58,90 @@ export function AppShell() {
 
   return (
     <>
-      <MandalaCorner corner="top-left" />
-      <MandalaCorner corner="top-right" />
       <MandalaCorner corner="bottom-left" />
       <MandalaCorner corner="bottom-right" />
 
       <header className={styles.header}>
-        <Link to="/" className={styles.brand} aria-label="Fake Sangeet — home">
-          <SnuphoriaMark />
-          <span className={styles.collabX} aria-hidden="true">
-            &times;
-          </span>
-          <img
-            className={styles.infernoLogo}
-            src="/logo/inferno.png"
-            alt="Inferno, SNU's dance society"
-          />
-        </Link>
+        <FilmStrip size="thin" framesClassName={styles.bar}>
+          <Link to="/" className={styles.brand} aria-label="Fake Sangeet — home">
+            <SnuphoriaMark />
+            <span className={styles.collabX} aria-hidden="true">
+              &times;
+            </span>
+            <img
+              className={styles.infernoLogo}
+              src="/logo/inferno.png"
+              alt="Inferno, SNU's dance society"
+            />
+          </Link>
 
-        <div className={styles.wordmarkBlock}>
-          {/* The event's own wordmark, replacing the type treatment that stood
-              in for it. On the maroon plaque its marigold fill reads properly;
-              bare on the saffron ground it all but disappeared. */}
-          <span className={styles.wordmarkPlaque}>
-            <img className={styles.wordmark} src="/logo/event.svg" alt="Fake Sangeet" />
-          </span>
-          <p className={styles.tagline}>band baaja no baarat</p>
-        </div>
-
-        {user && (
-          <div className={styles.identity}>
-            {user.avatar_url && (
-              <img
-                className={styles.avatar}
-                src={user.avatar_url}
-                alt=""
-                // Decorative: the name is right beside it, so announcing the
-                // picture as well would just say the name twice.
-                aria-hidden="true"
-                referrerPolicy="no-referrer"
-              />
-            )}
-            <span className={styles.name}>{user.display_name}</span>
-            <span className={styles.role}>{user.roles.join(", ")}</span>
-            {isGate && !isStaff && (
-              // SECURITY's whole staff surface. They walk the participant
-              // screens for their own pass like anybody else, so without this
-              // the door screen is reachable only by typing the URL — and they
-              // get this ONE link, never the rest of /ops (LLD-v1 §11.5).
-              // Hidden for ops staff, who already have Dashboard and would
-              // otherwise carry two links to overlapping places.
-              <Link className={styles.staffLink} to="/gate">
-                Gate
-              </Link>
-            )}
-            {isStaff && !isStaffArea && (
-              // The way INTO /ops. Without this a staff member lands on a
-              // participant screen with no route to the dashboard except
-              // typing the URL — a rail inside /ops is no use to somebody who
-              // cannot get there. Hidden once inside, where the rail navigates.
-              <Link className={styles.staffLink} to="/ops">
-                Dashboard
-              </Link>
-            )}
-            <Button variant="quiet" onClick={() => void signOut()}>
-              Sign out
-            </Button>
+          <div className={styles.wordmarkBlock}>
+            {/* The event's own wordmark. Its marigold and scarlet need a light
+                ground, so it hangs on a small paper plaque in the reel. */}
+            <Plaque tone="paper" size="sm" lifted={false} className={styles.wordmarkPlaque}>
+              <img className={styles.wordmark} src="/logo/event.svg" alt="Fake Sangeet" />
+            </Plaque>
+            <p className={styles.tagline}>band baaja no baarat</p>
           </div>
-        )}
+
+          {user && (
+            <div className={styles.identity}>
+              <span className={styles.who}>
+                {user.avatar_url ? (
+                  <img
+                    className={styles.avatar}
+                    src={user.avatar_url}
+                    alt=""
+                    // Decorative: the name is right beside it, so announcing the
+                    // picture as well would just say the name twice.
+                    aria-hidden="true"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className={styles.initial} aria-hidden="true">
+                    {user.display_name.trim().charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className={styles.whoText}>
+                  <span className={styles.name}>{user.display_name}</span>
+                  <span className={styles.role}>{user.roles.join(", ")}</span>
+                </span>
+              </span>
+              {isGate && !isStaff && (
+                // SECURITY's whole staff surface. They walk the participant
+                // screens for their own pass like anybody else, so without this
+                // the door screen is reachable only by typing the URL — and they
+                // get this ONE link, never the rest of /ops (LLD-v1 §11.5).
+                // Hidden for ops staff, who already have Dashboard and would
+                // otherwise carry two links to overlapping places.
+                <Link className={styles.staffLink} to="/gate">
+                  Gate
+                </Link>
+              )}
+              {isStaff && !isStaffArea && (
+                // The way INTO /ops. Without this a staff member lands on a
+                // participant screen with no route to the dashboard except
+                // typing the URL — a rail inside /ops is no use to somebody who
+                // cannot get there. Hidden once inside, where the rail navigates.
+                <Link className={styles.staffLink} to="/ops">
+                  Dashboard
+                </Link>
+              )}
+              <Button variant="quiet" className={styles.signOut} onClick={() => void signOut()}>
+                Sign out
+              </Button>
+            </div>
+          )}
+        </FilmStrip>
       </header>
       <main className={wantsWideColumn ? styles.mainWide : styles.mainNarrow}>
+        {/* Hung from the reel's underside, but painted inside main and behind
+            its content, so a panel always covers them and they never cover a
+            panel. */}
+        <div className={styles.garlands}>
+          <Garland side="left" />
+          <Garland side="right" />
+        </div>
         <Outlet />
       </main>
     </>

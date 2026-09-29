@@ -1,0 +1,47 @@
+.strip {
+  --pitch: 22px;
+  --band: 16px;
+  display: flex;
+  background: var(--scarlet);
+  color: var(--paper);
+}
+
+.thin {
+  --pitch: 15px;
+  --band: 11px;
+}
+
+.horizontal {
+  flex-direction: column;
+  width: 100%;
+  border-block: var(--line);
+}
+
+.vertical {
+  flex-direction: row;
+  height: 100%;
+  border-inline: var(--line);
+}
+
+.holes {
+  flex: none;
+  background-repeat: repeat;
+}
+
+.horizontal .holes {
+  height: var(--band);
+  background-size: var(--pitch) var(--band);
+  background-image: var(--sprockets-x);
+}
+
+.vertical .holes {
+  width: var(--band);
+  background-size: var(--band) var(--pitch);
+  background-image: var(--sprockets-y);
+}
+
+.frames {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}

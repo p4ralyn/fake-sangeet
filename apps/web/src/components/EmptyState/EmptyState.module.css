@@ -1,0 +1,25 @@
+.empty {
+  text-align: center;
+}
+
+.sparkle {
+  margin: 0 auto var(--space-3);
+  width: 36px;
+  height: 36px;
+}
+
+.title {
+  margin-bottom: var(--space-4);
+}
+
+.body > p {
+  margin-inline: auto;
+}
+
+.action {
+  margin-top: var(--space-5);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

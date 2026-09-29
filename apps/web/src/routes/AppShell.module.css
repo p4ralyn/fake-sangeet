@@ -1,222 +1,257 @@
+/* The header is a length of the reel: sprockets top and bottom, the lockup,
+   wordmark and identity in the frames between. */
+/* Above main, so nothing drawn in the page (the landing reel) can cover it. */
 .header {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+}
+
+.bar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   grid-template-areas: "brand center identity";
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  /* Transparent, not a solid fill: the body is already saffron, and leaving
-     this see-through lets the fixed mandala corners (z-index 0, below the
-     header's own z-index 1) show through the header's empty space instead
-     of being painted over by an opaque bar. */
-  background: transparent;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--gutter);
+  border-block: 2px solid var(--ink);
 }
 
 .brand {
   grid-area: brand;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  min-width: 0;
-  text-decoration: none;
-
-  /* The collab lockup sits on a maroon plaque.
-
-     Two reasons, and the first is a real defect fix: the Inferno PNG has WHITE
-     lettering baked in -- it was drawn for the poster, where it sits on the
-     dark film strip -- so on the saffron ground it washed out to roughly 1.6:1
-     and was close to unreadable. It is a raster, so it cannot be recoloured the
-     way the Snuphoria SVG can.
-
-     Second, it matches the source: on the poster both marks sit together on a
-     dark field. The plaque also groups the two societies as one collab unit,
-     which is what the lockup is for. */
-  background: var(--maroon);
-  color: var(--cream);
-  padding: 0.45rem 0.75rem;
-  border-radius: 2px;
-  /* Hug the marks. Without this the link stretches to fill its header column
-     and the plaque runs half the page width. */
+  gap: 0.55rem;
   width: fit-content;
   justify-self: start;
+  padding: 0.4rem 0.75rem;
+  /* The Inferno PNG has WHITE lettering baked in (drawn for the poster's dark
+     film strip), so both marks sit together on an ink tile. */
+  background: var(--ink);
+  color: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 60%, transparent);
+  text-decoration: none;
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.brand:hover {
+  transform: rotate(-2deg);
 }
 
 .logo {
-  height: 30px;
+  height: 28px;
   width: auto;
   flex-shrink: 0;
-  color: var(--cream);
+  color: var(--paper);
 }
 
 .collabX {
   font-family: var(--font-display);
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   line-height: 1;
   color: var(--marigold);
   flex-shrink: 0;
 }
 
 .infernoLogo {
-  /* The mark is a wide 2.29:1 lockup, so height drives the size and width
-     follows. */
-  height: 26px;
+  height: 22px;
   width: auto;
   flex-shrink: 0;
 }
 
 .wordmarkBlock {
   grid-area: center;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.wordmarkPlaque {
+  display: block;
 }
 
 .wordmark {
-  /* A 1.95:1 lockup, so height drives the size and width follows -- same rule
-     as the two society marks beside it. Vector now, so the height is free to
-     change without anyone regenerating a raster. */
-  display: block;
-  height: 40px;
+  height: 38px;
   width: auto;
 }
 
-/* The mark sits on a cream plaque, built like a Card: cream ground, 2px inked
-   maroon border, 2px radius.
-
-   It took three grounds to get here, and the reason is in the artwork. The
-   wordmark uses BOTH brand reds: "fake" is marigold, which tokens.css confines
-   to scarlet/maroon grounds, and "sangeet" is solid scarlet with no outline.
-   On saffron the marigold washed into the page; on maroon the scarlet went
-   dark-on-dark and "sangeet" disappeared. Only a light ground carries both,
-   which is exactly the ground the logo was drawn for -- and is why the landing
-   hero, sitting on a cream card, needs no plaque at all. */
-.wordmarkPlaque {
-  display: inline-block;
-  background: var(--cream);
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  padding: 0.35rem 0.8rem;
-}
-
 .tagline {
-  margin: 0.35rem 0 0;
+  margin: 0;
   font-size: var(--text-xs);
-  color: var(--maroon);
-  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--paper);
 }
 
 .identity {
   grid-area: identity;
+  justify-self: end;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 0.6rem;
-  font-size: var(--text-xs);
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--paper);
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.avatar,
+.initial {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  object-fit: cover;
+}
+
+.initial {
+  display: grid;
+  place-items: center;
+  background: var(--marigold);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding-top: 3px;
+}
+
+.whoText {
+  display: grid;
+  line-height: 1.15;
   min-width: 0;
 }
 
 .name {
-  white-space: nowrap;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 8rem;
+  white-space: nowrap;
+  max-width: 12rem;
 }
 
 .role {
-  color: var(--maroon);
-  font-weight: 600;
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  padding: 0.15rem 0.5rem;
-  white-space: nowrap;
-}
-
-.mainNarrow {
-  position: relative;
-  z-index: 1;
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
-}
-
-.mainWide {
-  position: relative;
-  z-index: 1;
-  max-width: none;
-  margin: 0 auto;
-  padding: 1.5rem 1.25rem 3rem;
-}
-
-@media (min-width: 60rem) {
-  .mainWide {
-    max-width: 90rem;
-  }
-}
-
-/* At 700px the three-column lockup has nowhere left to give without
-   shrinking into mush, so it stacks: brand and identity share the top row,
-   the wordmark and tagline take the row beneath. */
-@media (max-width: 700px) {
-  .header {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      "brand identity"
-      "center center";
-  }
-
-  .wordmarkBlock {
-    margin-top: 0.25rem;
-  }
-
-  .identity {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 400px) {
-  .name {
-    display: none;
-  }
-
-  .tagline {
-    white-space: normal;
-  }
-}
-
-/* Google's avatar, when there is one. `referrerPolicy="no-referrer"` on the
-   img stops the URL of the page somebody is on leaking to Google with every
-   load. */
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--maroon);
-  object-fit: cover;
-}
-
-/* The staff entry point. Marigold on the maroon header band — the poster's
-   own accent, and the only thing in the header that is a destination rather
-   than a label. */
-/* Maroon on saffron, not marigold.
-
-   This is the ONLY way into /ops for an admin and to /scan for a volunteer,
-   and it was drawn in marigold on the saffron ground -- the pairing tokens.css
-   rules out, the two being neighbouring warm ochres. Against the page it was
-   close to invisible, which for a sole entry point is a dead end rather than a
-   blemish. Maroon is what every other piece of header text already uses. */
-.staffLink {
-  padding: 0.25rem 0.625rem;
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  color: var(--maroon);
-  text-decoration: none;
   font-size: var(--text-xs);
-  font-weight: 700;
-  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.staffLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0.25rem 0.9rem;
+  background: var(--marigold);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 2px 2px 0 var(--ink);
 }
 
 .staffLink:hover {
-  background: var(--maroon);
-  color: var(--cream);
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.signOut {
+  color: var(--paper);
+  min-height: 44px;
+}
+
+.signOut:hover:not(:disabled) {
+  text-decoration-color: var(--marigold);
+}
+
+/* Full-bleed layer at the top of main, behind its content, so the garlands
+   hang at the viewport edges whatever the column width. */
+.garlands {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 50%;
+  width: 100vw;
+  height: 0;
+  translate: -50% 0;
+}
+
+/* Content columns. Above the ornament layer. */
+.mainNarrow,
+.mainWide {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  padding: clamp(var(--space-5), 5vw, var(--space-7)) var(--gutter) var(--space-7);
+}
+
+.mainNarrow {
+  max-width: calc(var(--content-max) + 2 * var(--gutter));
+}
+
+.mainWide {
+  max-width: calc(var(--wide-max) + 2 * var(--gutter));
+}
+
+/* Tablet: identity text goes; the initial and the actions stay. */
+@media (max-width: 900px) {
+  .whoText {
+    display: none;
+  }
+}
+
+/* Phone: lockup and identity share the first row, the wordmark takes the
+   second. Nothing shrinks into illegibility. */
+@media (max-width: 640px) {
+  .bar {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "brand identity"
+      "center center";
+    row-gap: var(--space-2);
+    padding-block: var(--space-2) var(--space-3);
+  }
+
+  .logo {
+    height: 24px;
+  }
+
+  .infernoLogo {
+    height: 18px;
+  }
+
+  .collabX {
+    font-size: var(--text-md);
+  }
+
+  .wordmark {
+    height: 32px;
+  }
+
+  .identity {
+    gap: var(--space-1);
+  }
+
+  .avatar,
+  .initial {
+    width: 32px;
+    height: 32px;
+  }
+
+  .staffLink {
+    padding-inline: 0.7rem;
+  }
+
+  .signOut {
+    padding-inline: 0.4rem;
+  }
 }

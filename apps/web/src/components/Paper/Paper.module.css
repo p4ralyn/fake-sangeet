@@ -1,0 +1,76 @@
+.paper {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--line);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.pad-sm {
+  padding: var(--space-4);
+}
+
+.pad-md {
+  padding: var(--space-5) clamp(var(--space-4), 5vw, var(--space-6));
+}
+
+.pad-lg {
+  padding: var(--space-6) clamp(var(--space-5), 6vw, var(--space-7));
+}
+
+.lift-sm {
+  box-shadow: var(--lift-sm);
+}
+
+.lift-md {
+  box-shadow: var(--lift);
+}
+
+.lift-lg {
+  box-shadow: var(--lift-lg);
+}
+
+.tilt-left {
+  rotate: -1.2deg;
+}
+
+.tilt-right {
+  rotate: 1.2deg;
+}
+
+.taped {
+  margin-top: var(--space-3);
+}
+
+/* Masking tape: translucent marigold, torn ends via a zigzag mask. */
+.tape {
+  position: absolute;
+  top: -14px;
+  width: 92px;
+  height: 26px;
+  background: color-mix(in srgb, var(--marigold) 70%, transparent);
+  border-inline: 0;
+  /* torn ends */
+  clip-path: polygon(
+    4% 0, 96% 0, 100% 18%, 96% 36%, 100% 54%, 96% 72%, 100% 90%, 96% 100%,
+    4% 100%, 0 82%, 4% 64%, 0 46%, 4% 28%, 0 10%
+  );
+  pointer-events: none;
+}
+
+.tapeLeft {
+  left: -18px;
+  rotate: -32deg;
+}
+
+.tapeRight {
+  right: -18px;
+  rotate: 32deg;
+}
+
+@media (max-width: 420px) {
+  .tape {
+    width: 70px;
+  }
+}

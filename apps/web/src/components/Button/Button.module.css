@@ -1,0 +1,124 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0.55rem 1.35rem;
+  font: 700 1.05rem/1.2 var(--font-body);
+  text-align: center;
+  text-decoration: none;
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast);
+}
+
+.button:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.button:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.lg {
+  min-height: 56px;
+  padding: 0.7rem 1.8rem;
+  font-size: 1.2rem;
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}
+
+.primary {
+  background: var(--scarlet);
+  color: var(--paper);
+}
+
+.primary:hover:not(:disabled) {
+  color: var(--paper);
+}
+
+.secondary {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--marigold);
+  color: var(--ink);
+}
+
+.marigold {
+  background: var(--marigold);
+  color: var(--ink);
+}
+
+.marigold:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.good {
+  background: var(--state-good);
+  color: var(--paper);
+}
+
+.good:hover:not(:disabled) {
+  color: var(--paper);
+}
+
+.danger {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.danger:hover:not(:disabled) {
+  color: var(--paper);
+}
+
+.quiet {
+  background: transparent;
+  color: inherit;
+  border-color: transparent;
+  box-shadow: none;
+  padding-inline: 0.75rem;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.quiet:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+  color: inherit;
+  text-decoration-color: var(--scarlet);
+}
+
+.quiet:active:not(:disabled) {
+  transform: none;
+}
+
+/* Disabled reads as "not yet" — a dashed outline and no shadow to press —
+   rather than a washed-out version of the live colour. */
+.button:disabled {
+  background: var(--paper-deep);
+  color: var(--muted);
+  border-style: dashed;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.quiet:disabled {
+  background: transparent;
+  border-color: transparent;
+}

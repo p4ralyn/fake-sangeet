@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card } from "../components/Card";
+import { Button, Field, Notice, Paper } from "../components";
 import { ApiError } from "../lib/api";
 import { transferPass } from "../lib/passApi";
 import type { TransferWindow } from "../lib/types";
@@ -55,25 +55,25 @@ export function TransferPanel({ window: transferWindow, onTransferred }: Transfe
   // to tell somebody holding one.
   if (transferWindow.transfers_used >= transferWindow.max_transfers) {
     return (
-      <Card className={styles.panel}>
-        <p className={styles.title}>This pass can&rsquo;t be passed on again</p>
+      <Paper as="section" className={styles.panel}>
+        <h2 className={styles.title}>This pass can&rsquo;t be passed on again</h2>
         <p className={styles.note}>
           A pass can only be transferred once, and this one already has been. If something
           needs sorting out, talk to the desk.
         </p>
-      </Card>
+      </Paper>
     );
   }
 
   if (!transferWindow.open) {
     return (
-      <Card className={styles.panel}>
-        <p className={styles.title}>Transfers are closed</p>
+      <Paper as="section" className={styles.panel}>
+        <h2 className={styles.title}>Transfers are closed</h2>
         <p className={styles.note}>
           Passes stopped moving at {formatDeadline(transferWindow.closes_at)}, three hours
           before doors. Talk to the desk if something needs sorting out.
         </p>
-      </Card>
+      </Paper>
     );
   }
 
@@ -96,8 +96,8 @@ export function TransferPanel({ window: transferWindow, onTransferred }: Transfe
   }
 
   return (
-    <Card className={styles.panel}>
-      <p className={styles.title}>Give this pass to someone else</p>
+    <Paper as="section" className={styles.panel}>
+      <h2 className={styles.title}>Give this pass to someone else</h2>
       <p className={styles.note}>
         <strong>A pass can only be transferred once.</strong> Once you send this, it
         can&rsquo;t be passed on again &mdash; not by you, and not by them.
@@ -110,59 +110,54 @@ export function TransferPanel({ window: transferWindow, onTransferred }: Transfe
 
       {!confirming ? (
         <>
-          <label className={styles.label} htmlFor="transfer-net-id">
-            Their NetID
-          </label>
-          <input
+          <Field
             id="transfer-net-id"
-            className={styles.input}
+            label="Their NetID"
+            inputSize="lg"
             value={netId}
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
             placeholder="zq202"
+            error={error}
             onChange={(event) => {
               setNetId(event.target.value);
               setError(null);
             }}
           />
-          {error && <p className={styles.error}>{error}</p>}
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            block
             className={styles.action}
             disabled={netId.trim().length < 3}
             onClick={() => setConfirming(true)}
           >
             Continue
-          </button>
+          </Button>
         </>
       ) : (
         <>
-          <p className={styles.confirm}>
-            Send this pass to <strong>{netId.trim().toLowerCase()}</strong>? You
-            can&rsquo;t undo this, and it can&rsquo;t be transferred again after this.
-          </p>
-          {error && <p className={styles.error}>{error}</p>}
+          <Notice tone="warn" className={styles.confirm}>
+            <p>
+              Send this pass to <strong>{netId.trim().toLowerCase()}</strong>? You
+              can&rsquo;t undo this, and it can&rsquo;t be transferred again after this.
+            </p>
+          </Notice>
+          {error && (
+            <Notice tone="error" live>
+              <p>{error}</p>
+            </Notice>
+          )}
           <div className={styles.confirmRow}>
-            <button
-              type="button"
-              className={styles.back}
-              disabled={busy}
-              onClick={() => setConfirming(false)}
-            >
+            <Button variant="secondary" disabled={busy} onClick={() => setConfirming(false)}>
               Go back
-            </button>
-            <button
-              type="button"
-              className={styles.action}
-              disabled={busy}
-              onClick={() => void send()}
-            >
+            </Button>
+            <Button variant="danger" disabled={busy} onClick={() => void send()}>
               {busy ? "Sending…" : "Yes, send it"}
-            </button>
+            </Button>
           </div>
         </>
       )}
-    </Card>
+    </Paper>
   );
 }

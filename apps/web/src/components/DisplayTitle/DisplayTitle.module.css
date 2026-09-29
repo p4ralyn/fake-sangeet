@@ -1,0 +1,75 @@
+.title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1;
+  margin: 0;
+  letter-spacing: 0.005em;
+  text-wrap: balance;
+}
+
+.hero {
+  font-size: clamp(3rem, 15vw, 6.4rem);
+  line-height: 0.92;
+}
+
+.page {
+  font-size: clamp(2.1rem, 9vw, 3.1rem);
+}
+
+.section {
+  font-size: clamp(1.6rem, 6vw, 2rem);
+}
+
+/* Fill, 8-way outline, then the extrusion: three scarlet steps and two ink
+   steps, all offset in em so it scales with the size. */
+.marigold {
+  --o: 0.035em;
+  color: var(--marigold);
+  text-shadow:
+    calc(var(--o) * -1) 0 0 var(--ink),
+    var(--o) 0 0 var(--ink),
+    0 calc(var(--o) * -1) 0 var(--ink),
+    0 var(--o) 0 var(--ink),
+    calc(var(--o) * -1) calc(var(--o) * -1) 0 var(--ink),
+    var(--o) calc(var(--o) * -1) 0 var(--ink),
+    calc(var(--o) * -1) var(--o) 0 var(--ink),
+    var(--o) var(--o) 0 var(--ink),
+    0.05em 0.05em 0 var(--scarlet),
+    0.065em 0.065em 0 var(--scarlet),
+    0.08em 0.08em 0 var(--scarlet),
+    0.095em 0.095em 0 var(--ink),
+    0.105em 0.105em 0 var(--ink);
+}
+
+.section.marigold {
+  --o: 0.03em;
+  text-shadow:
+    calc(var(--o) * -1) 0 0 var(--ink),
+    var(--o) 0 0 var(--ink),
+    0 calc(var(--o) * -1) 0 var(--ink),
+    0 var(--o) 0 var(--ink),
+    var(--o) var(--o) 0 var(--ink),
+    0.06em 0.06em 0 var(--ink);
+}
+
+.ink {
+  color: var(--ink);
+  text-shadow:
+    0.04em 0.04em 0 var(--marigold),
+    0.07em 0.07em 0 var(--scarlet);
+}
+
+.section.ink {
+  text-shadow: 0.05em 0.05em 0 var(--marigold);
+}
+
+.scarlet {
+  color: var(--scarlet);
+  text-shadow:
+    0.035em 0.035em 0 var(--ink),
+    0.06em 0.06em 0 var(--marigold);
+}
+
+.section.scarlet {
+  text-shadow: 0.04em 0.04em 0 var(--ink);
+}

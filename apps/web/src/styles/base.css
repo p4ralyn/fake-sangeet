@@ -1,11 +1,9 @@
 /* Base stylesheet — resets and global rules.
-   Binding rule from docs/design/frontend-design-spec.md:
-   NO GRADIENTS AND NO BOX-SHADOWS ANYWHERE IN THE ENTIRE APP.
-   Brightness comes from the flat palette, not glows. The only shadow-shaped
-   thing in this app is the display-type extrusion, and it is a hard,
-   un-blurred offset (`text-shadow: Npx Npx 0 var(--maroon)`), never a blur,
-   never applied to a box. Do not add `box-shadow` or any `gradient(...)` to
-   any stylesheet in this app. */
+   Binding rules from docs/design/frontend-design-spec.md:
+   - Shadows are HARD offsets only (`--lift*` tokens, `text-shadow: Npx Npx 0`).
+     Never a blur, never a glow.
+   - Texture (paper grain, halftone dots) is allowed as pattern, never as a
+     colour wash behind text. */
 
 @import "./tokens.css";
 
@@ -18,76 +16,91 @@
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* The ground: flat ochre with a fine paper grain printed over it, the way the
+   poster's field is mottled rather than digital-flat. The grain is an inline
+   SVG turbulence tile — no image request, and it scrolls with the page. */
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--saffron);
-  color: var(--maroon);
+  min-height: 100dvh;
+  background-color: var(--ochre);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .29 0 0 0 0 .04 0 0 0 0 .08 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
+  color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--text-sm);
   line-height: 1.6;
   overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Nothing in the app scrolls horizontally except the admin table, which
-   scrolls inside its own container (see AdminTable / .table-scroll). */
+/* `clip`, not `hidden`: ornaments that hang past the edge (tape, garlands,
+   the reel) are cut off without making #root a scroll container. */
 #root {
   max-width: 100%;
   position: relative;
   isolation: isolate;
+  overflow-x: clip;
 }
 
+/* Headings default to the reading-surface treatment: scarlet Shrikhand with
+   a small hard ink offset. The full marigold extrusion is DisplayTitle's job
+   and only happens on scarlet, rani or ink grounds where it reads. */
 h1,
 h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  line-height: 1.05;
-  letter-spacing: 0.01em;
   font-weight: 400;
-  margin: 0 0 0.75em;
+  line-height: 1.1;
+  margin: 0 0 0.6em;
+  text-wrap: balance;
 }
 
-/* Display type at 2rem and up (h1, h2) is the poster's chunky lettering:
-   scarlet fill (5.35:1 on the cream cards these always sit in — see the
-   reskin report) with the hard, un-blurred maroon extrusion. Never blur,
-   never scale it by anything but the offset distance. A heading that must
-   sit directly on bare saffron ground (not a cream card) cannot use this
-   rule as-is — scarlet-on-saffron is only 2.86:1 — and instead gets a
-   local scarlet plaque + marigold fill override (see Pass.module.css). */
 h1 {
-  font-size: var(--text-3xl);
+  font-size: clamp(var(--text-xl), 7vw, var(--text-2xl));
   color: var(--scarlet);
-  text-shadow: 4px 4px 0 var(--maroon);
+  text-shadow: 2px 2px 0 var(--ink);
 }
 
 h2 {
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   color: var(--scarlet);
-  text-shadow: 3px 3px 0 var(--maroon);
+  text-shadow: 2px 2px 0 var(--ink);
 }
 
-/* Below 2rem the extrusion drops: at this size a hard offset reads as
-   noise, not lettering, and the smaller sizes are plain maroon on cream
-   (12.39:1), which is legible without help. */
+/* Below ~2rem the offset reads as noise, so small headings drop it. */
 h3 {
-  font-size: var(--text-xl);
-  color: var(--maroon);
-}
-h4 {
   font-size: var(--text-lg);
-  color: var(--maroon);
+  color: var(--ink);
+}
+
+h4 {
+  font-size: var(--text-md);
+  color: var(--ink);
 }
 
 p {
   max-width: 66ch;
   margin: 0 0 1em;
+  text-wrap: pretty;
+}
+
+p:last-child {
+  margin-bottom: 0;
 }
 
 a {
   color: var(--scarlet);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--ink);
 }
 
 img,
@@ -105,19 +118,28 @@ textarea {
   color: inherit;
 }
 
-/* Sentence case everywhere, including buttons. No all-caps transform lives
-   anywhere in this codebase except the event wordmark itself, which is a
-   wordmark set in caps in its own markup — do not add a text-transform. */
-
-/* Visible keyboard focus, globally. A 2px maroon outline with a 2px offset
-   — verified to stay visible against both cream (12.39:1) and saffron
-   (6.62:1). Never remove this without an equally visible replacement. */
-:focus-visible {
-  outline: 2px solid var(--maroon);
-  outline-offset: 2px;
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
 }
 
-/* Tabular numerals utility — countdowns, amounts, seat counts, short codes. */
+/* Sentence case everywhere, including buttons. No all-caps transform lives
+   anywhere in this codebase. */
+
+/* Visible keyboard focus, globally. A 3px ink outline with a marigold halo
+   (a second hard outline, not a glow) stays visible on paper, ochre, scarlet
+   and rani alike. Never remove this without an equally visible replacement. */
+:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 7px var(--marigold);
+}
+
+::selection {
+  background: var(--marigold);
+  color: var(--ink);
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
@@ -126,12 +148,24 @@ textarea {
   overflow-x: auto;
 }
 
-/* Ornament layer: mandala corner rosettes, the film-strip band, sparkle
-   bursts. Every one of these is inline SVG, aria-hidden, non-interactive,
-   and sits behind content — never reduces text contrast because it never
-   overlaps a text run at meaningful opacity. */
+/* Visually hidden, still announced. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Ornament layer: every piece is inline SVG, aria-hidden, non-interactive and
+   behind content. */
 .ornament {
   pointer-events: none;
+  user-select: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -139,6 +173,7 @@ textarea {
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;

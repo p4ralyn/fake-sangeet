@@ -1,9 +1,13 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { buttonClass } from "../../components";
 import { useSession } from "../../lib/session";
 import styles from "./OpsShell.module.css";
 
 /**
  * The staff area (`/ops`).
+ *
+ * A rail cut from the reel: sprockets down both edges, one frame per
+ * destination, the lit frame is where you are.
  *
  * A rail, not a header: three destinations that people move between all night,
  * where a header would push the work down the page on the laptop this is
@@ -58,7 +62,7 @@ export function OpsShell() {
           </NavLink>
         ))}
 
-        <a className={styles.scannerLink} href="/scan">
+        <a className={buttonClass({ variant: "marigold", block: true }, styles.scannerLink)} href="/scan">
           Open the scanner
         </a>
         <p className={styles.who}>
@@ -71,9 +75,11 @@ export function OpsShell() {
               referrerPolicy="no-referrer"
             />
           )}
-          {user?.net_id}
-          <br />
-          <span className={styles.role}>{user?.roles.join(", ")}</span>
+          <span>
+            {user?.net_id}
+            <br />
+            <span className={styles.role}>{user?.roles.join(", ")}</span>
+          </span>
         </p>
       </nav>
 

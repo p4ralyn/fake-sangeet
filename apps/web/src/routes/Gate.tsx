@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { ButtonLink, Loading, Notice } from "../components";
 import { InTheRoom, TheDoor } from "./ops/Boards";
 import { getSummary, usePolled } from "../lib/opsApi";
 import panels from "./ops/Panels.module.css";
@@ -25,18 +25,44 @@ export function Gate() {
 
   return (
     <div className={styles.gate}>
-      <Link className={styles.scanLink} to="/scan">
+      <ButtonLink className={styles.scanLink} to="/scan" variant="primary" size="lg" block>
+        <ScanGlyph />
         Open the scanner
-      </Link>
+      </ButtonLink>
 
-      {state.kind === "loading" && <p className={panels.state}>Loading&hellip;</p>}
-      {state.kind === "error" && <p className={panels.errorState}>{state.message}</p>}
+      {state.kind === "loading" && <Loading>Loading&hellip;</Loading>}
+      {state.kind === "error" && (
+        <Notice tone="error">
+          <p>{state.message}</p>
+        </Notice>
+      )}
       {state.kind === "ready" && (
         <>
-          <InTheRoom data={state.data} heading="Tonight" />
-          <TheDoor data={state.data} />
+          <div className={panels.board}>
+            <InTheRoom data={state.data} heading="Tonight" />
+            <TheDoor data={state.data} />
+          </div>
         </>
       )}
     </div>
+  );
+}
+
+/** Viewfinder brackets round a QR block, in the button's own colour. */
+function ScanGlyph() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+      <path
+        d="M2 9V3h6M20 3h6v6M26 19v6h-6M8 25H2v-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <rect x="8" y="8" width="5" height="5" fill="currentColor" />
+      <rect x="15" y="8" width="5" height="5" fill="currentColor" />
+      <rect x="8" y="15" width="5" height="5" fill="currentColor" />
+      <rect x="16" y="16" width="3" height="3" fill="currentColor" />
+    </svg>
   );
 }

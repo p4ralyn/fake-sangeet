@@ -1,0 +1,92 @@
+.plaque {
+  --r: 22px; /* scoop radius */
+  --b: 3px; /* outline width */
+  --inset: 9px; /* dotted rule inset */
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.sm {
+  --r: 12px;
+  --inset: 6px;
+}
+
+.lg {
+  --r: 30px;
+  --b: 4px;
+  --inset: 12px;
+}
+
+.lifted {
+  filter: drop-shadow(6px 6px 0 var(--ink));
+}
+
+.lg.lifted {
+  filter: drop-shadow(9px 9px 0 var(--ink));
+}
+
+/* Scooped-corner mask: four quarter-tiles, each a circle cut from its corner. */
+.frame,
+.face,
+.face::before {
+  mask:
+    radial-gradient(circle at 0 0, #0000 var(--rr), #000 calc(var(--rr) + 0.5px)) top left / 51% 51% no-repeat,
+    radial-gradient(circle at 100% 0, #0000 var(--rr), #000 calc(var(--rr) + 0.5px)) top right / 51% 51% no-repeat,
+    radial-gradient(circle at 0 100%, #0000 var(--rr), #000 calc(var(--rr) + 0.5px)) bottom left / 51% 51% no-repeat,
+    radial-gradient(circle at 100% 100%, #0000 var(--rr), #000 calc(var(--rr) + 0.5px)) bottom right / 51% 51% no-repeat;
+}
+
+.frame {
+  --rr: var(--r);
+  background: var(--ink);
+  padding: var(--b);
+}
+
+/* The face's scoops are centred on its own corners with a radius that makes
+   the ink band an even width all the way round. */
+.face {
+  --rr: calc(var(--r) - var(--b) * 0.6);
+  position: relative;
+  padding: calc(var(--inset) + 0.9rem) calc(var(--r) + 0.9rem);
+  color: var(--paper);
+  text-align: center;
+}
+
+.sm .face {
+  padding: calc(var(--inset) + 0.45rem) calc(var(--r) + 0.6rem);
+}
+
+.face::before {
+  --rr: calc(var(--r) - var(--inset) * 0.4);
+  content: "";
+  position: absolute;
+  inset: var(--inset);
+  border: 3px dotted var(--marigold);
+  pointer-events: none;
+}
+
+.sm .face::before {
+  border-width: 2px;
+}
+
+.rani {
+  background: var(--rani);
+}
+
+.scarlet {
+  background: var(--scarlet);
+}
+
+.ink {
+  background: var(--ink);
+}
+
+.paper {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.paper::before {
+  border-color: var(--scarlet);
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Button, EmptyState, Loading, Notice, Paper, Stamp } from "../../components";
 import { ApiError } from "../../lib/api";
 import { decideReview, getReviewQueue } from "../../lib/verificationApi";
 import type { ReviewItem } from "../../lib/types";
@@ -109,31 +110,34 @@ export function IdReview() {
   }, [decide]);
 
   if (loading) {
-    return <p className={styles.state}>Loading the queue…</p>;
+    return <Loading>Loading the queue…</Loading>;
   }
 
   if (!current) {
     return (
-      <div className={styles.empty}>
-        <h1 className={styles.emptyTitle}>Queue clear</h1>
+      <EmptyState
+        title="Queue clear"
+        action={
+          <Button variant="secondary" onClick={() => void load()}>
+            Check again
+          </Button>
+        }
+      >
         <p>No IDs are waiting. New ones appear here as people upload them.</p>
-        <button type="button" className={styles.secondary} onClick={() => void load()}>
-          Check again
-        </button>
-      </div>
+      </EmptyState>
     );
   }
 
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <span className={styles.count}>
+        <Stamp tone={pending > 0 ? "warn" : "neutral"} glyph="◔" className={styles.count}>
           {pending} waiting
-        </span>
+        </Stamp>
         <span className={styles.shortcuts}>{SHORTCUTS}</span>
       </header>
 
-      <figure className={styles.figure}>
+      <Paper as="div" lift="md" tape pad="sm" className={styles.figure}>
         {current.id_image_url ? (
           <img className={styles.photo} src={current.id_image_url} alt="Uploaded student ID" />
         ) : (
@@ -141,7 +145,7 @@ export function IdReview() {
             This image has been purged. Ask them to upload again.
           </p>
         )}
-      </figure>
+      </Paper>
 
       <div className={styles.identity}>
         <h1 className={styles.name}>{current.full_name}</h1>
@@ -157,47 +161,45 @@ export function IdReview() {
             : ""}
         </p>
         {current.fraud_flags.includes("DUPLICATE_IMAGE") && (
-          <p className={styles.flag}>
-            The same photo was uploaded before. Worth a second look — it is not proof of
-            anything on its own.
-          </p>
+          <Notice tone="warn" className={styles.flag}>
+            <p>
+              The same photo was uploaded before. Worth a second look — it is not proof of
+              anything on its own.
+            </p>
+          </Notice>
         )}
       </div>
 
+      <label className="sr-only" htmlFor="review-note">
+        Note
+      </label>
       <input
+        id="review-note"
         className={styles.note}
         value={note}
         placeholder="Note (optional) — they see this if you refuse or ask again"
         onChange={(event) => setNote(event.target.value)}
       />
 
-      {error && <p className={styles.error}>{error}</p>}
+      {error && (
+        <Notice tone="error" live className={styles.error}>
+          <p>{error}</p>
+        </Notice>
+      )}
 
       <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.approve}
-          disabled={busy}
-          onClick={() => void decide(true, false)}
-        >
+        <Button variant="good" size="lg" block disabled={busy} onClick={() => void decide(true, false)}>
           Approve
-        </button>
-        <button
-          type="button"
-          className={styles.secondary}
-          disabled={busy}
-          onClick={() => void decide(false, true)}
-        >
+          <kbd className={styles.key} aria-hidden="true">A</kbd>
+        </Button>
+        <Button variant="secondary" size="lg" block disabled={busy} onClick={() => void decide(false, true)}>
           Ask for another photo
-        </button>
-        <button
-          type="button"
-          className={styles.refuse}
-          disabled={busy}
-          onClick={() => void decide(false, false)}
-        >
+          <kbd className={styles.key} aria-hidden="true">R</kbd>
+        </Button>
+        <Button variant="danger" size="lg" block disabled={busy} onClick={() => void decide(false, false)}>
           Refuse
-        </button>
+          <kbd className={styles.key} aria-hidden="true">X</kbd>
+        </Button>
       </div>
     </div>
   );

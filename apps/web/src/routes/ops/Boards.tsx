@@ -1,3 +1,4 @@
+import { DisplayTitle, Stat, StatGrid } from "../../components";
 import type { OpsSummary } from "../../lib/types";
 import styles from "./Panels.module.css";
 
@@ -9,40 +10,22 @@ import styles from "./Panels.module.css";
  * SECURITY volunteer gets, which must not show queues at all. Copying them
  * would mean the number a volunteer reads and the number an owner reads could
  * drift apart on the one night that matters.
+ *
+ * The stat tiles themselves are the design system's `Stat` stubs.
  */
 
-export function Stat({
-  value,
-  label,
-  hint,
-  tone,
-}: {
-  value: number | string;
-  label: string;
-  hint?: string;
-  tone?: "good" | "warn" | "bad";
-}) {
-  const toneClass =
-    tone === "good" ? styles.good : tone === "warn" ? styles.warn : tone === "bad" ? styles.bad : "";
-  return (
-    <div className={styles.stat}>
-      <p className={`${styles.statValue} ${toneClass} tabular-nums`}>{value}</p>
-      <p className={styles.statLabel}>{label}</p>
-      {hint && <p className={styles.statHint}>{hint}</p>}
-    </div>
-  );
-}
-
-/** Occupancy. The number an OWNER wants at 18:30. */
 export function InTheRoom({ data, heading }: { data: OpsSummary; heading: string }) {
   const { occupancy, seats } = data;
   const pct = seats.total ? Math.round((100 * occupancy.inside) / seats.total) : 0;
 
   return (
     <section className={styles.section} aria-label="In the room">
-      <h1 className={styles.title}>{heading}</h1>
-      <div className={styles.statRow}>
+      <DisplayTitle tone="ink" className={styles.title}>
+        {heading}
+      </DisplayTitle>
+      <StatGrid>
         <Stat
+          feature
           value={occupancy.inside}
           label="In the room"
           hint={`${pct}% of ${seats.total}`}
@@ -51,7 +34,7 @@ export function InTheRoom({ data, heading }: { data: OpsSummary; heading: string
         <Stat value={occupancy.on_break} label="On a break" />
         <Stat value={occupancy.not_arrived} label="Not arrived" />
         <Stat value={occupancy.departed} label="Left" />
-      </div>
+      </StatGrid>
     </section>
   );
 }
@@ -62,8 +45,10 @@ export function TheDoor({ data }: { data: OpsSummary }) {
 
   return (
     <section className={styles.section} aria-label="The door">
-      <h2 className={styles.subtitle}>The door</h2>
-      <div className={styles.statRow}>
+      <DisplayTitle as="h2" size="section" tone="ink" className={styles.subtitle}>
+        The door
+      </DisplayTitle>
+      <StatGrid>
         <Stat
           value={data.scans_recent}
           label={`Scans, last ${data.scans_window_minutes} min`}
@@ -82,7 +67,7 @@ export function TheDoor({ data }: { data: OpsSummary }) {
           label="Seats sold"
           hint={`${seats.total - seats.committed} free of ${seats.total}`}
         />
-      </div>
+      </StatGrid>
     </section>
   );
 }

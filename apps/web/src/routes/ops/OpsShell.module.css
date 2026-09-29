@@ -1,124 +1,116 @@
-/* The staff area. Poster palette, working register: saffron ground, a scarlet
-   rail, cream panels. Denser than the participant screens because this is a
-   thing people read for four hours, not a ceremony. */
+/* The staff area. A rail cut from the reel, panels on paper. Denser than the
+   participant screens because this is read for four hours, not a ceremony. */
 
 .ops {
   display: grid;
-  grid-template-columns: 13rem minmax(0, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: var(--space-6);
   align-items: start;
 }
 
 .rail {
   position: sticky;
-  top: 1rem;
+  top: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 1rem 0.75rem;
-  background: var(--scarlet);
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  color: var(--cream);
+  gap: var(--space-2);
+  padding: var(--space-4) calc(16px + var(--space-3));
+  color: var(--paper);
+  background:
+    var(--sprockets-y) left top / 16px 22px repeat-y,
+    var(--sprockets-y) right top / 16px 22px repeat-y,
+    var(--scarlet);
+  border: var(--line-thick);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
 }
 
 .railTitle {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--space-2);
   max-width: none;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid color-mix(in srgb, var(--cream) 35%, transparent);
   font-family: var(--font-display);
-  font-size: var(--text-md);
+  font-size: var(--text-lg);
+  line-height: 1;
   color: var(--marigold);
+  text-shadow: 2px 2px 0 var(--ink);
 }
 
+/* Each destination is a frame of film. */
 .link {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: 40px;
-  padding: 0.375rem 0.625rem;
-  border-radius: 2px;
-  color: var(--cream);
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0.4rem 0.75rem;
+  background: var(--scarlet-deep);
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+  color: var(--paper);
+  font-weight: 700;
   text-decoration: none;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: background-color var(--motion-fast) ease;
+  transition: background-color var(--motion-fast), transform var(--motion-fast) var(--ease-out);
 }
 
 .link:hover {
-  background: color-mix(in srgb, var(--cream) 16%, transparent);
+  color: var(--paper);
+  background: var(--ink);
+  transform: translateX(2px);
 }
 
-/* Marigold fill for the active destination — the poster's own accent, and
-   unmistakable at a glance across a room. */
-.linkActive {
+/* Where you are: lit marigold, with a pointer glyph so colour is not the
+   only cue (NavLink also sets aria-current="page"). */
+.linkActive,
+.linkActive:hover {
   background: var(--marigold);
-  color: var(--maroon);
+  color: var(--ink);
+  transform: none;
 }
 
-.badge,
-.badgeLoud {
-  margin-left: auto;
-  min-width: 1.35rem;
-  padding: 0 0.3rem;
-  border-radius: 999px;
-  text-align: center;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.badge {
-  background: var(--cream);
-  color: var(--maroon);
-}
-
-/* A critical item makes the badge magenta rather than just bigger: the rail
-   has to carry "something is actually wrong" without being read. */
-.badgeLoud {
-  background: var(--magenta);
-  color: var(--cream);
+.linkActive::before {
+  content: "▶";
+  font-size: 0.7em;
 }
 
 .scannerLink {
-  margin-top: 0.75rem;
-  padding: 0.5rem 0.625rem;
-  border: 2px solid var(--cream);
-  border-radius: 2px;
-  color: var(--cream);
-  text-decoration: none;
-  text-align: center;
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
-
-.scannerLink:hover {
-  background: color-mix(in srgb, var(--cream) 16%, transparent);
+  margin-top: var(--space-3);
 }
 
 .who {
-  margin: 1rem 0 0;
-  max-width: none;
-  padding-top: 0.75rem;
-  border-top: 2px solid color-mix(in srgb, var(--cream) 35%, transparent);
-  font-size: var(--text-xs);
-  line-height: 1.45;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 2px dashed color-mix(in srgb, var(--paper) 55%, transparent);
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
 }
 
 .role {
-  color: color-mix(in srgb, var(--cream) 75%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 500;
 }
 
 .panel {
   min-width: 0;
 }
 
-/* Phone: the rail becomes a scrolling strip above the panel. A 13rem column
-   next to content on a 400px screen is two unusable columns. */
-@media (max-width: 52rem) {
+/* Narrow: the rail turns sideways into a strip above the panel, sprockets
+   top and bottom, destinations in a row. */
+@media (max-width: 860px) {
   .ops {
     grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
   }
 
   .rail {
@@ -126,29 +118,33 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    padding: calc(16px + var(--space-2)) var(--space-3);
+    background:
+      var(--sprockets-x) left top / 22px 16px repeat-x,
+      var(--sprockets-x) left bottom / 22px 16px repeat-x,
+      var(--scarlet);
   }
 
-  .railTitle,
-  .who {
-    display: none;
+  .railTitle {
+    margin: 0 var(--space-2) 0 0;
+    font-size: var(--text-md);
   }
 
   .link {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .link:hover {
+    transform: none;
   }
 
   .scannerLink {
     margin-top: 0;
-    margin-left: auto;
+    flex: 1 1 100%;
   }
-}
 
-.avatar {
-  display: block;
-  width: 32px;
-  height: 32px;
-  margin-bottom: 0.375rem;
-  border-radius: 50%;
-  border: 2px solid var(--cream);
-  object-fit: cover;
+  .who {
+    display: none;
+  }
 }

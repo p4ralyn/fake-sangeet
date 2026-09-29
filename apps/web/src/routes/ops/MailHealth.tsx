@@ -1,4 +1,5 @@
 import { getMailHealth, usePolled } from "../../lib/opsApi";
+import { DisplayTitle, Loading, Notice, Paper, Stamp, Stat, StatGrid } from "../../components";
 import styles from "./Panels.module.css";
 
 /**
@@ -15,56 +16,61 @@ import styles from "./Panels.module.css";
 export function MailHealth() {
   const state = usePolled(getMailHealth);
 
-  if (state.kind === "loading") return <p className={styles.state}>Loading…</p>;
-  if (state.kind === "error") return <p className={styles.errorState}>{state.message}</p>;
+  if (state.kind === "loading") return <Loading>Loading…</Loading>;
+  if (state.kind === "error")
+    return (
+      <Notice tone="error">
+        <p>{state.message}</p>
+      </Notice>
+    );
 
   const mail = state.data;
 
   return (
     <section className={styles.section}>
-      <h1 className={styles.title}>Mail</h1>
+      <DisplayTitle tone="ink" className={styles.title}>
+        Mail
+      </DisplayTitle>
 
-      <div className={styles.statRow}>
-        <div className={styles.stat}>
-          <p className={`${styles.statValue} ${styles.good} tabular-nums`}>{mail.sent}</p>
-          <p className={styles.statLabel}>Sent</p>
-        </div>
-        <div className={styles.stat}>
-          <p className={`${styles.statValue} tabular-nums`}>{mail.queued}</p>
-          <p className={styles.statLabel}>Waiting</p>
-        </div>
-        <div className={styles.stat}>
-          <p className={`${styles.statValue} ${mail.dead ? styles.bad : ""} tabular-nums`}>
-            {mail.dead}
-          </p>
-          <p className={styles.statLabel}>Gave up</p>
-        </div>
-      </div>
+      <StatGrid>
+        <Stat value={mail.sent} label="Sent" tone="good" />
+        <Stat value={mail.queued} label="Waiting" />
+        <Stat value={mail.dead} label="Gave up" tone={mail.dead ? "bad" : undefined} />
+      </StatGrid>
 
       {mail.queued > 0 && (
-        <p className={styles.lede}>
-          Waiting mail goes out when the worker runs:{" "}
-          <code className={styles.code}>scripts/mailer.py</code>.
-        </p>
+        <Notice tone="wait">
+          <p>
+            Waiting mail goes out when the worker runs:{" "}
+            <code className={styles.code}>scripts/mailer.py</code>.
+          </p>
+        </Notice>
       )}
 
       {mail.problems.length === 0 ? (
-        <p className={styles.empty}>
-          Nothing has failed. Every message either went or is queued.
-        </p>
+        <Notice tone="good">
+          <p>Nothing has failed. Every message either went or is queued.</p>
+        </Notice>
       ) : (
         <ul className={styles.rows}>
           {mail.problems.map((problem) => (
-            <li key={problem.id} className={styles.row}>
-              <p className={styles.rowRef}>{problem.to_email}</p>
-              <p className={styles.rowReason}>
-                {problem.status === "DEAD"
-                  ? `Gave up after ${problem.attempts} tries`
-                  : `Failed ${problem.attempts}× — will try again`}
-              </p>
-              {problem.last_error && (
-                <p className={styles.rowError}>{problem.last_error}</p>
-              )}
+            <li key={problem.id}>
+              <Paper pad="sm" className={styles.row}>
+                <p className={styles.rowRef}>{problem.to_email}</p>
+                <Stamp
+                  size="sm"
+                  tone={problem.status === "DEAD" ? "bad" : "warn"}
+                  glyph={problem.status === "DEAD" ? "✕" : "↻"}
+                  className={styles.rowReason}
+                >
+                  {problem.status === "DEAD"
+                    ? `Gave up after ${problem.attempts} tries`
+                    : `Failed ${problem.attempts}× — will try again`}
+                </Stamp>
+                {problem.last_error && (
+                  <p className={styles.rowError}>{problem.last_error}</p>
+                )}
+              </Paper>
             </li>
           ))}
         </ul>

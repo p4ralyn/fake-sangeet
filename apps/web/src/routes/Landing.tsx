@@ -1,8 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Button } from "../components/Button";
-import { Card } from "../components/Card";
-import { Sparkle } from "../components/Sparkle";
-import { ZariRule } from "../components/ZariRule";
+import { Button, DisplayTitle, Paper, Plaque, Reel, Sparkle } from "../components";
 import { EVENT_DATE_LABEL, EVENT_NAME_FALLBACK, EVENT_VENUE } from "../lib/event";
 import { homeFor, isOpsStaff } from "../lib/home";
 import { usePersonStatus } from "../lib/personStatus";
@@ -28,35 +25,44 @@ export function Landing() {
   const personStatus = usePersonStatus();
 
   return (
-    <Card className={styles.hero}>
-      <ZariRule />
+    <section className={styles.hero}>
+      {/* The poster's reel, drawn on once behind the title. */}
+      <div className={styles.reelWrap}>
+        <Reel animate />
+      </div>
+
       <p className={styles.invitedTo}>
         <Sparkle />
         You&rsquo;re invited
         <Sparkle />
       </p>
-      {/* The wordmark IS the event's name, so it carries the h1 rather than
-          sitting beside one. The alt text is the name the server knows, which
-          keeps the heading truthful to a screen reader even if the event is
-          ever renamed under a logo that has not caught up. */}
-      <h1 className={styles.eventName}>
-        <img
-          className={styles.eventLogo}
-          src="/logo/event.svg"
-          alt={user?.event.name ?? EVENT_NAME_FALLBACK}
-        />
-      </h1>
-      <p className={styles.dateVenue}>
-        {EVENT_DATE_LABEL}
-        <br />
-        {EVENT_VENUE}
-      </p>
-      <ZariRule />
+
+      {/* The heading names the event for a screen reader, and shows the
+          night's title the way the poster sets it. */}
+      <Plaque tone="rani" size="lg" className={styles.plaque}>
+        <h1 className={styles.eventName}>
+          <span className="sr-only">{user?.event.name ?? EVENT_NAME_FALLBACK}: </span>
+          <DisplayTitle as="span" size="hero" className={styles.titleLine}>
+            Band Baaja
+          </DisplayTitle>
+          <span className={styles.subLine}>
+            <span aria-hidden="true">✦</span> no baarat <span aria-hidden="true">✦</span>
+          </span>
+        </h1>
+      </Plaque>
+
+      <Paper lift="md" tilt="right" pad="sm" className={styles.dateTag}>
+        <p className={styles.dateVenue}>
+          <span className={styles.date}>{EVENT_DATE_LABEL}</span>
+          <br />
+          {EVENT_VENUE}
+        </p>
+      </Paper>
 
       <div className={styles.action}>
         {!user ? (
           <>
-            <Button variant="primary" onClick={() => signIn("/pass")}>
+            <Button variant="primary" size="lg" onClick={() => signIn("/pass")}>
               Sign in to see your pass
             </Button>
             <p className={styles.availabilityLine}>
@@ -67,22 +73,22 @@ export function Landing() {
           // Staff who run the event hold no ticket in that capacity. Asking
           // them to "view your pass" would send them to a screen that
           // redirects — so say what actually happens.
-          <Button variant="primary" onClick={() => navigate(homeFor(roles))}>
+          <Button variant="primary" size="lg" onClick={() => navigate(homeFor(roles))}>
             Open the dashboard
           </Button>
         ) : personStatus.kind === "loading" ? (
           // Reserves the same space a real button takes so nothing shifts once
           // we know which one to show.
-          <Button variant="primary" disabled>
+          <Button variant="primary" size="lg" disabled>
             Checking&hellip;
           </Button>
         ) : personStatus.kind === "has_pass" ? (
-          <Button variant="primary" onClick={() => navigate("/pass")}>
+          <Button variant="primary" size="lg" onClick={() => navigate("/pass")}>
             View your pass
           </Button>
         ) : personStatus.kind === "needs_id" ? (
           <>
-            <Button variant="primary" onClick={() => navigate("/verify")}>
+            <Button variant="primary" size="lg" onClick={() => navigate("/verify")}>
               {personStatus.verification.outcome === "MANUAL_REVIEW"
                 ? "Check your ID status"
                 : "Verify your ID"}
@@ -93,7 +99,7 @@ export function Landing() {
           </>
         ) : (
           <>
-            <Button variant="primary" onClick={() => navigate("/pass")}>
+            <Button variant="primary" size="lg" onClick={() => navigate("/pass")}>
               View your pass
             </Button>
             <p className={styles.availabilityLine}>
@@ -102,7 +108,6 @@ export function Landing() {
           </>
         )}
       </div>
-
-    </Card>
+    </section>
   );
 }

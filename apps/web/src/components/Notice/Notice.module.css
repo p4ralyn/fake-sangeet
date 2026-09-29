@@ -1,0 +1,57 @@
+.notice {
+  --tone: var(--ink);
+  --on-tone: var(--paper);
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  align-items: stretch;
+  background: var(--paper);
+  border: var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-block: var(--space-4);
+}
+
+.tab {
+  display: grid;
+  place-items: center;
+  background: var(--tone);
+  color: var(--on-tone);
+  font-weight: 800;
+  font-size: 1.2rem;
+  border-right: var(--line);
+}
+
+.body {
+  padding: var(--space-3) var(--space-4);
+  font-weight: 500;
+}
+
+.body > p {
+  margin: 0;
+}
+
+.info {
+  --tone: var(--marigold);
+  --on-tone: var(--ink);
+}
+
+.wait {
+  --tone: var(--ink);
+}
+
+.good {
+  --tone: var(--state-good);
+}
+
+.warn {
+  --tone: var(--rani);
+  --on-tone: var(--paper);
+}
+
+.error {
+  --tone: var(--scarlet);
+}
+
+.error .body {
+  color: var(--ink);
+}

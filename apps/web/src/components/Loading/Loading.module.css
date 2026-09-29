@@ -1,0 +1,33 @@
+.loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.page {
+  justify-content: center;
+  padding: var(--space-7) var(--space-4);
+}
+
+.inline {
+  padding: var(--space-4) 0;
+}
+
+.reel {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  animation: spin 1.4s linear infinite;
+}
+
+.label {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-md);
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}

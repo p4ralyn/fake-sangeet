@@ -1,9 +1,0 @@
-.card {
-  position: relative;
-  background: var(--cream);
-  color: var(--maroon);
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  padding: 1.5rem;
-  /* No box-shadow. The inked maroon border is the only elevation device. */
-}

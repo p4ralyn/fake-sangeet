@@ -1,28 +1,44 @@
 /* The decision card. Photo up top where the eyes go, actions at the bottom
    where the thumb already is, identity between them. Nothing competes with
-   the face. */
+   the face. It lands like a card slapped on the table. */
 
 .card {
   position: absolute;
   inset: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto auto;
-  gap: 0.75rem;
-  padding: 1rem;
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  background: var(--saffron);
-  color: var(--maroon);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  background: var(--ochre);
+  color: var(--ink);
   overflow-y: auto;
+  animation: deal 320ms var(--ease-stamp) both;
 }
 
+@keyframes deal {
+  from {
+    opacity: 0;
+    translate: 0 40px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* The photo on paper, lifted, pinned with two strips of tape. */
 .photoFrame {
+  position: relative;
   display: grid;
   place-items: center;
   min-height: 0;
-  padding: 0.75rem;
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  background: var(--cream);
+  padding: var(--space-3);
+  background: var(--paper);
+  border: var(--line-thick);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  rotate: -0.8deg;
 }
 
 .photo {
@@ -31,140 +47,120 @@
   object-fit: contain;
 }
 
-/* M4 ships ID capture; until then every card lands here, so this has to be
-   an instruction rather than an apology. */
+/* An instruction, not an apology. */
 .photoMissing {
   margin: 0;
   max-width: 22rem;
+  padding: var(--space-5) var(--space-3);
   text-align: center;
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-md);
+  font-weight: 800;
   color: var(--scarlet);
 }
 
-/* The global `p { max-width: 66ch }` measure cap makes these narrower than
-   the card, so `text-align: center` centres the text inside a box that is
-   itself sitting on the left. Centre the boxes too. */
 .identity {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
   text-align: center;
 }
 
-.identity p {
-  max-width: none;
-}
-
-/* Cream and flat, not the global scarlet extrusion — see the note on
-   .setupTitle in Scan.module.css. The name has to be the most legible thing
-   on the card after the photo. */
 .name {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  line-height: 1.1;
-  color: var(--maroon);
-  text-shadow: none;
+  max-width: none;
+  font-size: clamp(var(--text-xl), 8vw, var(--text-2xl));
+  color: var(--ink);
+  text-shadow: 0.04em 0.04em 0 var(--marigold);
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
 .state {
-  margin: 0.25rem 0 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-/* Its own line, not appended to the state: "Inside 0 of 1 breaks used" reads
-   as one run-on phrase at a glance, and a glance is all this gets. */
-.breaks {
-  margin: 0.125rem 0 0;
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-
-/* Flex, not an auto-fit grid: `repeat(auto-fit, minmax(…, 1fr))` leaves the
-   buttons at their minimum width on a wide screen instead of filling the row,
-   because the empty tracks collapse after the fr sizing is resolved. */
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-/* Marigold on maroon: the affirmative actions are the brightest thing on the
-   card after the photo, and they sit at the bottom edge. */
-.action {
-  min-height: 56px;
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  background: var(--marigold);
-  color: var(--maroon);
-  font-family: var(--font-body);
+  background: var(--paper);
   font-size: var(--text-md);
+}
+
+.breaks {
+  margin: 0;
   font-weight: 700;
-  cursor: pointer;
-  transition: background-color var(--motion-fast) ease;
 }
 
-.action:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.actions {
+  display: grid;
+  gap: var(--space-3);
 }
 
-/* Not admitting is not an error and not a button you press by accident:
-   outlined, quieter, and the same height so it is still thumb-sized. */
+.action {
+  min-height: 64px;
+  font-size: var(--text-lg);
+}
+
 .dismiss {
-  min-height: 48px;
-  border: 2px solid var(--maroon);
-  border-radius: 2px;
-  background: transparent;
-  color: var(--maroon);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
+  min-height: 52px;
 }
 
-.dismiss:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.expiryRow {
+  display: grid;
+  gap: var(--space-2);
 }
 
-.action:focus-visible,
-.dismiss:focus-visible {
-  outline: 2px solid var(--magenta);
-  outline-offset: 2px;
+/* Time left, as a draining strip of marigold. */
+.expiryTrack {
+  display: block;
+  height: 10px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.expiryFill {
+  display: block;
+  height: 100%;
+  background: var(--scarlet);
+  transform-origin: left;
+  transition: transform 1s linear;
 }
 
 .expiry {
   margin: 0;
-  /* Same global 66ch measure cap as .identity's paragraphs. */
   max-width: none;
   text-align: center;
-  font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--cream) 62%, transparent);
+  font-size: var(--text-sm);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-/* On anything wider than a phone the photo and the identity can share a row,
-   but the actions stay pinned along the bottom — the ergonomic rule does not
-   change just because the screen got bigger. */
-@media (min-width: 40rem) {
+/* Wide screens: photo left, decision right. Actions stay low. */
+@media (min-width: 760px) {
   .card {
-    padding: 2rem;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "photo identity"
+      "photo actions";
+    padding: var(--space-6);
+    gap: var(--space-5) var(--space-6);
   }
 
-  /* The affirmative actions share one row; "Don't admit" and the countdown
-     each keep their own full-width line below it. */
+  .photoFrame {
+    grid-area: photo;
+  }
+
+  .identity {
+    grid-area: identity;
+    align-self: end;
+  }
+
   .actions {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: stretch;
-  }
-
-  .action {
-    flex: 1 1 12rem;
-  }
-
-  .dismiss,
-  .expiry {
-    flex: 1 0 100%;
+    grid-area: actions;
+    align-self: end;
   }
 }

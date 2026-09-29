@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ScanAction, SecurityScanResponse } from "../lib/types";
+import { Button } from "./Button/Button";
+import { Stamp, type StampTone } from "./Stamp/Stamp";
 import styles from "./ScanDecisionCard.module.css";
 
 /**
@@ -33,6 +35,14 @@ const ACTION_LABELS: Record<ScanAction, string> = {
 };
 
 /** How the pass's current state reads to a person. */
+const STATE_LOOK: Record<SecurityScanResponse["state"], { tone: StampTone; glyph: string }> = {
+  NOT_ARRIVED: { tone: "neutral", glyph: "○" },
+  INSIDE: { tone: "good", glyph: "●" },
+  ON_BREAK: { tone: "warn", glyph: "◑" },
+  DEPARTED: { tone: "neutral", glyph: "✓" },
+  REVOKED: { tone: "bad", glyph: "✕" },
+};
+
 const STATE_LABELS: Record<SecurityScanResponse["state"], string> = {
   NOT_ARRIVED: "Not arrived yet",
   INSIDE: "Inside",
@@ -54,6 +64,9 @@ export interface ScanDecisionCardProps {
 export function ScanDecisionCard({ response, busy, onConfirm, onDismiss, onExpire }: ScanDecisionCardProps) {
   const seconds = useExpiryCountdown(response.decision_expires_in, onExpire);
 
+  const total = response.decision_expires_in;
+  const look = STATE_LOOK[response.state];
+
   return (
     <section className={styles.card} aria-label="Confirm this person">
       <div className={styles.photoFrame}>
@@ -68,44 +81,55 @@ export function ScanDecisionCard({ response, busy, onConfirm, onDismiss, onExpir
 
       <div className={styles.identity}>
         <h1 className={styles.name}>{response.participant_name ?? "Name not on file"}</h1>
-        <p className={styles.state}>{STATE_LABELS[response.state]}</p>
-        {response.max_breaks > 0 && (
-          <p className={styles.breaks}>
-            {response.breaks_used} of {response.max_breaks} breaks used
-          </p>
-        )}
+        <div className={styles.facts}>
+          <Stamp tone={look.tone} glyph={look.glyph} className={styles.state}>
+            {STATE_LABELS[response.state]}
+          </Stamp>
+          {response.max_breaks > 0 && (
+            <p className={styles.breaks}>
+              {response.breaks_used} of {response.max_breaks} breaks used
+            </p>
+          )}
+        </div>
       </div>
 
       <div className={styles.actions}>
         {response.legal_actions.map((action) => (
-          <button
+          <Button
             key={action}
-            type="button"
+            variant={action === "DENIED" ? "danger" : "good"}
+            size="lg"
+            block
             className={styles.action}
             disabled={busy}
             onClick={() => onConfirm(action)}
           >
             {ACTION_LABELS[action]}
-          </button>
+          </Button>
         ))}
-        <button type="button" className={styles.dismiss} disabled={busy} onClick={onDismiss}>
+        <Button variant="secondary" size="lg" block className={styles.dismiss} disabled={busy} onClick={onDismiss}>
           Don&rsquo;t admit
-        </button>
+        </Button>
         {seconds !== null && (
-          <p className={styles.expiry} role="timer" aria-live="off">
-            This decision expires in {seconds}s
-          </p>
+          <div className={styles.expiryRow}>
+            {total ? (
+              <span className={styles.expiryTrack} aria-hidden="true">
+                <span
+                  className={styles.expiryFill}
+                  style={{ transform: `scaleX(${Math.max(0, seconds) / total})` }}
+                />
+              </span>
+            ) : null}
+            <p className={styles.expiry} role="timer" aria-live="off">
+              This decision expires in {seconds}s
+            </p>
+          </div>
         )}
       </div>
     </section>
   );
 }
 
-/**
- * Counts the server's `decision_expires_in` down and fires once at zero.
- * The token is single-use and 60-second; a card left open past that would
- * hand the operator buttons that are already dead.
- */
 function useExpiryCountdown(initial: number | null, onExpire: () => void): number | null {
   const [seconds, setSeconds] = useState<number | null>(initial);
 

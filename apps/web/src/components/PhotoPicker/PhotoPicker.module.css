@@ -1,0 +1,64 @@
+.picker {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: stretch;
+}
+
+.frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  padding: var(--space-4);
+  background: var(--ink);
+  color: var(--marigold);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.card {
+  width: min(70%, 16rem);
+}
+
+.preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Viewfinder brackets. */
+.corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid var(--marigold);
+  z-index: 1;
+}
+
+.tl {
+  top: 10px;
+  left: 10px;
+  border-top-width: 4px;
+  border-left-width: 4px;
+}
+
+.tr {
+  top: 10px;
+  right: 10px;
+  border-top-width: 4px;
+  border-right-width: 4px;
+}
+
+.bl {
+  bottom: 10px;
+  left: 10px;
+  border-bottom-width: 4px;
+  border-left-width: 4px;
+}
+
+.br {
+  bottom: 10px;
+  right: 10px;
+  border-bottom-width: 4px;
+  border-right-width: 4px;
+}

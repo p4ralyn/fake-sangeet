@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { Link, Navigate, useLocation } from "react-router-dom";
-import { Card } from "../components/Card";
+import { Navigate, useLocation } from "react-router-dom";
+import { ButtonLink, EmptyState, Loading } from "../components";
 import { useSession } from "../lib/session";
 import type { Role } from "../lib/types";
 
@@ -17,11 +17,7 @@ export function RequireRole({ allow, children }: RequireRoleProps) {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <Card>
-        <p>Loading…</p>
-      </Card>
-    );
+    return <Loading>Loading…</Loading>;
   }
 
   if (!user) {
@@ -32,13 +28,16 @@ export function RequireRole({ allow, children }: RequireRoleProps) {
   const permitted = roles.some((role) => allow.includes(role));
   if (!permitted) {
     return (
-      <Card>
-        <h1>Not available</h1>
+      <EmptyState
+        title="Not available"
+        action={
+          <ButtonLink to="/" variant="secondary">
+            Back to the invitation
+          </ButtonLink>
+        }
+      >
         <p>Your account doesn't have access to this page.</p>
-        <p>
-          <Link to="/">Back to the invitation</Link>
-        </p>
-      </Card>
+      </EmptyState>
     );
   }
 

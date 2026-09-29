@@ -1,6 +1,7 @@
 import { getSummary, usePolled } from "../../lib/opsApi";
 import type { OpsSummary } from "../../lib/types";
-import { InTheRoom, Stat, TheDoor } from "./Boards";
+import { DisplayTitle, Loading, Notice, Stat, StatGrid } from "../../components";
+import { InTheRoom, TheDoor } from "./Boards";
 import styles from "./Panels.module.css";
 
 /**
@@ -24,8 +25,10 @@ function Board({ data }: { data: OpsSummary }) {
       <TheDoor data={data} />
 
       <section className={styles.section} aria-label="Queues">
-        <h2 className={styles.subtitle}>Backing up?</h2>
-        <div className={styles.statRow}>
+        <DisplayTitle as="h2" size="section" tone="ink" className={styles.subtitle}>
+          Backing up?
+        </DisplayTitle>
+        <StatGrid>
           <Stat
             value={queues.ids_waiting}
             label="IDs to review"
@@ -47,7 +50,7 @@ function Board({ data }: { data: OpsSummary }) {
             label="Mail gave up"
             tone={queues.mail_dead > 0 ? "bad" : undefined}
           />
-        </div>
+        </StatGrid>
       </section>
     </>
   );
@@ -57,10 +60,18 @@ export function Tonight() {
   const state = usePolled(getSummary);
 
   if (state.kind === "loading") {
-    return <p className={styles.state}>Loading…</p>;
+    return <Loading>Loading…</Loading>;
   }
   if (state.kind === "error") {
-    return <p className={styles.errorState}>{state.message}</p>;
+    return (
+      <Notice tone="error">
+        <p>{state.message}</p>
+      </Notice>
+    );
   }
-  return <Board data={state.data} />;
+  return (
+    <div className={styles.board}>
+      <Board data={state.data} />
+    </div>
+  );
 }

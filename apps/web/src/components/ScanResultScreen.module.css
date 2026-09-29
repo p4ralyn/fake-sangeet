@@ -3,77 +3,109 @@
 
    Three fields, not two. The glyphs differ in shape as well as meaning
    (✓ / ✕ / ↻) so the screen still separates for an operator who cannot tell
-   the green from the scarlet. */
+   the green from the scarlet. A halftone of the field's own ink gives it the
+   printed-poster texture without lowering contrast. */
 
 .screen {
+  --dot: color-mix(in srgb, var(--ink) 18%, transparent);
   position: absolute;
   inset: 0;
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 0.5rem;
-  padding: 2rem 1.5rem;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-5);
   text-align: center;
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
+  background-image: radial-gradient(var(--dot) 1.4px, transparent 1.8px);
+  background-size: 14px 14px;
 }
 
 .admitted {
-  background: var(--gate-admit);
-  color: var(--cream);
+  background-color: var(--gate-admit);
+  color: var(--paper);
 }
 
 .refused {
-  background: var(--scarlet);
-  color: var(--cream);
+  background-color: var(--gate-refuse);
+  color: var(--paper);
 }
 
-/* Marigold, and deliberately neither of the other two: a double-tap is not a
-   success to celebrate and not a refusal to act on. Maroon text, because
-   cream on marigold is unreadable. */
+/* Marigold, deliberately neither of the other two: a double-tap is not a
+   success to celebrate and not a refusal to act on. Ink text. */
 .duplicate {
-  background: var(--gate-repeat);
-  color: var(--maroon);
+  background-color: var(--gate-repeat);
+  color: var(--ink);
 }
 
+/* The glyph is stamped on: a ringed disc that lands with a thump. */
 .glyph {
-  margin: 0;
-  font-size: clamp(4rem, 22vw, 7rem);
+  display: grid;
+  place-items: center;
+  width: clamp(7rem, 34vw, 10rem);
+  aspect-ratio: 1;
+  margin: 0 0 var(--space-3);
+  border: 6px solid currentColor;
+  outline: 3px solid currentColor;
+  outline-offset: 6px;
+  border-radius: 50%;
+  font-size: clamp(4rem, 20vw, 6rem);
   line-height: 1;
+  rotate: -6deg;
+  animation: thump 420ms var(--ease-stamp) both;
 }
 
-/* Sentence case, not shouted caps: the size is already the emphasis. Cream
-   and flat — the global h1's scarlet fill would vanish into the refused
-   field and its maroon extrusion does nothing on any of these grounds. */
+.glyph > span {
+  translate: 0 -0.04em;
+}
+
+@keyframes thump {
+  from {
+    opacity: 0;
+    scale: 1.9;
+    rotate: -20deg;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    rotate: -6deg;
+  }
+}
+
 .verdict {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(var(--text-xl), 9vw, var(--text-3xl));
+  font-size: clamp(var(--text-2xl), 11vw, var(--text-4xl));
   line-height: 1;
-  /* Inherits the field's own text colour rather than the global h1 scarlet,
-     which would vanish into the refused field. */
   color: inherit;
-  text-shadow: none;
+  text-shadow: 0.05em 0.05em 0 var(--ink);
+}
+
+.duplicate .verdict {
+  text-shadow: 0.05em 0.05em 0 var(--paper);
 }
 
 .name {
   margin: 0;
   font-size: var(--text-lg);
-  font-weight: 600;
+  font-weight: 800;
 }
 
-/* `justify-items: center` on the grid centres the box; the 24rem cap is
-   this screen's own measure, not the global 66ch one. */
 .detail {
-  margin: 0.25rem 0 0;
+  margin: var(--space-1) 0 0;
   max-width: 24rem;
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   line-height: 1.45;
+  font-weight: 500;
 }
 
 .hint {
-  margin: 1.5rem 0 0;
-  font-size: var(--text-xs);
-  opacity: 0.78;
+  margin: var(--space-5) 0 0;
+  padding: 0.3rem 0.9rem;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  font-weight: 700;
 }

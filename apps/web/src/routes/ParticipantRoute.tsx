@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { Card } from "../components/Card";
+import { Loading } from "../components";
 import { homeFor, isOpsStaff } from "../lib/home";
 import { usePersonStatus } from "../lib/personStatus";
 import { useSession } from "../lib/session";
@@ -36,11 +36,7 @@ export function ParticipantRoute({ requireIdCheck = false, children }: Participa
   const personStatus = usePersonStatus();
 
   if (loading) {
-    return (
-      <Card>
-        <p>Loading&hellip;</p>
-      </Card>
-    );
+    return <Loading>Loading&hellip;</Loading>;
   }
 
   if (isOpsStaff(roles)) {
@@ -49,11 +45,7 @@ export function ParticipantRoute({ requireIdCheck = false, children }: Participa
 
   if (requireIdCheck) {
     if (personStatus.kind === "loading") {
-      return (
-        <Card>
-          <p>Loading&hellip;</p>
-        </Card>
-      );
+      return <Loading>Loading&hellip;</Loading>;
     }
     // Only "needs_id" is redirected. "none" falls through so /pass can say
     // this account holds nothing, which is a different and truthful answer.

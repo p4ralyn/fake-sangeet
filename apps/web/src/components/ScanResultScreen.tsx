@@ -62,7 +62,7 @@ export function ScanResultScreen({ tone, verdict, name, detail, onDismiss }: Sca
       onClick={onDismiss}
     >
       <p className={styles.glyph} aria-hidden="true">
-        {GLYPHS[tone]}
+        <span>{GLYPHS[tone]}</span>
       </p>
       <h1 className={styles.verdict}>{verdict}</h1>
       {name && <p className={styles.name}>{name}</p>}
