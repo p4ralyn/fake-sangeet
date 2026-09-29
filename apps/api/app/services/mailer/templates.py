@@ -88,7 +88,7 @@ only thing left to do. Your pass appears once it has been checked.
 Sign in with your SNU account. Anyone can open that link, but only you can see
 your pass.
 
-Fake Sangeet — band baaja no baarat
+Fake Sangeet — band baaja no baraat
 15 October, UAC Terrace, 6pm
 """
 
@@ -99,7 +99,7 @@ is the only thing left to do. Your pass appears once it has been checked.</p>
 <p><a href="{_escape(url)}">{_escape(url)}</a></p>
 <p>Sign in with your SNU account. Anyone can open that link, but only you can
 see your pass.</p>
-<p><strong>Fake Sangeet</strong> &mdash; band baaja no baarat<br>
+<p><strong>Fake Sangeet</strong> &mdash; band baaja no baraat<br>
 15 October, UAC Terrace, 6pm</p>
 """
 
