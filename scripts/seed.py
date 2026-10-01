@@ -42,11 +42,12 @@ class SeedConfig(BaseSettings):
         Phase 3 pricing. Note COUPLE is not 2x SINGLE -- 519 against 598 -- so
         never derive the couple price by doubling; read it from this config.
 
-        `total_seats` stays the REAL cap (600), not the number still on sale.
-        The ~550 already sold offline are ingested as approved rows that each
-        consume their seats, so `seats_available` falls out of the addendum A1
-        arithmetic instead of being hardcoded. Setting total_seats to 50 would
-        break the gate headcount and the ledger reconciliation.
+        `total_seats` is the number SOLD, not the venue's 600 (client decision,
+        1 Oct 2026): until the phase-2 sheet is ingested, the tickets sold are
+        the whole event. Set EVENT_SEATS_TOTAL to the committed count after an
+        ingest. It can never go below committed seats — `no_oversell` refuses —
+        and a later ingest halts on "no seats remain" until it is raised, which
+        is the intended friction: raise it for phase 2, then ingest.
         """
         return {
             "capacity": {"total_seats": self.event_seats_total},

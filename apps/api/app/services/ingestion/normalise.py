@@ -27,11 +27,15 @@ DOMAIN = "snu.edu.in"
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 RNS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 
-# Two to four letters then two to four digits, e.g. pk944. Deliberately loose:
-# a local part on the real domain is authoritative regardless of shape, and this
-# pattern is only used to RESCUE a value whose domain is wrong or missing.
-NETID_RE = re.compile(r"^[a-z]{2,4}\d{2,4}$")
-LEADING_NETID_RE = re.compile(r"^([a-z]{2,4}\d{2,4})")
+# Exactly two letters then three digits, e.g. pk944 — the client's rule (1 Oct
+# 2026), and it now binds EVERY identity, including a local part on the real
+# domain. It replaces the earlier "a local part on @snu.edu.in is the identity
+# whatever its shape", which let `zzzz107` through: a ticket bound to a NetID
+# nobody owns is a ticket nobody can sign in to collect.
+NETID_RE = re.compile(r"^[a-z]{2}\d{3}$")
+# A NetID glued to a domain ('zz106snu.edu.in'). The lookahead stops a fourth
+# digit being silently dropped: 'ab1234...' is nobody, not ab123.
+LEADING_NETID_RE = re.compile(r"^([a-z]{2}\d{3})(?!\d)")
 # Any run of separators. Splitting aggressively is safe because every part
 # is then filtered through NETID_RE -- fragments of names simply drop out.
 SPLIT_RE = re.compile(r"(?:\s|&|,|/|\+|\band\b)+")
@@ -92,8 +96,10 @@ class Identity:
 def normalise_identity(raw: str) -> Identity:
     """Resolve one cell into a NetID and the address it implies.
 
-    Rule 1 from the client: a local part on @snu.edu.in IS the identity, whatever
-    its shape. Everything else is a rescue attempt.
+    Whatever the cell holds, the result is either a NetID matching NETID_RE or
+    nothing. A value on the real domain is trusted as written only when its
+    local part is already that shape; anything rescued from a typo is marked
+    SALVAGED_* so the row is flagged for an admin to glance at.
     """
     v = (raw or "").strip().lower()
     if not v:
@@ -101,9 +107,13 @@ def normalise_identity(raw: str) -> Identity:
 
     if v.endswith("@" + DOMAIN):
         local = v.split("@")[0]
-        return (
-            Identity(local, v, "OK", raw) if local else Identity(None, None, "EMPTY", raw)
-        )
+        if not local:
+            return Identity(None, None, "EMPTY", raw)
+        cleaned = re.sub(r"\s", "", local)               # 'zz103 @snu.edu.in'
+        if not NETID_RE.match(cleaned):
+            return Identity(None, None, "UNUSABLE", raw)
+        status = "OK" if cleaned == local else "SALVAGED_WHITESPACE"
+        return Identity(cleaned, f"{cleaned}@{DOMAIN}", status, raw)
 
     if "@" not in v:
         squashed = re.sub(r"[^a-z0-9]", "", v)
@@ -114,7 +124,7 @@ def normalise_identity(raw: str) -> Identity:
             return Identity(m.group(1), f"{m.group(1)}@{DOMAIN}", "SALVAGED_GLUED", raw)
         return Identity(None, None, "UNUSABLE", raw)
 
-    local, _dom = v.split("@", 1)
+    local = re.sub(r"\s", "", v.split("@", 1)[0])
     if NETID_RE.match(local):                              # right person, wrong domain
         return Identity(local, f"{local}@{DOMAIN}", "SALVAGED_BAD_DOMAIN", raw)
     return Identity(None, None, "UNUSABLE", raw)
