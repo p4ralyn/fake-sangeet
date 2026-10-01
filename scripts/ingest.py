@@ -19,12 +19,13 @@ from sqlalchemy import select
 
 from app.core.logging import configure_logging
 from app.db.session import session_factory
-from app.models import Event, EventInventory
+from app.models import Event, EventInventory, Order
 from app.services.ingestion.service import (
     IngestReport,
+    ingest_source,
+    row_external_id,
     row_ref_of,
     row_verdict,
-    ingest_source,
 )
 from app.services.ingestion.sources import source_for_path
 
@@ -71,6 +72,17 @@ async def dry_run(session, event, source) -> IngestReport:
     report = IngestReport(source_key=source.source_key)
     async for row in source.fetch():
         report.rows_seen += 1
+        # The real path's first question, asked first here too: a row whose hash
+        # already has an order is already ingested, and the real run only
+        # refreshes its name and phone. Without this, a dry run over a sheet
+        # that is already in reported every row as "buyer already holds a live
+        # ticket" -- true, and nothing like what the real run would do.
+        external_id = row_external_id(source.source_key, row)
+        if await session.scalar(
+            select(Order.id).where(Order.event_id == event.id, Order.external_id == external_id)
+        ):
+            report.orders_updated += 1
+            continue
         verdict = await row_verdict(session, event_id=event.id, source=source, row=row)
         if verdict.flags:
             report.rows_flagged += 1
