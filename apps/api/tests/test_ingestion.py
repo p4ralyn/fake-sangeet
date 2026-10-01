@@ -375,6 +375,28 @@ async def test_the_same_person_twice_in_one_sheet_is_one_row_not_two(db_session,
     assert (await counts(db_session, event.id))["seats"] == 1
 
 
+async def test_a_repeated_row_does_not_flip_the_stored_details_on_every_run(
+    db_session, event
+):
+    """The real shape: `zz107` sent the same form three times with three
+    different phone numbers. One order is right, but the copies used to take
+    turns overwriting its phone, so every re-run reported "2 updated" over a
+    sheet nobody had touched. The FIRST row in the sheet now wins, and a
+    second run over the same sheet changes nothing."""
+    rows = [
+        single("pk944", row=2, phone="1111111111"),
+        single("pk944", row=3, phone="2222222222"),
+        single("pk944", row=4, phone="3333333333"),
+    ]
+    await ingest_source(db_session, event=event, source=FakeSource(rows))
+    again = await ingest_source(db_session, event=event, source=FakeSource(rows))
+
+    assert again.orders_updated == 0
+    order = await db_session.scalar(select(Order))
+    await db_session.refresh(order)
+    assert order.purchaser_phone == "1111111111"
+
+
 async def test_a_partner_who_already_holds_a_ticket_refuses_the_row(db_session, event):
     report = await ingest_source(
         db_session,

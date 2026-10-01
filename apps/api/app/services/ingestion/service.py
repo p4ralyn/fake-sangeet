@@ -400,10 +400,20 @@ async def ingest_source(
     source_id = record.id
     await db.commit()
 
+    # Hashes already handled this run. The same purchase written twice hashes
+    # identically and is one order (the identity is the hash); without this,
+    # each copy would also take its turn refreshing name and phone, so copies
+    # that differ -- `zz107` sent one form three times with three numbers --
+    # flip the stored details on every run. First row in the sheet wins.
+    seen: set[str] = set()
+
     async for row in source.fetch():
         report.rows_seen += 1
         row_ref = row_ref_of(row)
         external_id = row_external_id(source.source_key, row)
+        if external_id in seen:
+            continue
+        seen.add(external_id)
 
         existing = await db.scalar(
             select(Order).where(Order.event_id == event_id, Order.external_id == external_id)

@@ -70,8 +70,15 @@ async def dry_run(session, event, source) -> IngestReport:
     "what has been minted" that could disagree with the database.
     """
     report = IngestReport(source_key=source.source_key)
+    seen: set[str] = set()  # the real path's first-row-wins rule; see ingest_source
+    # Not `orders_updated`: a dry run cannot tell whether name or phone would
+    # change, and "200 updated" over an untouched sheet reads as 200 changes.
+    already = 0
     async for row in source.fetch():
         report.rows_seen += 1
+        if row_external_id(source.source_key, row) in seen:
+            continue
+        seen.add(row_external_id(source.source_key, row))
         # The real path's first question, asked first here too: a row whose hash
         # already has an order is already ingested, and the real run only
         # refreshes its name and phone. Without this, a dry run over a sheet
@@ -81,7 +88,7 @@ async def dry_run(session, event, source) -> IngestReport:
         if await session.scalar(
             select(Order.id).where(Order.event_id == event.id, Order.external_id == external_id)
         ):
-            report.orders_updated += 1
+            already += 1
             continue
         verdict = await row_verdict(session, event_id=event.id, source=source, row=row)
         if verdict.flags:
@@ -96,6 +103,8 @@ async def dry_run(session, event, source) -> IngestReport:
         report.orders_created += 1
         report.tickets_minted += row.seats
         report.seats_committed += row.seats
+    if already:
+        print(f"  {already} rows already ingested; a real run only refreshes their name and phone")
     return report
 
 
