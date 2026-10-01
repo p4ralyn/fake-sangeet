@@ -6,6 +6,7 @@ import {
   EmptyState,
   FilmStrip,
   Loading,
+  Notice,
   Paper,
   Sparkle,
   Stamp,
@@ -34,17 +35,24 @@ const STATE_COPY: Record<TicketState, { label: string; glyph: string; tone: Stam
  * the QR in the frame, a perforation, and the stub with the short code and
  * the state stamped on it.
  */
+/** Shown in place of the QR on a partner seat nobody has been sent yet. */
+const LOCKED = { label: "Not sent yet", glyph: "◌", tone: "neutral" as StampTone };
+
 function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean }) {
   const ticketTypeLabel = ticket.seats === 2 ? "Couple" : "Single";
-  const state = STATE_COPY[ticket.state];
+  const state = ticket.locked ? LOCKED : STATE_COPY[ticket.state];
 
   return (
     <div className={styles.wrapper}>
-      <article className={cx(styles.passCard, animate && styles.revealing)}>
+      <article
+        className={cx(styles.passCard, animate && styles.revealing, ticket.locked && styles.locked)}
+      >
         <FilmStrip size="thin" className={styles.sprockets} />
 
         <div className={styles.passTop}>
-          <p className={styles.holderName}>{ticket.holder_name}</p>
+          <p className={styles.holderName}>
+            {ticket.locked ? "Your partner’s pass" : ticket.holder_name}
+          </p>
           <p className={styles.ticketType}>
             <span className={styles.typeChip}>{ticketTypeLabel}</span>
             {ticket.seats > 1 && (
@@ -60,7 +68,14 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
           <span className={cx(styles.frameCorner, styles.tr)} aria-hidden="true" />
           <span className={cx(styles.frameCorner, styles.bl)} aria-hidden="true" />
           <span className={cx(styles.frameCorner, styles.br)} aria-hidden="true" />
-          {ticket.qr_token ? (
+          {ticket.locked ? (
+            // Nobody's ID stands behind this seat yet, so there is no QR to
+            // show — only the way to give it to the person it is for.
+            <div className={styles.lockedFace}>
+              <LockGlyph />
+              <p className={styles.lockedText}>Locked until you send it to your partner</p>
+            </div>
+          ) : ticket.qr_token ? (
             <QRCodeSVG
               className={styles.qr}
               value={ticket.qr_token}
@@ -93,6 +108,23 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
   );
 }
 
+function LockGlyph() {
+  return (
+    <svg className={styles.lockGlyph} viewBox="0 0 64 72" aria-hidden="true" focusable="false">
+      <path
+        d="M16 32V22a16 16 0 0 1 32 0v10"
+        fill="none"
+        stroke="#4a0a14"
+        strokeWidth="7"
+        strokeLinecap="round"
+      />
+      <rect x="6" y="30" width="52" height="38" rx="6" fill="#c8102e" stroke="#4a0a14" strokeWidth="4" />
+      <circle cx="32" cy="46" r="5.5" fill="#ffc61a" stroke="#4a0a14" strokeWidth="2" />
+      <rect x="29.5" y="49" width="5" height="10" rx="2" fill="#4a0a14" />
+    </svg>
+  );
+}
+
 /**
  * Your pass (`/pass`) — the one bold element in the product. A couple
  * renders two cards, because it is two tickets, two QR codes, counted
@@ -105,6 +137,7 @@ export function Pass() {
   const [retryCount, setRetryCount] = useState(0);
   const [animate] = useState(() => !hasSeenPassReveal());
   const [transferredTo, setTransferredTo] = useState<string | null>(null);
+  const [partnerSentTo, setPartnerSentTo] = useState<string | null>(null);
   const tickets = pass?.tickets ?? null;
 
   useEffect(() => {
@@ -191,8 +224,30 @@ export function Pass() {
         />
       ))}
 
+      {partnerSentTo && (
+        <Notice tone="good" live>
+          <p>
+            Sent to <strong>{partnerSentTo}</strong>. They sign in with their own SNU account
+            and upload their own ID to get their QR.
+          </p>
+        </Notice>
+      )}
+
+      {pass?.partner_transfer && (
+        <TransferPanel
+          mode="partner"
+          window={pass.partner_transfer}
+          onTransferred={(to) => {
+            // The seat has left this account: show what is left, which is one pass.
+            setPartnerSentTo(to);
+            setRetryCount((n) => n + 1);
+          }}
+        />
+      )}
+
       {tickets.some((ticket) => ticket.state !== "REVOKED") && (
         <TransferPanel
+          carriesPartner={tickets.some((ticket) => ticket.locked)}
           window={pass?.transfer ?? null}
           onTransferred={setTransferredTo}
         />

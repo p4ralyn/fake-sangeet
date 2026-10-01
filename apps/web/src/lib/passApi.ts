@@ -25,3 +25,14 @@ export function transferPass(toNetId: string): Promise<TransferResponse> {
     to_net_id: toNetId,
   });
 }
+
+/**
+ * Send a PROXY couple's locked partner seat to the partner. Like a transfer,
+ * the seat is derived from the session. The partner then signs in as
+ * themselves and has their own ID checked; they can never pass it on.
+ */
+export function transferPartnerSeat(toNetId: string): Promise<TransferResponse> {
+  return api.post<TransferResponse>("/api/v1/me/pass/transfer-partner", {
+    to_net_id: toNetId,
+  });
+}

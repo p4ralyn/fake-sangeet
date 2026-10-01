@@ -109,12 +109,23 @@ export interface PassTicket {
   seat_index: number;
   seats: number;
   state: TicketState;
+  /**
+   * A PROXY couple's partner seat nobody has been given yet. Never carries a
+   * QR — nobody's ID stands behind it. The screen draws a lock and the way to
+   * send it to the partner instead.
+   */
+  locked: boolean;
 }
 
 export interface MyPassResponse {
   tickets: PassTicket[];
-  /** Null when there is nothing transferable. */
+  /**
+   * Transferring this person's OWN ticket; null when they hold none. For a
+   * PROXY couple whose partner seat is unsent, both seats move together.
+   */
   transfer: TransferWindow | null;
+  /** Sending the locked partner seat to the partner. Null when there is none. */
+  partner_transfer: TransferWindow | null;
 }
 
 /** When transfer stops. Three hours before doors, decided by the server. */

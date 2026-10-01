@@ -261,3 +261,50 @@
   font-weight: 800;
   font-size: var(--text-md);
 }
+
+/* A partner seat nobody has been sent yet. Same ticket, but the frame holds a
+   padlock on a hatched ground instead of a QR, and the ticket itself sits a
+   little back — it is not a pass anybody can use yet. */
+.locked {
+  box-shadow: var(--lift);
+}
+
+.locked .holderName {
+  color: var(--ink);
+  text-shadow: 0.04em 0.04em 0 var(--marigold);
+}
+
+.locked .qrWrap {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--paper),
+    var(--paper) 10px,
+    var(--paper-deep) 10px,
+    var(--paper-deep) 20px
+  );
+}
+
+.lockedFace {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+}
+
+.lockGlyph {
+  width: 64px;
+  height: auto;
+  rotate: -6deg;
+}
+
+.lockedText {
+  margin: 0;
+  max-width: 14rem;
+  padding: 0.2rem 0.7rem;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  font-weight: 800;
+  line-height: 1.35;
+}
