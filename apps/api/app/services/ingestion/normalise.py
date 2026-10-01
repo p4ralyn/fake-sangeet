@@ -23,16 +23,16 @@ from decimal import Decimal
 
 from defusedxml import ElementTree as ET
 
+from app.services.identity.netid import NETID_RE
+
 DOMAIN = "snu.edu.in"
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 RNS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 
-# Exactly two letters then three digits, e.g. pk944 — the client's rule (1 Oct
-# 2026), and it now binds EVERY identity, including a local part on the real
-# domain. It replaces the earlier "a local part on @snu.edu.in is the identity
-# whatever its shape", which let `zzzz107` through: a ticket bound to a NetID
-# nobody owns is a ticket nobody can sign in to collect.
-NETID_RE = re.compile(r"^[a-z]{2}\d{3}$")
+# The NetID rule lives in one place (identity/netid.py) and binds EVERY
+# identity here, including a local part on the real domain. It replaces the
+# earlier "a local part on @snu.edu.in is the identity whatever its shape",
+# which let `zzzz107` through.
 # A NetID glued to a domain ('zz106snu.edu.in'). The lookahead stops a fourth
 # digit being silently dropped: 'ab1234...' is nobody, not ab123.
 LEADING_NETID_RE = re.compile(r"^([a-z]{2}\d{3})(?!\d)")

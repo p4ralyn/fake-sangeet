@@ -314,7 +314,9 @@ async def test_you_cannot_transfer_to_yourself(db_session, event, holder, ticket
     assert "your own NetID" in str(refused.value)
 
 
-@pytest.mark.parametrize("bad", ["", "  ", "x", "a" * 80])
+@pytest.mark.parametrize(
+    "bad", ["", "  ", "x", "a" * 80, "zzzz107", "ab1234", "abc12", "student@gmail.com"]
+)
 async def test_an_unusable_netid_is_refused_before_anything_moves(
     db_session, event, holder, ticket, bad
 ):

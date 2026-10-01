@@ -107,12 +107,20 @@ class PassTicket(BaseModel):
     seat_index: int
     seats: int
     state: TicketViewState
+    #: A PROXY couple's partner seat that has not been sent to anybody. It is
+    #: never served a QR — nobody's ID stands behind it — and the screen draws
+    #: a lock and the way to send it instead.
+    locked: bool = False
 
 
 class MyPassResponse(BaseModel):
     tickets: list[PassTicket]
-    #: Null when nothing here is transferable.
+    #: Transferring this person's OWN ticket; null when they hold none. For a
+    #: PROXY couple with the partner seat unsent, both seats move together.
     transfer: "TransferWindow | None" = None
+    #: Sending the locked partner seat to the partner. Present only while
+    #: there is such a seat on this account.
+    partner_transfer: "TransferWindow | None" = None
 
 
 class TransferRequest(BaseModel):

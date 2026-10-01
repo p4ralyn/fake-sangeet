@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api.v1.routes import auth, health, ops, scans, verification
 from app.api.v1.routes import me as me_routes
+from app.api.v1.routes import passes as passes_routes
 from app.core.deps import get_redis_client
 from app.core.errors import register_error_handlers
 from app.core.http import aclose_http_client
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(me_routes.router)
+    app.include_router(passes_routes.router)
     app.include_router(scans.router)
     app.include_router(verification.router)
     app.include_router(ops.router)

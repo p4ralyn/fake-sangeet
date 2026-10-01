@@ -172,16 +172,22 @@ async def test_the_pass_state_wins_once_somebody_is_through_the_door(
     assert body["tickets"][0]["state"] == "CHECKED_IN"
 
 
-async def test_a_proxy_couple_shows_both_seats_on_one_account(client, db_session, event_id):
-    """PROXY means nobody could claim the second seat, so the buyer holds both
-    passes — two tickets, two QR codes, counted separately."""
+async def test_a_proxy_couple_shows_both_seats_with_the_partners_locked(
+    client, db_session, event_id
+):
+    """PROXY means nobody claimed the second seat, so the buyer holds both —
+    but the second has no owner, no ID check and therefore no QR. It is shown
+    LOCKED until it is sent to the partner (client decision, 1 Oct 2026),
+    never as a working QR on the buyer's phone."""
     event = await db_session.get(Event, event_id)
     order, first = await make_ticket(
         db_session, event_id, seats=2, seq=1, partner_mode=PartnerMode.PROXY
     )
     _, second = await make_ticket(
-        db_session, event_id, seats=2, seq=2, order=order, partner_mode=PartnerMode.PROXY
+        db_session, event_id, seats=2, seq=2, order=order, partner_mode=PartnerMode.PROXY,
+        status=TicketStatus.PURCHASED,
     )
+    # Even a pass that exists for the seat is not served while it is unsent.
     for ticket in (first, second):
         await issue_pass(db_session, event=event, ticket=ticket)
     await db_session.commit()
@@ -189,45 +195,56 @@ async def test_a_proxy_couple_shows_both_seats_on_one_account(client, db_session
     headers = await login(client, HOLDER_NET_ID)
     body = (await client.get("/api/v1/me/pass", headers=headers)).json()
 
-    assert len(body["tickets"]) == 2
     assert [t["seat_index"] for t in body["tickets"]] == [1, 2]
     assert all(t["seats"] == 2 for t in body["tickets"])
-    # Two DIFFERENT tokens and two different codes — never one shared pass.
-    assert body["tickets"][0]["qr_token"] != body["tickets"][1]["qr_token"]
-    assert body["tickets"][0]["short_code"] != body["tickets"][1]["short_code"]
+    own, partner = body["tickets"]
+    assert own["qr_token"] and own["locked"] is False
+    assert partner["locked"] is True
+    assert partner["qr_token"] is None and partner["short_code"] == ""
 
 
-async def test_both_of_a_proxy_couples_qrs_admit_somebody(client, db_session, staff, event_id):
-    """The half the test above does not cover: two DIFFERENT tokens is not the
-    same as two WORKING tokens.
-
-    One phone carries both seats, so the buyer holds it out twice and two
-    different people walk in. If the second QR were a duplicate of the first,
-    or pointed at the same pass, the second scan would come back as somebody
-    already inside and the partner would be turned away at the door.
-    """
+async def test_once_sent_both_seats_of_a_proxy_couple_admit_somebody(
+    client, db_session, staff, event_id
+):
+    """Two seats, two people, two phones, two headcounts. The partner seat is
+    sent, the partner is verified like anybody else, and both QRs check in
+    as fresh arrivals — never one pass scanned twice."""
     from datetime import UTC, datetime
     from uuid import uuid4
 
+    partner_net_id = "zq202"
     event = await db_session.get(Event, event_id)
     order, first = await make_ticket(
         db_session, event_id, seats=2, seq=1, partner_mode=PartnerMode.PROXY
     )
     _, second = await make_ticket(
-        db_session, event_id, seats=2, seq=2, order=order, partner_mode=PartnerMode.PROXY
+        db_session, event_id, seats=2, seq=2, order=order, partner_mode=PartnerMode.PROXY,
+        status=TicketStatus.PURCHASED,
     )
-    for ticket in (first, second):
-        await issue_pass(db_session, event=event, ticket=ticket)
+    await issue_pass(db_session, event=event, ticket=first)
     await db_session.commit()
 
     holder = await login(client, HOLDER_NET_ID)
-    body = (await client.get("/api/v1/me/pass", headers=holder)).json()
-    tokens = [ticket["qr_token"] for ticket in body["tickets"]]
-    assert len(tokens) == 2
+    sent = await client.post(
+        "/api/v1/me/pass/transfer-partner", headers=holder, json={"to_net_id": partner_net_id}
+    )
+    assert sent.status_code == 200, sent.text
+    mine = (await client.get("/api/v1/me/pass", headers=holder)).json()
+    tokens = [mine["tickets"][0]["qr_token"]]
     client.cookies.clear()
 
+    # The partner's ID is approved; that is what issues their pass.
+    await db_session.refresh(second)
+    await issue_pass(db_session, event=event, ticket=second)
+    second.status = TicketStatus.PASS_ISSUED
+    await db_session.commit()
+    theirs = await login(client, partner_net_id)
+    their_pass = (await client.get("/api/v1/me/pass", headers=theirs)).json()
+    tokens.append(their_pass["tickets"][0]["qr_token"])
+    client.cookies.clear()
+    assert all(tokens) and len(set(tokens)) == 2
+
     guard = await login(client, SECURITY_NET_ID)
-    admitted = []
     for token in tokens:
         presented = await client.post(
             "/api/v1/scans",
@@ -239,7 +256,6 @@ async def test_both_of_a_proxy_couples_qrs_admit_somebody(client, db_session, st
             },
         )
         assert presented.status_code == 200, presented.text
-        # Each is a fresh arrival: CHECK_IN, never "already inside".
         assert presented.json()["legal_actions"] == ["CHECK_IN"], presented.text
         confirmed = await client.post(
             "/api/v1/scans/confirm",
@@ -247,21 +263,17 @@ async def test_both_of_a_proxy_couples_qrs_admit_somebody(client, db_session, st
             json={"decision_token": presented.json()["decision_token"], "action": "CHECK_IN"},
         )
         assert confirmed.status_code == 200, confirmed.text
-        assert confirmed.json()["state"] == "INSIDE"
-        admitted.append(token)
 
-    # Two seats, two headcounts. Asserted against the passes themselves rather
-    # than the response, which is narrowed for SECURITY (§11.5): if both QRs
-    # pointed at one pass, this would be a single row checked in twice.
     for ticket in (first, second):
         await db_session.refresh(ticket)
     inside = [
         await db_session.scalar(select(Pass).where(Pass.ticket_id == ticket.id))
         for ticket in (first, second)
     ]
+    for issued_pass in inside:
+        await db_session.refresh(issued_pass)
     assert len({p.id for p in inside}) == 2
     assert all(p.current_state is PassState.INSIDE for p in inside)
-    assert len(set(admitted)) == 2  # and the two QRs were genuinely different
 
 
 async def test_a_self_claim_partners_ticket_stays_off_the_buyers_account(

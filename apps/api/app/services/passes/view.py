@@ -18,7 +18,6 @@ from app.models import (
     TICKET_LIVE_STATUSES,
     Event,
     Order,
-    PartnerMode,
     Pass,
     PassState,
     Registration,
@@ -32,7 +31,7 @@ from app.schemas.passes import (
     view_state,
 )
 from app.services.passes.token import mint_pass_token
-from app.services.passes.transfer import closes_at, is_open
+from app.services.passes.transfer import closes_at, held_by, is_open, unsent_partner_seat
 
 
 async def my_pass_view(db: AsyncSession, *, event: Event, user: User) -> MyPassResponse:
@@ -44,23 +43,18 @@ async def my_pass_view(db: AsyncSession, *, event: Event, user: User) -> MyPassR
     ballgame.
     """
     event_id = event.id
-    mine = (Ticket.user_id == user.id) | (Ticket.bound_net_id == user.net_id)
+    mine = held_by(user)
 
     # A PROXY couple's second ticket is deliberately unbound — M3 leaves
     # `bound_net_id` NULL because there is nobody to claim it, and because
     # `tickets_one_per_net_id` would refuse a second ticket bound to the buyer.
-    # Without this clause the buyer reaches the door holding one QR for two
-    # people. A SELF_CLAIM sibling is excluded by the same condition: it IS
+    # It is shown to whoever holds the order's bound seat, LOCKED, until they
+    # send it on. A SELF_CLAIM sibling is excluded by the same condition: it IS
     # bound, to the partner, who signs in and gets it on their own account.
     my_orders = (
         select(Ticket.order_id).where(Ticket.event_id == event_id, mine).scalar_subquery()
     )
-    proxied_to_me = (
-        Ticket.order_id.in_(my_orders)
-        & (Ticket.partner_mode == PartnerMode.PROXY)
-        & Ticket.user_id.is_(None)
-        & Ticket.bound_net_id.is_(None)
-    )
+    proxied_to_me = unsent_partner_seat(order_ids=my_orders)
 
     rows = (
         await db.execute(
@@ -82,7 +76,27 @@ async def my_pass_view(db: AsyncSession, *, event: Event, user: User) -> MyPassR
     ).all()
 
     tickets: list[PassTicket] = []
+    own_transfers: list[int] = []
+    partner_seats: list[Ticket] = []
     for ticket, issued, order, registration in rows:
+        is_mine = ticket.user_id == user.id or ticket.bound_net_id == user.net_id
+        if not is_mine:
+            # The only way a row that is not mine reaches here is
+            # `proxied_to_me`: an unsent partner seat. Locked, whatever it has.
+            partner_seats.append(ticket)
+            tickets.append(
+                PassTicket(
+                    short_code="",
+                    qr_token=None,
+                    holder_name=order.purchaser_name or user.display_name or user.net_id,
+                    seat_index=ticket.seq_in_order,
+                    seats=order.quantity,
+                    state=view_state(ticket.status, None),
+                    locked=True,
+                )
+            )
+            continue
+        own_transfers.append(ticket.transfer_count)
         # A ticket with no pass yet still appears — "ID check pending" is a
         # state the person needs to see, and hiding the row would read as a
         # lost ticket.
@@ -108,13 +122,11 @@ async def my_pass_view(db: AsyncSession, *, event: Event, user: User) -> MyPassR
         #    transferred ticket has no registration yet and no `user_id` until
         #    they next sign in, so matching on `bound_net_id` too is what stops
         #    the previous holder's name appearing on the new holder's pass;
-        # 3. the purchaser, which is only right for a PROXY second seat, where
-        #    the viewer IS the buyer holding somebody else's ticket;
+        # 3. the purchaser, from the order;
         # 4. a NetID, which is nobody's name but is at least correct.
-        is_mine = ticket.user_id == user.id or ticket.bound_net_id == user.net_id
         holder = (
             (registration.full_name if registration else None)
-            or (user.display_name if is_mine else None)
+            or user.display_name
             or order.purchaser_name
             or (ticket.bound_net_id or user.net_id)
         )
@@ -136,13 +148,20 @@ async def my_pass_view(db: AsyncSession, *, event: Event, user: User) -> MyPassR
             TransferWindow(
                 open=is_open(event),
                 closes_at=closes_at(event),
-                # The most-moved ticket in the set decides. A PROXY couple
-                # travels together, so one number covers both seats.
-                transfers_used=max(
-                    (row[0].transfer_count for row in rows), default=0
-                ),
+                # This person's own ticket decides. A PROXY couple's unsent
+                # seat travels with it but keeps its own, unspent, transfer.
+                transfers_used=max(own_transfers),
             )
-            if tickets
+            if own_transfers
+            else None
+        ),
+        partner_transfer=(
+            TransferWindow(
+                open=is_open(event),
+                closes_at=closes_at(event),
+                transfers_used=max(seat.transfer_count for seat in partner_seats),
+            )
+            if partner_seats
             else None
         ),
     )

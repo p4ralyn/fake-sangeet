@@ -43,6 +43,7 @@ from app.models import (
     MAX_TRANSFERS_PER_TICKET,
     TICKET_LIVE_STATUSES,
     Event,
+    PartnerMode,
     Pass,
     PassState,
     Registration,
@@ -51,17 +52,12 @@ from app.models import (
     User,
 )
 from app.services.audit import write_audit
+from app.services.identity.netid import is_net_id
 
 #: Minutes before `events.starts_at` that transfer stops. Overridable per event
 #: via `events.config.transfer.closes_before_minutes`; three hours is the
 #: default because that is the answer the client gave.
 DEFAULT_CLOSES_BEFORE_MINUTES = 180
-
-#: A NetID as this university issues them, and as `normalise.py` recognises
-#: them. Kept loose on purpose — the authority on whether a NetID exists is
-#: whether it holds a ticket, not a regex.
-NET_ID_MIN = 3
-NET_ID_MAX = 32
 
 
 class TransferRefused(Exception):
@@ -115,50 +111,36 @@ def normalise_net_id(raw: str) -> str:
     return value
 
 
-async def transfer_ticket(
-    db: AsyncSession,
-    *,
-    event: Event,
-    holder: User,
-    ticket: Ticket,
-    to_net_id: str,
-    actor_role: str | None = None,
-) -> TransferResult:
-    """Hand `ticket` to `to_net_id`. Raises `TransferRefused` before writing."""
-    recipient = normalise_net_id(to_net_id)
-
-    if not is_open(event):
-        raise TransferRefused(
-            "Transfers closed three hours before the event. Talk to the desk."
-        )
-    if not NET_ID_MIN <= len(recipient) <= NET_ID_MAX:
+def _recipient(raw: str, *, holder: User) -> str:
+    """The NetID a ticket is going to, or a refusal in the holder's words."""
+    recipient = normalise_net_id(raw)
+    if not is_net_id(recipient):
         raise TransferRefused("That doesn’t look like a NetID. Check and try again.")
     if recipient == (holder.net_id or "").lower():
         raise TransferRefused("That’s your own NetID.")
-    if ticket.status not in TICKET_LIVE_STATUSES:
-        raise TransferRefused("This ticket can’t be transferred.")
-    # One transfer, ever. Refused here so the holder reads a sentence; the
-    # CHECK on `tickets.transfer_count` is what actually guarantees it.
-    if ticket.transfer_count >= MAX_TRANSFERS_PER_TICKET:
-        raise TransferRefused(
-            "This pass has already been passed on once, and a pass can only be "
-            "transferred once. Talk to the desk."
-        )
+    return recipient
+
+
+async def _refuse_unless_free(db: AsyncSession, *, event_id: UUID, recipient: str) -> None:
     # One person, one pass — the same invariant `tickets_one_per_net_id`
     # enforces in the database, checked here so the refusal is a sentence
     # rather than a constraint violation.
-    if await _live_ticket_for(db, event_id=event.id, net_id=recipient) is not None:
+    if await _live_ticket_for(db, event_id=event_id, net_id=recipient) is not None:
         raise TransferRefused("That person already has a ticket.")
 
-    now = datetime.now(UTC)
-    from_net_id = ticket.bound_net_id or holder.net_id
 
+async def _hand_over(db: AsyncSession, *, ticket: Ticket, recipient: str, now: datetime) -> bool:
+    """Bind `ticket` to `recipient` and spend its one transfer. Returns whether
+    a pass existed (and is now dead).
+
+    Bumping the serial is what makes every QR already on the old holder's
+    phone stop working, immediately and without needing them to cooperate.
+    Revoking alone would do it too; doing both means a reissued pass cannot
+    collide with a token minted a second ago. The old registration is kept as
+    the record that the previous holder's ID was checked.
+    """
     issued = await db.scalar(select(Pass).where(Pass.ticket_id == ticket.id))
     if issued is not None:
-        # Bumping the serial is what makes every QR already on the old
-        # holder's phone stop working, immediately and without needing them to
-        # cooperate. Revoking alone would do it too; doing both means a
-        # reissued pass cannot collide with a token minted a second ago.
         issued.serial += 1
         issued.current_state = PassState.REVOKED
         issued.revoked_at = now
@@ -170,8 +152,6 @@ async def transfer_ticket(
         )
     )
     if current is not None:
-        # Kept, not deleted. It is the record that the previous holder's ID was
-        # checked, and that record outlives their claim to the ticket.
         current.superseded_at = now
 
     ticket.bound_net_id = recipient
@@ -180,6 +160,43 @@ async def transfer_ticket(
     ticket.transfer_count += 1
     ticket.status = TicketStatus.PURCHASED
     await db.flush()
+    return issued is not None
+
+
+async def transfer_ticket(
+    db: AsyncSession,
+    *,
+    event: Event,
+    holder: User,
+    ticket: Ticket,
+    to_net_id: str,
+    actor_role: str | None = None,
+) -> TransferResult:
+    """Hand `ticket` to `to_net_id`. Raises `TransferRefused` before writing.
+
+    For a PROXY couple whose partner seat is still unsent, the seat goes too,
+    without being touched: it hangs off the order rather than a person, so it
+    follows whoever holds the order's bound seat — and because moving with
+    the bundle is not its transfer, the new holder can still send it.
+    """
+    if not is_open(event):
+        raise TransferRefused(
+            "Transfers closed three hours before the event. Talk to the desk."
+        )
+    recipient = _recipient(to_net_id, holder=holder)
+    if ticket.status not in TICKET_LIVE_STATUSES:
+        raise TransferRefused("This ticket can’t be transferred.")
+    # One transfer, ever. Refused here so the holder reads a sentence; the
+    # CHECK on `tickets.transfer_count` is what actually guarantees it.
+    if ticket.transfer_count >= MAX_TRANSFERS_PER_TICKET:
+        raise TransferRefused(
+            "This pass has already been passed on once, and a pass can only be "
+            "transferred once. Talk to the desk."
+        )
+    await _refuse_unless_free(db, event_id=event.id, recipient=recipient)
+
+    from_net_id = ticket.bound_net_id or holder.net_id
+    revoked = await _hand_over(db, ticket=ticket, recipient=recipient, now=datetime.now(UTC))
 
     await write_audit(
         db,
@@ -195,8 +212,92 @@ async def transfer_ticket(
         before={"net_id": hash_pii(from_net_id)},
         after={
             "net_id": hash_pii(recipient),
-            "pass_revoked": issued is not None,
+            "pass_revoked": revoked,
             "transfer_count": ticket.transfer_count,
         },
     )
     return TransferResult(ticket_ref=ticket.ticket_ref, to_net_id=recipient)
+
+
+def held_by(user: User):
+    """The SQL condition for "this ticket is this person's own"."""
+    return (Ticket.user_id == user.id) | (Ticket.bound_net_id == user.net_id)
+
+
+def unsent_partner_seat(*, order_ids):
+    """A PROXY couple's second seat that nobody has been given yet."""
+    return (
+        Ticket.order_id.in_(order_ids)
+        & (Ticket.partner_mode == PartnerMode.PROXY)
+        & Ticket.user_id.is_(None)
+        & Ticket.bound_net_id.is_(None)
+    )
+
+
+async def transfer_partner_seat(
+    db: AsyncSession,
+    *,
+    event: Event,
+    holder: User,
+    to_net_id: str,
+    actor_role: str | None = None,
+) -> TransferResult:
+    """Send a PROXY couple's unsent partner seat to the partner.
+
+    Which seat moves is derived from who is asking — the unbound PROXY seat in
+    an order where they hold the bound one — never named by the client. The
+    row is locked so two quick taps cannot send one seat to two people.
+
+    The send spends the seat's one transfer, so the partner who receives it
+    can never pass it on (client decision, 1 Oct 2026). Their ID is checked
+    like anybody else's before the seat has a QR.
+    """
+    if not is_open(event):
+        raise TransferRefused(
+            "Transfers closed three hours before the event. This pass can no longer be sent."
+        )
+    recipient = _recipient(to_net_id, holder=holder)
+
+    my_orders = (
+        select(Ticket.order_id)
+        .where(
+            Ticket.event_id == event.id,
+            Ticket.status.in_(TICKET_LIVE_STATUSES),
+            held_by(holder),
+        )
+        .scalar_subquery()
+    )
+    seat = await db.scalar(
+        select(Ticket)
+        .where(
+            Ticket.event_id == event.id,
+            Ticket.status.in_(TICKET_LIVE_STATUSES),
+            unsent_partner_seat(order_ids=my_orders),
+        )
+        .order_by(Ticket.seq_in_order)
+        .limit(1)
+        .with_for_update()
+    )
+    if seat is None:
+        raise TransferRefused("There’s no partner pass on this account to send.")
+    # Unbound implies unsent, so this cannot fire today; kept so a future
+    # admin "unbind" cannot hand the seat a second transfer.
+    if seat.transfer_count >= MAX_TRANSFERS_PER_TICKET:  # pragma: no cover
+        raise TransferRefused("This pass has already been sent once.")
+    await _refuse_unless_free(db, event_id=event.id, recipient=recipient)
+
+    await _hand_over(db, ticket=seat, recipient=recipient, now=datetime.now(UTC))
+
+    await write_audit(
+        db,
+        event_id=event.id,
+        actor_user_id=holder.id,
+        actor_net_id=holder.net_id,
+        actor_role=actor_role,
+        action="PARTNER_SEAT_TRANSFERRED",
+        object_type="ticket",
+        object_id=seat.id,
+        before={"held_by": hash_pii(holder.net_id or "")},
+        after={"net_id": hash_pii(recipient), "transfer_count": seat.transfer_count},
+    )
+    return TransferResult(ticket_ref=seat.ticket_ref, to_net_id=recipient)
