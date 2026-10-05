@@ -1,5 +1,12 @@
 # Moving off nip.io onto a real domain
 
+> **Done, 5 Oct 2026: the site is https://fakesangeet.live.** Cloudflare DNS,
+> one `A` record `@` → `203.0.113.10`, DNS only. Kept as a record of how and
+> why. One trap the steps below did not foresee: the zone arrived on Cloudflare
+> with the registrar's parking records (Porkbun: two proxied `A` records and
+> `*`/`www` CNAMEs to `pixie.porkbun.com`). They shadowed ours until deleted.
+> Check what the zone's own nameservers say, not a cached resolver.
+
 Why this is the fix for the college wifi blocking it, and exactly what to do.
 
 ## The problem, stated correctly

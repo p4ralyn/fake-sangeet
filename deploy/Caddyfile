@@ -16,10 +16,11 @@
 	header {
 		# HSTS. After one successful visit the browser refuses to speak plain
 		# HTTP to this host at all, which closes the window where a redirect
-		# can be intercepted. No `preload`, and no `includeSubDomains` while
-		# the host is a shared nip.io suffix -- claiming subdomains of somebody
-		# else's zone is not ours to do. Both get added on the real domain.
-		Strict-Transport-Security "max-age=31536000"
+		# can be intercepted. `includeSubDomains` since the move to our own
+		# domain (5 Oct 2026) -- it was held back while the host was a shared
+		# nip.io suffix, whose subdomains were not ours to claim. No `preload`:
+		# it is hard to undo, and nothing here needs it.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
 		# Never let a browser second-guess a declared Content-Type. The ID
 		# images this app serves are user-supplied bytes behind a signed URL;
