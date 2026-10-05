@@ -45,8 +45,10 @@ Hi <name>,
 
 Your ticket for Fake Sangeet is confirmed.
 
-Before the night, sign in and upload a photo of your student ID — that is the
-only thing left to do. Your pass appears once it has been checked.
+Sign in and upload a photo of your student ID — that is the only thing left to
+do. Your pass appears once it has been checked.
+
+Please finish setting up your pass before 13 October.
 
 https://fakesangeet.live/pass
 
@@ -74,8 +76,10 @@ Hi <name>,
 Someone has booked a couple ticket for Fake Sangeet and put your name on the
 second seat.
 
-Before the night, sign in and upload a photo of your student ID — that is the
-only thing left to do. Your pass appears once it has been checked.
+Sign in and upload a photo of your student ID — that is the only thing left to
+do. Your pass appears once it has been checked.
+
+Please finish setting up your pass before 13 October.
 
 https://fakesangeet.live/pass
 
@@ -90,6 +94,10 @@ Fake Sangeet — band baaja no baarat
 Facing any issues? Reach out to Pragun Kathuria (Associate Secretary 1, Snuphoria)
 on 9000000000, or at pk944@snu.edu.in or snuphoria@snu.edu.in.
 ```
+
+The 13 October date is the client's (5 Oct 2026); it is a request in the email,
+not something the site enforces — uploads stay open after it. In the HTML copy
+it sits in a highlighted "Deadline" panel.
 
 Both are sent as plain text with an HTML copy of the same words. The HTML copy
 is a branded page — the scarlet film-strip header with the Fake Sangeet

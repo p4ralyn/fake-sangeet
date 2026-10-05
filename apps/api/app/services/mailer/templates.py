@@ -47,6 +47,11 @@ CONTACT_PHONE = "9000000000"
 CONTACT_EMAILS = ("pk944@snu.edu.in", "snuphoria@snu.edu.in")
 SIGN_OFF = "Snuphoria x Inferno Core"
 
+#: The client's date for having a pass ready (5 Oct 2026). Asked for in the
+#: first email; nothing in the app enforces it -- uploads stay open after it.
+SETUP_DEADLINE = "13 October"
+DEADLINE_LINE = f"Please finish setting up your pass before {SETUP_DEADLINE}."
+
 
 def _footer_text() -> str:
     first, second = CONTACT_EMAILS
@@ -239,8 +244,10 @@ def _ticket_ready(payload: dict[str, Any]) -> RenderedEmail:
 
 {lead}
 
-Before the night, sign in and upload a photo of your student ID — that is the
-only thing left to do. Your pass appears once it has been checked.
+Sign in and upload a photo of your student ID — that is the only thing left to
+do. Your pass appears once it has been checked.
+
+{DEADLINE_LINE}
 
 {url}
 
@@ -261,11 +268,15 @@ your pass.
         paragraphs=[
             greeting,
             lead,
-            "Before the night, sign in and upload a photo of your student ID — that is the "
-            "only thing left to do. Your pass appears once it has been checked.",
-            "Sign in with your SNU account. Anyone can open the link, but only you can see "
-            "your pass.",
+            "Sign in and upload a photo of your student ID — that is the only thing left "
+            "to do. Your pass appears once it has been checked.",
         ],
+        panel_label="Deadline",
+        panel_text=DEADLINE_LINE,
+        after_panel=(
+            "Sign in with your SNU account. Anyone can open the link, but only you can "
+            "see your pass.",
+        ),
         button_label="Sign in and upload your ID",
         button_url=url,
     )

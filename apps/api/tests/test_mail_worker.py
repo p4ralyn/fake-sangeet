@@ -190,6 +190,17 @@ def test_every_email_is_a_branded_html_page_with_one_clear_button(
     assert "<img" not in html
 
 
+@pytest.mark.parametrize("payload", [{"name": "Aarav"}, {"name": "Isha", "claim_code": "x"}])
+def test_the_ticket_mail_asks_them_to_finish_by_13_october(payload):
+    """The first email everyone gets carries the client's deadline, in both
+    parts, and no longer says "before the night", which would be a second,
+    later deadline in the same message."""
+    message = render(TEMPLATE_TICKET_READY, payload)
+    for body in (message.text_body, message.html_body or ""):
+        assert "before 13 October" in body
+        assert "Before the night" not in body
+
+
 def test_an_unknown_template_raises_rather_than_silently_skipping():
     with pytest.raises(UnknownTemplate):
         render("no_such_template", {})
