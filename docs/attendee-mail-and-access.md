@@ -91,8 +91,12 @@ Facing any issues? Reach out to Pragun Kathuria (Associate Secretary 1, Snuphori
 on 9000000000, or at pk944@snu.edu.in or snuphoria@snu.edu.in.
 ```
 
-Both are sent as plain text with an HTML copy of the same words; the link is
-clickable in the HTML part. `<name>` is filled in at send time; if there is no
+Both are sent as plain text with an HTML copy of the same words. The HTML copy
+is a branded page — the scarlet film-strip header with the Fake Sangeet
+wordmark, a heading, one button, and the footer — built the way the Primus IQ
+daily report is (inline styles, table layout, a phone-width rule), in the
+poster's colours. It uses no images, which many inboxes block by default.
+`_layout()` in the templates is the one place it lives. `<name>` is filled in at send time; if there is no
 name, the greeting is just "Hi,".
 
 **The email never contains the QR code**, on purpose. A QR is the ticket

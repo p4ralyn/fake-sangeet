@@ -154,6 +154,42 @@ def test_every_email_signs_off_from_the_core_with_someone_to_contact(template, p
     assert 'href="mailto:pk944@snu.edu.in"' in html
 
 
+@pytest.mark.parametrize(
+    ("template", "payload", "heading", "button", "path"),
+    [
+        (TEMPLATE_TICKET_READY, {"name": "Aarav"}, "Your ticket is confirmed",
+         "Sign in and upload your ID", "/pass"),
+        (TEMPLATE_TICKET_READY, {"name": "Isha", "claim_code": "x"},
+         "You have a seat at Fake Sangeet", "Sign in and upload your ID", "/pass"),
+        (TEMPLATE_ID_REVIEWED, {"outcome": "APPROVED"}, "Your pass is ready",
+         "View your pass", "/pass"),
+        (TEMPLATE_ID_REVIEWED, {"outcome": "RETRY_REQUIRED", "note": "Too dark"},
+         "We need a clearer photo", "Send a new photo", "/verify"),
+        (TEMPLATE_ID_REVIEWED, {"outcome": "REJECTED"}, "Your ID wasn",
+         "Open Fake Sangeet", "/"),
+    ],
+)
+def test_every_email_is_a_branded_html_page_with_one_clear_button(
+    template, payload, heading, button, path
+):
+    """The Primus IQ report's structure in Fake Sangeet's colours: a full
+    document, a branded header, one heading, one button. Text only -- no
+    images, which many inboxes block by default and which would let the
+    wordmark vanish."""
+    html = render(template, payload).html_body or ""
+
+    assert html.lstrip().lower().startswith("<!doctype html")
+    assert 'name="viewport"' in html
+    assert "Fake Sangeet" in html and "band baaja no baarat" in html
+    assert heading in html
+    # The button: a real link, styled as one, to the right place.
+    assert f'{button}</a>' in html
+    assert f'href="http://localhost:8000{path}"' in html or 'href="https://' in html
+    # Preview text for the inbox list, hidden in the body.
+    assert "display:none" in html
+    assert "<img" not in html
+
+
 def test_an_unknown_template_raises_rather_than_silently_skipping():
     with pytest.raises(UnknownTemplate):
         render("no_such_template", {})
