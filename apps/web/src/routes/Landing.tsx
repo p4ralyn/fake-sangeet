@@ -46,7 +46,7 @@ export function Landing() {
             Band Baaja
           </DisplayTitle>
           <span className={styles.subLine}>
-            <span aria-hidden="true">✦</span> no baraat <span aria-hidden="true">✦</span>
+            <span aria-hidden="true">✦</span> no baarat <span aria-hidden="true">✦</span>
           </span>
         </h1>
       </Plaque>

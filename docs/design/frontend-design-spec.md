@@ -10,7 +10,7 @@ Instagram.
 
 ## The event
 
-**Fake Sangeet — "Band Baaja No Baraat."**
+**Fake Sangeet — "Band Baaja No Baarat."**
 A mock Indian wedding thrown by **Inferno** (SNU's dance society) and
 **Snuphoria** (SNU's music society), at **UAC Terrace, 15 October 2026**.
 

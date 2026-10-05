@@ -81,7 +81,7 @@ export function AppShell() {
             <Plaque tone="paper" size="sm" lifted={false} className={styles.wordmarkPlaque}>
               <img className={styles.wordmark} src="/logo/event.svg" alt="Fake Sangeet" />
             </Plaque>
-            <p className={styles.tagline}>band baaja no baraat</p>
+            <p className={styles.tagline}>band baaja no baarat</p>
           </div>
 
           {user && (
