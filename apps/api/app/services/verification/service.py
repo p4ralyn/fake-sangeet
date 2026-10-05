@@ -333,10 +333,16 @@ async def review_verification(
     Approving issues the pass. That is the whole point of the milestone — a
     verified person has something to scan at the door.
     """
+    # Locked, so the check below means something. Several admins have the
+    # queue open and the same oldest card in front of them; without the lock,
+    # two clicks a few milliseconds apart both read "still open" and both
+    # apply -- six simultaneous decisions all landed in the test that caught
+    # it, an approval and a refusal stacked on one ID. With it, the second
+    # waits for the first to commit, then reads the outcome and is refused.
     verification = await db.scalar(
-        select(Verification).where(
-            Verification.id == verification_id, Verification.event_id == event.id
-        )
+        select(Verification)
+        .where(Verification.id == verification_id, Verification.event_id == event.id)
+        .with_for_update()
     )
     if verification is None:
         raise LookupError(f"no verification {verification_id} for this event")
