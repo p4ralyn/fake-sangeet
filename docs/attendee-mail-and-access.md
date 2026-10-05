@@ -20,8 +20,19 @@ One email per **person with a bound ticket**, at `<netid>@snu.edu.in`:
 | Couple, partner named on the sheet (SELF_CLAIM, 125 couples) | 2 — the buyer, and the partner |
 | Couple, no partner on the sheet (PROXY, 21 couples, all Snuphoria Early Bird) | 1, to the buyer only. Nobody else is known yet |
 
-Sent from `fakesangeet@snu.edu.in` (the VM's `SMTP_FROM`). Demo tickets made
-with `scripts/demo_ticket.py` queue no email at all.
+Sent from whatever `SMTP_FROM` says in the VM's `.env` — `fakesangeet@snu.edu.in`
+as of 5 Oct 2026, but **prod has no real mail server configured yet** (`SMTP_HOST`
+is mailpit), so nothing can be delivered until one is. Demo tickets made with
+`scripts/demo_ticket.py` queue no email at all.
+
+Every email ends with the same footer (`_footer_text` / `_footer_html` in the
+templates): the Snuphoria x Inferno Core sign-off and a contact — Pragun
+Kathuria, Associate Secretary 1, Snuphoria, 9000000000, pk944@snu.edu.in or
+snuphoria@snu.edu.in.
+
+To see all five formats in an inbox without touching the held queue:
+`scripts/send_sample_emails.py --to <one address>` sends one of each, marked
+[SAMPLE], straight through SMTP.
 
 ---
 
@@ -44,6 +55,11 @@ your pass.
 
 Fake Sangeet — band baaja no baarat
 15 October, UAC Terrace, 6pm
+
+— Snuphoria x Inferno Core
+
+Facing any issues? Reach out to Pragun Kathuria (Associate Secretary 1, Snuphoria)
+on 9000000000, or at pk944@snu.edu.in or snuphoria@snu.edu.in.
 ```
 
 ## The email — partner's version
@@ -68,6 +84,11 @@ your pass.
 
 Fake Sangeet — band baaja no baarat
 15 October, UAC Terrace, 6pm
+
+— Snuphoria x Inferno Core
+
+Facing any issues? Reach out to Pragun Kathuria (Associate Secretary 1, Snuphoria)
+on 9000000000, or at pk944@snu.edu.in or snuphoria@snu.edu.in.
 ```
 
 Both are sent as plain text with an HTML copy of the same words; the link is
@@ -111,6 +132,11 @@ https://fakesangeet.live/pass
 
 Fake Sangeet — band baaja no baarat
 15 October, UAC Terrace, 6pm
+
+— Snuphoria x Inferno Core
+
+Facing any issues? Reach out to Pragun Kathuria (Associate Secretary 1, Snuphoria)
+on 9000000000, or at pk944@snu.edu.in or snuphoria@snu.edu.in.
 ```
 
 Like the ticket email, it never carries the QR. These are queued behind the

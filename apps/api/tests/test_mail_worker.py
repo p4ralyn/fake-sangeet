@@ -130,6 +130,30 @@ def test_a_refused_mail_points_to_the_desk_not_to_another_upload():
     assert "None" not in message.text_body
 
 
+@pytest.mark.parametrize(
+    ("template", "payload"),
+    [
+        (TEMPLATE_TICKET_READY, {"name": "Aarav"}),
+        (TEMPLATE_TICKET_READY, {"name": "Isha", "claim_code": "abc"}),
+        (TEMPLATE_ID_REVIEWED, {"name": "Aarav", "outcome": "APPROVED"}),
+        (TEMPLATE_ID_REVIEWED, {"name": "Aarav", "outcome": "RETRY_REQUIRED"}),
+        (TEMPLATE_ID_REVIEWED, {"name": "Aarav", "outcome": "REJECTED"}),
+    ],
+)
+def test_every_email_signs_off_from_the_core_with_someone_to_contact(template, payload):
+    message = render(template, payload)
+    html = message.html_body or ""
+    for body in (message.text_body, html):
+        assert "Snuphoria x Inferno Core" in body
+        assert "Pragun Kathuria" in body
+        assert "Associate Secretary 1, Snuphoria" in body
+        assert "9000000000" in body
+        assert "pk944@snu.edu.in" in body and "snuphoria@snu.edu.in" in body
+    # Tappable on a phone.
+    assert 'href="tel:+919000000000"' in html
+    assert 'href="mailto:pk944@snu.edu.in"' in html
+
+
 def test_an_unknown_template_raises_rather_than_silently_skipping():
     with pytest.raises(UnknownTemplate):
         render("no_such_template", {})

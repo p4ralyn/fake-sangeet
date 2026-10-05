@@ -38,6 +38,40 @@ class UnknownTemplate(Exception):
     """
 
 
+# Who to ask when something goes wrong. One block, appended to every email,
+# so a person stuck at any step has a name and a number -- and so a change of
+# contact is one edit here, not one per template.
+CONTACT_NAME = "Pragun Kathuria"
+CONTACT_ROLE = "Associate Secretary 1, Snuphoria"
+CONTACT_PHONE = "9000000000"
+CONTACT_EMAILS = ("pk944@snu.edu.in", "snuphoria@snu.edu.in")
+SIGN_OFF = "Snuphoria x Inferno Core"
+
+
+def _footer_text() -> str:
+    first, second = CONTACT_EMAILS
+    return f"""Fake Sangeet — band baaja no baarat
+15 October, UAC Terrace, 6pm
+
+— {SIGN_OFF}
+
+Facing any issues? Reach out to {CONTACT_NAME} ({CONTACT_ROLE})
+on {CONTACT_PHONE}, or at {first} or {second}.
+"""
+
+
+def _footer_html() -> str:
+    first, second = CONTACT_EMAILS
+    return f"""<p><strong>Fake Sangeet</strong> &mdash; band baaja no baarat<br>
+15 October, UAC Terrace, 6pm</p>
+<p>&mdash; {_escape(SIGN_OFF)}</p>
+<p style="color:#555">Facing any issues? Reach out to {_escape(CONTACT_NAME)}
+({_escape(CONTACT_ROLE)}) on
+<a href="tel:+91{CONTACT_PHONE}">{CONTACT_PHONE}</a>, or at
+<a href="mailto:{first}">{first}</a> or <a href="mailto:{second}">{second}</a>.</p>
+"""
+
+
 def _site_url(path: str) -> str:
     return f"{get_settings().app_base_url.rstrip('/')}{path}"
 
@@ -92,9 +126,7 @@ only thing left to do. Your pass appears once it has been checked.
 Sign in with your SNU account. Anyone can open that link, but only you can see
 your pass.
 
-Fake Sangeet — band baaja no baarat
-15 October, UAC Terrace, 6pm
-"""
+{_footer_text()}"""
 
     html = f"""<p>{_escape(greeting)}</p>
 <p>{_escape(lead)}</p>
@@ -103,9 +135,7 @@ is the only thing left to do. Your pass appears once it has been checked.</p>
 <p><a href="{_escape(url)}">{_escape(url)}</a></p>
 <p>Sign in with your SNU account. Anyone can open that link, but only you can
 see your pass.</p>
-<p><strong>Fake Sangeet</strong> &mdash; band baaja no baarat<br>
-15 October, UAC Terrace, 6pm</p>
-"""
+{_footer_html()}"""
 
     subject = (
         "Your Fake Sangeet ticket — one step left"
@@ -160,16 +190,12 @@ def _id_reviewed(payload: dict[str, Any]) -> RenderedEmail:
 
 {url}
 
-Fake Sangeet — band baaja no baarat
-15 October, UAC Terrace, 6pm
-"""
+{_footer_text()}"""
     paragraphs = "\n".join(f"<p>{_escape(line)}</p>" for line in lines if line)
     html = f"""<p>{_escape(greeting)}</p>
 {paragraphs}
 <p><a href="{_escape(url)}">{_escape(url)}</a></p>
-<p><strong>Fake Sangeet</strong> &mdash; band baaja no baarat<br>
-15 October, UAC Terrace, 6pm</p>
-"""
+{_footer_html()}"""
     return RenderedEmail(subject=subject, text_body=text, html_body=html)
 
 
