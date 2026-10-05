@@ -20,9 +20,9 @@ One email per **person with a bound ticket**, at `<netid>@snu.edu.in`:
 | Couple, partner named on the sheet (SELF_CLAIM, 125 couples) | 2 — the buyer, and the partner |
 | Couple, no partner on the sheet (PROXY, 21 couples, all Snuphoria Early Bird) | 1, to the buyer only. Nobody else is known yet |
 
-Sent from whatever `SMTP_FROM` says in the VM's `.env` — `fakesangeet@snu.edu.in`
-as of 5 Oct 2026, but **prod has no real mail server configured yet** (`SMTP_HOST`
-is mailpit), so nothing can be delivered until one is. Demo tickets made with
+Sent as **`Fake Sangeet <snuphoria@snu.edu.in>`** through Gmail SMTP, with an
+app password on the snuphoria account in the VM's `.env` (set up and verified
+5 Oct 2026). Replies and bounces land in the snuphoria inbox. Demo tickets made with
 `scripts/demo_ticket.py` queue no email at all.
 
 Every email ends with the same footer (`_footer_text` / `_footer_html` in the
