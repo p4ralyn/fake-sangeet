@@ -375,6 +375,18 @@ async def test_the_same_person_twice_in_one_sheet_is_one_row_not_two(db_session,
     assert (await counts(db_session, event.id))["seats"] == 1
 
 
+async def test_a_demo_mint_queues_no_mail(db_session, event):
+    """`scripts/demo_ticket.py` mints through this same path, but a demo seat
+    must never ride along in the one-time send to every real attendee."""
+    report = await ingest_source(
+        db_session, event=event, source=FakeSource([single("pk944")]), queue_mail=False
+    )
+
+    assert (report.tickets_minted, report.seats_committed) == (1, 1)
+    assert report.emails_queued == 0
+    assert (await counts(db_session, event.id))["emails"] == 0
+
+
 async def test_a_repeated_row_does_not_flip_the_stored_details_on_every_run(
     db_session, event
 ):

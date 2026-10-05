@@ -385,6 +385,7 @@ async def ingest_source(
     event: Event,
     source: TicketSource,
     actor_user_id: UUID | None = None,
+    queue_mail: bool = True,
 ) -> IngestReport:
     """Run one source to completion. Commits per row; never raises on bad data.
 
@@ -488,8 +489,12 @@ async def ingest_source(
                 order_id=order.id,
                 actor_user_id=actor_user_id,
             )
-            queued = await _queue_ticket_ready(
-                db, event_id=event_id, row=row, tickets=tickets
+            # Off only for scripts/demo_ticket.py: a demo seat must never ride
+            # along in the one-time send to every real attendee.
+            queued = (
+                await _queue_ticket_ready(db, event_id=event_id, row=row, tickets=tickets)
+                if queue_mail
+                else 0
             )
             await db.commit()
         except SoldOut as exc:
