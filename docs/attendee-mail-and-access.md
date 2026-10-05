@@ -79,16 +79,44 @@ itself — anyone holding it gets in — and one sitting in an inbox is one forw
 away from being somebody else's. The QR only ever appears on the pass page,
 behind the holder's own sign-in.
 
-> ### ⚠️ Two things to fix before the send
->
-> 1. **The partner's email greets them with the buyer's name.** Both emails on
->    a couple are filled from the order's purchaser name, so the partner reads
->    "Hi Aarav Sharma," on a message meant for them. The 418 queued rows already
->    carry that name, so a fix has to correct those rows too, not just the code.
-> 2. **The ID page promises an email that does not exist.** After an upload
->    it says "You'll get an email when it's been looked at", but the only email
->    the system can send is this one. Either add a "your ID was checked" email
->    or change that sentence.
+Greetings use each person's own name (fixed 5 Oct 2026). The partner's name
+comes from the Phase 1 form's "Partner's Name" column; Early Bird packs a Duo
+into one name cell, which is split only when the NetID initials prove who is
+who. Anyone the sheet cannot name with certainty gets a plain "Hi," — never
+somebody else's name.
+
+---
+
+## The "your ID was checked" email
+
+Sent when an admin decides an ID upload — one per decision, to the address
+the person signed in with, greeting them by their Google name. Three versions:
+
+| Decision | Subject | Points to |
+|---|---|---|
+| Approved | Your ID is approved — your Fake Sangeet pass is ready | `/pass` |
+| Asked for a clearer photo | Fake Sangeet — we need a clearer photo of your ID | `/verify`, with the reviewer's note |
+| Refused | Fake Sangeet — your ID wasn't accepted | the site, and "talk to the desk", with the note |
+
+Approved, word for word:
+
+```text
+Hi <name>,
+
+Your student ID has been checked and approved. Your pass is ready.
+
+Sign in to see it, and keep it handy on your phone for the door:
+
+https://fakesangeet.live/pass
+
+Fake Sangeet — band baaja no baarat
+15 October, UAC Terrace, 6pm
+```
+
+Like the ticket email, it never carries the QR. These are queued behind the
+same held mailer, so — like everything else — **none go out until the mailer is
+started**. Taking a demo back with `reset_identity.py` deletes its review
+emails and its uploaded photo too.
 
 ---
 
@@ -114,9 +142,8 @@ The first visit lands on **Your student ID**:
 
 ### 3. Wait for the check
 
-The page shows "Your photo is with the team" until an admin approves it at
-`/ops/ids`. There is no email for this step yet (see the warning above), so
-attendees should simply come back to the site.
+The page shows "Your photo is with the team" until an admin decides it at
+`/ops/ids`; the decision sends the email above (once the mailer is running).
 
 ### 4. The pass appears
 
@@ -176,4 +203,4 @@ should talk to the desk.
 Not before the phase-2 sheet is in. The order is in the project notes
 (`CLAUDE.md`, "Do not start the prod mailer"): real SMTP into the VM's `.env`,
 make room for and ingest phase 2, set the cap to what was sold, then start the
-`mailer` service. Fix the two issues above first.
+`mailer` service.

@@ -20,7 +20,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from app.core.settings import get_settings
-from app.services.mailer.outbox import TEMPLATE_TICKET_READY
+from app.services.mailer.outbox import TEMPLATE_ID_REVIEWED, TEMPLATE_TICKET_READY
 
 
 class RenderedEmail(BaseModel):
@@ -36,6 +36,10 @@ class UnknownTemplate(Exception):
     one that fails loudly into `last_error`, because nobody goes looking for
     mail that was never sent.
     """
+
+
+def _site_url(path: str) -> str:
+    return f"{get_settings().app_base_url.rstrip('/')}{path}"
 
 
 def _sign_in_url() -> str:
@@ -111,9 +115,67 @@ see your pass.</p>
     return RenderedEmail(subject=subject, text_body=text, html_body=html)
 
 
+def _id_reviewed(payload: dict[str, Any]) -> RenderedEmail:
+    """The answer to an ID upload, whichever it was.
+
+    The ID page tells people "you'll get an email when it's been looked at",
+    so every outcome sends one -- and the one that most needs it is the
+    clearer-photo case, because that person has something to do. Like the
+    ticket mail, it carries a link and never the pass.
+    """
+    name = str(payload.get("name") or "").strip()
+    greeting = f"Hi {name}," if name else "Hi,"
+    outcome = payload.get("outcome")
+    note = str(payload.get("note") or "").strip()
+    said = f'They said: "{note}"' if note else ""
+
+    if outcome == "APPROVED":
+        subject = "Your ID is approved — your Fake Sangeet pass is ready"
+        lines = [
+            "Your student ID has been checked and approved. Your pass is ready.",
+            "Sign in to see it, and keep it handy on your phone for the door:",
+        ]
+        url = _site_url("/pass")
+    elif outcome == "RETRY_REQUIRED":
+        subject = "Fake Sangeet — we need a clearer photo of your ID"
+        lines = [
+            "We couldn't use the photo of your student ID you sent.",
+            said,
+            "Sign in and send a new one — the whole card in frame, flat and in good light:",
+        ]
+        url = _site_url("/verify")
+    else:
+        subject = "Fake Sangeet — your ID wasn't accepted"
+        lines = [
+            "Your student ID wasn't accepted, so there is no pass on your account.",
+            said,
+            "If you think that's wrong, talk to the desk.",
+        ]
+        url = _site_url("/")
+
+    body = "\n\n".join(line for line in lines if line)
+    text = f"""{greeting}
+
+{body}
+
+{url}
+
+Fake Sangeet — band baaja no baarat
+15 October, UAC Terrace, 6pm
+"""
+    paragraphs = "\n".join(f"<p>{_escape(line)}</p>" for line in lines if line)
+    html = f"""<p>{_escape(greeting)}</p>
+{paragraphs}
+<p><a href="{_escape(url)}">{_escape(url)}</a></p>
+<p><strong>Fake Sangeet</strong> &mdash; band baaja no baarat<br>
+15 October, UAC Terrace, 6pm</p>
+"""
+    return RenderedEmail(subject=subject, text_body=text, html_body=html)
+
+
 #: Registry, not an if/else chain. A new template is a function plus one entry,
 #: and `render` can tell "unknown" from "not implemented yet".
-RENDERERS = {TEMPLATE_TICKET_READY: _ticket_ready}
+RENDERERS = {TEMPLATE_TICKET_READY: _ticket_ready, TEMPLATE_ID_REVIEWED: _id_reviewed}
 
 
 def render(template: str, payload: dict[str, Any]) -> RenderedEmail:

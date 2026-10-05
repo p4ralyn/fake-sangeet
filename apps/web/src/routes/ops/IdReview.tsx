@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, EmptyState, Loading, Notice, Paper, Stamp } from "../../components";
 import { ApiError } from "../../lib/api";
-import { decideReview, getReviewQueue } from "../../lib/verificationApi";
+import {
+  HIDDEN_REFRESH_MS,
+  REVIEW_REFRESH_MS,
+  decideReview,
+  getReviewQueue,
+  mergeReviewQueue,
+} from "../../lib/verificationApi";
 import type { ReviewItem } from "../../lib/types";
 import styles from "./IdReview.module.css";
 
@@ -33,6 +39,7 @@ export function IdReview() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [movedOn, setMovedOn] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +62,71 @@ export function IdReview() {
     void load();
   }, [load]);
 
+  // The live part. Several admins work this queue at once, so it re-checks:
+  // new uploads appear without a reload, and cards someone else decided drop
+  // out before anybody wastes a look on them. Every 5s while the tab is in
+  // front; every 30s behind other tabs, which is enough to keep the "(N) ID
+  // review" title honest -- that title is the alert for a background tab, so
+  // pausing there would defeat it -- and at once when the tab comes back.
+  // The latest state is read through a ref so the interval is armed once. A
+  // tick is skipped while a decision is in flight. The server still has the
+  // last word: deciding a card decided a moment ago gets a 409, never a
+  // second outcome.
+  const live = useRef({ queue, cursor, busy, loading });
+  live.current = { queue, cursor, busy, loading };
+  useEffect(() => {
+    let cancelled = false;
+    let lastFetch = 0;
+    const tick = async (force = false) => {
+      const now = live.current;
+      if (now.busy || now.loading) return;
+      const every = document.visibilityState === "hidden" ? HIDDEN_REFRESH_MS : REVIEW_REFRESH_MS;
+      if (!force && Date.now() - lastFetch < every - 250) return;
+      lastFetch = Date.now();
+      try {
+        const fresh = await getReviewQueue();
+        if (cancelled || live.current.busy) return;
+        const merged = mergeReviewQueue(live.current.queue, live.current.cursor, fresh.items);
+        setQueue(merged.queue);
+        setCursor(merged.cursor);
+        setPending(fresh.pending);
+        if (merged.decidedElsewhere) {
+          setNote("");
+          setMovedOn(merged.decidedElsewhere.full_name);
+        }
+      } catch {
+        // A missed tick is not an error worth showing; the next one retries.
+      }
+    };
+    const timer = window.setInterval(() => void tick(), REVIEW_REFRESH_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void tick(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
+  // "Someone else decided X" is news for a moment, not a fixture: left up, it
+  // ends up sitting over a card that arrived later and has nothing to do with it.
+  useEffect(() => {
+    if (!movedOn) return;
+    const timer = window.setTimeout(() => setMovedOn(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [movedOn]);
+
+  // A background tab says when there is work, without anyone looking at it.
+  useEffect(() => {
+    const before = document.title;
+    document.title = pending > 0 ? `(${pending}) ID review · Fake Sangeet` : "ID review · Fake Sangeet";
+    return () => {
+      document.title = before;
+    };
+  }, [pending]);
+
   const current = queue[cursor];
 
   const decide = useCallback(
@@ -69,6 +141,7 @@ export function IdReview() {
           allow_resubmit: allowResubmit,
         });
         setNote("");
+        setMovedOn(null);
         setPending((count) => Math.max(0, count - 1));
         // Advance locally rather than refetching per decision: a reload
         // between every card would put a network round trip between the
@@ -123,6 +196,11 @@ export function IdReview() {
           </Button>
         }
       >
+        {movedOn && (
+          <Notice tone="info">
+            <p>Someone else just decided {movedOn}&rsquo;s ID.</p>
+          </Notice>
+        )}
         <p>No IDs are waiting. New ones appear here as people upload them.</p>
       </EmptyState>
     );
@@ -181,10 +259,22 @@ export function IdReview() {
         onChange={(event) => setNote(event.target.value)}
       />
 
-      {error && (
-        <Notice tone="error" live className={styles.error}>
-          <p>{error}</p>
-        </Notice>
+      {(movedOn || error) && (
+        <div className={styles.error}>
+          {movedOn && (
+            <Notice tone="info" live>
+              <p>
+                Someone else just decided {movedOn}&rsquo;s ID, so you&rsquo;ve moved on to the
+                next one.
+              </p>
+            </Notice>
+          )}
+          {error && (
+            <Notice tone="error" live>
+              <p>{error}</p>
+            </Notice>
+          )}
+        </div>
       )}
 
       <div className={styles.actions}>

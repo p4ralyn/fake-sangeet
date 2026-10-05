@@ -90,3 +90,41 @@ export function useMyVerification(): MyVerificationState & { reload: () => void 
 
   return { ...state, reload };
 }
+
+/** How often an open review queue checks for new uploads and for cards
+ * another admin has decided. A card takes a reviewer 10-20s, so 5s is never
+ * noticeably late; every check also re-signs the queue's photo links, so
+ * faster buys nothing but load. */
+export const REVIEW_REFRESH_MS = 5000;
+/** Behind other tabs: slow, but still often enough that the tab title's
+ * waiting count is an alert someone can rely on. */
+export const HIDDEN_REFRESH_MS = 30000;
+
+export interface MergedQueue {
+  queue: ReviewItem[];
+  cursor: number;
+  /** The card on screen, if another admin decided it in the meantime. */
+  decidedElsewhere: ReviewItem | null;
+}
+
+/**
+ * Fold a fresh copy of the server's queue into the one on screen.
+ *
+ * The server's list is the truth for what is still waiting — new uploads
+ * arrive, cards somebody else decided disappear — with one exception: the
+ * card the reviewer is looking at keeps its own object, so its photo is not
+ * re-requested under them every few seconds (each fetch signs a new URL).
+ */
+export function mergeReviewQueue(
+  local: ReviewItem[],
+  cursor: number,
+  server: ReviewItem[],
+): MergedQueue {
+  const current = local[cursor];
+  if (!current) return { queue: server, cursor: 0, decidedElsewhere: null };
+  const at = server.findIndex((item) => item.verification_id === current.verification_id);
+  if (at === -1) return { queue: server, cursor: 0, decidedElsewhere: current };
+  const queue = server.slice();
+  queue[at] = current;
+  return { queue, cursor: at, decidedElsewhere: null };
+}

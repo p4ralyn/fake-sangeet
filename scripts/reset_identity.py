@@ -36,6 +36,7 @@ from app.models.ingestion import EmailOutbox
 from app.models.verification import IdImage, Registration, Verification
 from app.services.inventory import release_seats
 from app.services.mailer.outbox import TEMPLATE_TICKET_READY
+from app.services.storage.provider import get_object_store
 from app.services.ticketing.lookup import identity_keys, tickets_for_identities
 
 #: Deleting a ticket is the point of this script, so the seats it held go back.
@@ -71,6 +72,7 @@ async def reset(identities: list[str], *, event_slug: str, dry_run: bool) -> int
             return 0
 
         ticket_ids = [ticket.id for ticket in tickets]
+        photo_keys: list[str] = []
         order_ids = {ticket.order_id for ticket in tickets}
 
         passes = (await db.scalars(select(Pass).where(Pass.ticket_id.in_(ticket_ids)))).all()
@@ -106,6 +108,17 @@ async def reset(identities: list[str], *, event_slug: str, dry_run: bool) -> int
             # The ID check hangs off the registration, not the ticket: one
             # registration, N attempts, N images.
             if registration_ids:
+                # The photo files, read before their rows go: the rows are the
+                # only record of where they are.
+                photo_keys = list(
+                    (
+                        await db.scalars(
+                            select(IdImage.object_key).where(
+                                IdImage.registration_id.in_(registration_ids)
+                            )
+                        )
+                    ).all()
+                )
                 await db.execute(
                     delete(Verification).where(
                         Verification.registration_id.in_(registration_ids)
@@ -125,6 +138,10 @@ async def reset(identities: list[str], *, event_slug: str, dry_run: bool) -> int
                     EmailOutbox.idempotency_key.in_(
                         [f"{TEMPLATE_TICKET_READY}:{ticket.ticket_ref}" for ticket in tickets]
                     )
+                    # ...and the "your ID was checked" mail, which hangs off the
+                    # registration. Left behind, a demo's approval email would go
+                    # out in the real send.
+                    | EmailOutbox.registration_id.in_(registration_ids)
                 )
             )
             await db.execute(delete(Ticket).where(Ticket.id.in_(ticket_ids)))
@@ -144,6 +161,15 @@ async def reset(identities: list[str], *, event_slug: str, dry_run: bool) -> int
             return 0
 
         await db.commit()
+        # Then the ID photos themselves, after the commit: deleting a file
+        # cannot be rolled back, so it waits until the rows are certainly gone.
+        # Without this a demo's uploaded ID card would sit in the bucket with
+        # nothing pointing at it until somebody remembered to look.
+        store = get_object_store()
+        for key in photo_keys:
+            await store.delete(key)
+        if photo_keys:
+            print(f"deleted {len(photo_keys)} ID photo(s) from storage")
         print("done. re-ingest the workbook to mint them again.")
         return 0
 

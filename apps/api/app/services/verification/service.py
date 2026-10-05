@@ -50,6 +50,7 @@ from app.models.verification import (
 )
 from app.schemas.verification import MyVerification, ReviewItem, ReviewQueue
 from app.services.audit import write_audit, write_funnel_event
+from app.services.mailer.outbox import TEMPLATE_ID_REVIEWED, QueuedEmail, queue_email
 from app.services.passes.issue import issue_pass
 from app.services.storage.provider import ObjectStore
 from app.services.verification.images import InspectedImage, inspect
@@ -384,6 +385,25 @@ async def review_verification(
         issued.registration_id = registration.id
         ticket.status = TicketStatus.PASS_ISSUED
         await db.flush()
+
+    # Tell the person, whatever the answer. Queued only: the mailer sends when
+    # it runs, and is held until the client says so. Keyed on this review, so
+    # it is one email per decision however the request is retried.
+    await queue_email(
+        db,
+        event_id=event.id,
+        message=QueuedEmail(
+            to_email=registration.email,
+            template=TEMPLATE_ID_REVIEWED,
+            idempotency_key=f"{TEMPLATE_ID_REVIEWED}:{verification.id}",
+            registration_id=registration.id,
+            payload={
+                "name": registration.full_name,
+                "outcome": verification.outcome.value,
+                "note": note,
+            },
+        ),
+    )
 
     await write_audit(
         db,

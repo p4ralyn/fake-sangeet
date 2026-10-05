@@ -10,10 +10,11 @@ guard and watching it fail.
 """
 import pytest
 import pytest_asyncio
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from app.models import (
     AuditLog,
+    EmailOutbox,
     Event,
     IdImage,
     Order,
@@ -24,6 +25,7 @@ from app.models import (
     User,
     VerifyOutcome,
 )
+from app.services.mailer.outbox import TEMPLATE_ID_REVIEWED
 from app.services.verification import service
 from tests.images import jpeg_bytes, png_bytes
 
@@ -300,6 +302,58 @@ async def test_a_decision_writes_an_audit_row_naming_the_reviewer(
     assert row.actor_net_id == REVIEWER_NET_ID
     assert row.after["outcome"] == "APPROVED"
     assert row.after["pass_issued"] is True
+
+
+@pytest.mark.parametrize(
+    ("approve", "allow_resubmit", "outcome"),
+    [(True, False, "APPROVED"), (False, True, "RETRY_REQUIRED"), (False, False, "REJECTED")],
+)
+async def test_every_decision_queues_one_email_to_the_person(
+    db_session, store, event, holder, ticket, reviewer, approve, allow_resubmit, outcome
+):
+    """The ID page promises "you'll get an email when it's been looked at".
+    Queued only -- the mailer sends, when it runs."""
+    pending = await upload(db_session, store, event, holder)
+
+    await service.review_verification(
+        db_session, event=event, verification_id=pending.id, reviewer=reviewer,
+        reviewer_role="ADMIN", approve=approve, allow_resubmit=allow_resubmit,
+        note="Please retake it in daylight",
+    )
+
+    mails = (
+        await db_session.scalars(
+            select(EmailOutbox).where(EmailOutbox.template == TEMPLATE_ID_REVIEWED)
+        )
+    ).all()
+    assert len(mails) == 1
+    assert mails[0].to_email == f"{HOLDER_NET_ID}@snu.edu.in"
+    assert mails[0].status == "QUEUED"
+    assert mails[0].payload["outcome"] == outcome
+    assert mails[0].payload["name"] == "Aarav Sharma"
+    assert mails[0].payload["note"] == "Please retake it in daylight"
+
+
+async def test_a_refused_second_decision_queues_no_second_email(
+    db_session, store, event, holder, ticket, reviewer
+):
+    pending = await upload(db_session, store, event, holder)
+    await service.review_verification(
+        db_session, event=event, verification_id=pending.id, reviewer=reviewer,
+        reviewer_role="ADMIN", approve=True,
+    )
+    with pytest.raises(service.AlreadyDecided):
+        await service.review_verification(
+            db_session, event=event, verification_id=pending.id, reviewer=reviewer,
+            reviewer_role="ADMIN", approve=False, allow_resubmit=False,
+        )
+
+    count = await db_session.scalar(
+        select(func.count()).select_from(EmailOutbox).where(
+            EmailOutbox.template == TEMPLATE_ID_REVIEWED
+        )
+    )
+    assert count == 1
 
 
 async def test_the_second_reviewer_to_decide_the_same_row_loses(

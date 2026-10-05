@@ -17,6 +17,8 @@ from app.models import EmailOutbox, EmailStatus
 #: Template names the outbox knows about. A worker resolves these to bodies in
 #: M6; queueing an unknown one now would dead-letter silently then.
 TEMPLATE_TICKET_READY = "ticket_ready"
+#: "Your ID was checked": approved, send a clearer photo, or not accepted.
+TEMPLATE_ID_REVIEWED = "id_reviewed"
 
 
 class QueuedEmail(BaseModel):

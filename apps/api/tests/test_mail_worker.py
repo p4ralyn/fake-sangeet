@@ -10,7 +10,12 @@ import pytest_asyncio
 from sqlalchemy import select
 
 from app.models import EmailOutbox, EmailStatus
-from app.services.mailer.outbox import TEMPLATE_TICKET_READY, QueuedEmail, queue_email
+from app.services.mailer.outbox import (
+    TEMPLATE_ID_REVIEWED,
+    TEMPLATE_TICKET_READY,
+    QueuedEmail,
+    queue_email,
+)
 from app.services.mailer.provider import EmailMessage
 from app.services.mailer.templates import UnknownTemplate, render
 from app.services.mailer.worker import (
@@ -87,6 +92,41 @@ def test_a_partner_is_told_why_they_are_getting_this():
 def test_a_missing_name_does_not_produce_hi_none():
     message = render(TEMPLATE_TICKET_READY, {})
     assert message.text_body.startswith("Hi,")
+    assert "None" not in message.text_body
+
+
+# ── the "your ID was checked" mail ───────────────────────────────────────────
+def test_an_approved_id_mail_sends_them_to_their_pass_and_carries_no_qr():
+    message = render(TEMPLATE_ID_REVIEWED, {"name": "Aarav Sharma", "outcome": "APPROVED"})
+
+    assert "approved" in message.subject.lower()
+    assert message.text_body.startswith("Hi Aarav Sharma,")
+    assert "/pass" in message.text_body and "/pass" in (message.html_body or "")
+    assert "qr" not in message.text_body.lower()
+    assert "<img" not in (message.html_body or "")
+
+
+def test_a_retry_mail_says_what_to_fix_and_sends_them_to_upload_again():
+    message = render(
+        TEMPLATE_ID_REVIEWED,
+        {"name": "Aarav", "outcome": "RETRY_REQUIRED", "note": "The card is cut off <here>"},
+    )
+
+    assert "clearer photo" in message.subject.lower()
+    assert "/verify" in message.text_body
+    assert "The card is cut off <here>" in message.text_body
+    # The reviewer's note is escaped in the HTML part, never injected.
+    assert "&lt;here&gt;" in (message.html_body or "")
+
+
+def test_a_refused_mail_points_to_the_desk_not_to_another_upload():
+    message = render(
+        TEMPLATE_ID_REVIEWED, {"name": "Aarav", "outcome": "REJECTED", "note": None}
+    )
+
+    assert "wasn" in message.subject.lower()  # wasn't accepted
+    assert "desk" in message.text_body
+    assert "/verify" not in message.text_body
     assert "None" not in message.text_body
 
 
