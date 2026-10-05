@@ -34,10 +34,25 @@ services:
   # Local stand-in for GCS. Same JSON API, no credentials.
   fake-gcs:
     image: fsouza/fake-gcs-server:latest
-    command: ["-scheme", "http", "-port", "4443", "-public-host", "localhost:4443"]
+    # The volume is mounted where objects are WRITTEN (-filesystem-root), not
+    # at /data, which the server only reads once at start-up to preload. With
+    # it at /data, every uploaded ID photo lived in the container's own layer
+    # and vanished on each recreate -- i.e. on every deploy (found 5 Oct 2026,
+    # when a demo's photo was gone two deploys after it was uploaded).
+    command:
+      - "-scheme"
+      - "http"
+      - "-port"
+      - "4443"
+      - "-public-host"
+      - "localhost:4443"
+      - "-backend"
+      - "filesystem"
+      - "-filesystem-root"
+      - "/storage"
     ports: ["4443:4443"]
     volumes:
-      - gcsdata:/data
+      - gcsdata:/storage
 
   api:
     build: ./apps/api
