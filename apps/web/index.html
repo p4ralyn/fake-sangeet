@@ -11,7 +11,12 @@
          Chrome then preferred — it ranks SVG above PNG regardless of order, so
          the tab kept showing the old logo. One icon, no ranking to lose. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/logo/mark.svg" />
+    <!-- iOS: Safari ignores an SVG here and falls back to a blank tile, which
+         is why "Add to Home Screen" showed no logo on iPhones while Android
+         (which reads the SVG icon above) was fine. It needs a PNG, opaque --
+         iOS fills transparency black -- at 180x180; it rounds the corners
+         itself. Rendered from logo/mark.svg on the paper colour. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
