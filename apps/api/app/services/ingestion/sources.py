@@ -36,6 +36,7 @@ from app.services.ingestion.normalise import (
     read_rows,
     recover_number,
     sheet_targets,
+    split_couple_names,
     split_packed,
 )
 
@@ -159,6 +160,16 @@ class EarlyBirdSource(XlsxTicketSource):
                 mode = "PROXY"
                 problems.append("couple row carries only one NetID")
 
+        # A Duo's NAME cell holds both people. Split it only when the NetID
+        # initials prove who is who; otherwise leave it, and the mail greets
+        # them with a plain "Hi," rather than a guess.
+        name = _cell(row, index.get("NAME"))
+        partner_name = ""
+        if partner is not None:
+            names = split_couple_names(name, buyer.net_id, partner.net_id)
+            if names is not None:
+                name, partner_name = names
+
         return TicketRow(
             source=f"{self.source_key}/{sheet}",
             source_row=number,
@@ -168,7 +179,8 @@ class EarlyBirdSource(XlsxTicketSource):
             partner=partner,
             partner_mode=mode,
             phone=recover_number(_cell(row, index.get("PHONE NO."))),
-            name=_cell(row, index.get("NAME")),
+            name=name,
+            partner_name=partner_name,
             problems=problems,
         )
 
@@ -190,6 +202,7 @@ class Phase1Source(XlsxTicketSource):
         "buyer": "SNU Email",
         "ticket": "which ticket",
         "partner": "Partner's SNU Email",
+        "partner_name": "Partner's Name",
         "phone": "Phone Number",
     }
 
@@ -240,6 +253,9 @@ class Phase1Source(XlsxTicketSource):
             partner_mode=mode,
             phone=recover_number(_cell(row, index["phone"])),
             name=_cell(row, index["name"]),
+            # The Form asks for the partner by name, separately -- so this one
+            # needs no guessing. Only a couple has one.
+            partner_name=_cell(row, index["partner_name"]) if is_couple else "",
             problems=problems,
         )
 

@@ -42,6 +42,8 @@ from uuid_utils.compat import uuid7
 
 from app.models import (
     TICKET_LIVE_STATUSES,
+    EmailOutbox,
+    EmailStatus,
     Event,
     IngestionError,
     LedgerReason,
@@ -51,7 +53,7 @@ from app.models import (
     TicketStatus,
 )
 from app.models import TicketSource as TicketSourceRecord
-from app.services.ingestion.normalise import Identity, TicketRow
+from app.services.ingestion.normalise import Identity, TicketRow, looks_packed
 from app.services.ingestion.sources import TicketSource
 from app.services.inventory import SoldOut, commit_seats
 from app.services.mailer.outbox import TEMPLATE_TICKET_READY, QueuedEmail, queue_email
@@ -342,8 +344,9 @@ async def _queue_ticket_ready(
     recipients: list[tuple[Identity, Ticket]] = [(row.buyer, tickets[0])]
     if len(tickets) > 1 and tickets[1].bound_net_id and row.partner:
         recipients.append((row.partner, tickets[1]))
+    greetings = _greetings(row)
 
-    for identity, ticket in recipients:
+    for (identity, ticket), greeting in zip(recipients, greetings, strict=False):
         if not identity.email:
             continue
         created = await queue_email(
@@ -356,7 +359,7 @@ async def _queue_ticket_ready(
                 payload={
                     "ticket_ref": ticket.ticket_ref,
                     "ticket_type": ticket.ticket_type,
-                    "name": row.name,
+                    "name": greeting,
                     "claim_code": ticket.claim_code,
                     "seats_on_this_order": len(tickets),
                 },
@@ -364,6 +367,45 @@ async def _queue_ticket_ready(
         )
         queued += int(created)
     return queued
+
+
+def _greetings(row: TicketRow) -> tuple[str, str]:
+    """Who each email on this row says "Hi" to: (buyer, partner).
+
+    Each person by their own name, never the other's. A name cell that still
+    holds two people (one the initials could not untangle) greets nobody by
+    name, and a partner the sheet does not name gets "Hi," too.
+    """
+    buyer = "" if looks_packed(row.name) else row.name
+    return buyer, row.partner_name
+
+
+async def _refresh_queued_greetings(db: AsyncSession, *, order: Order, row: TicketRow) -> bool:
+    """Bring the greeting on this order's still-QUEUED mail in line with the
+    sheet. Sent mail is history and is never edited. True if anything changed.
+
+    This is how the emails queued before names were split get corrected: run
+    the same sheet again.
+    """
+    tickets = (
+        await db.scalars(
+            select(Ticket).where(Ticket.order_id == order.id).order_by(Ticket.seq_in_order)
+        )
+    ).all()
+    changed = False
+    for ticket, greeting in zip(tickets, _greetings(row), strict=False):
+        mail = await db.scalar(
+            select(EmailOutbox).where(
+                EmailOutbox.idempotency_key == f"{TEMPLATE_TICKET_READY}:{ticket.ticket_ref}",
+                EmailOutbox.status == EmailStatus.QUEUED.value,
+            )
+        )
+        if mail is not None and (mail.payload or {}).get("name") != greeting:
+            # A new dict, not an in-place edit: JSONB change tracking only
+            # notices reassignment.
+            mail.payload = {**(mail.payload or {}), "name": greeting}
+            changed = True
+    return changed
 
 
 def _update_mutable(order: Order, row: TicketRow) -> bool:
@@ -420,7 +462,9 @@ async def ingest_source(
             select(Order).where(Order.event_id == event_id, Order.external_id == external_id)
         )
         if existing is not None:
-            if _update_mutable(existing, row):
+            details = _update_mutable(existing, row)
+            greetings = await _refresh_queued_greetings(db, order=existing, row=row)
+            if details or greetings:
                 report.orders_updated += 1
             await db.commit()
             continue

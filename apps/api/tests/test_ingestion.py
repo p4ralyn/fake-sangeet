@@ -375,6 +375,70 @@ async def test_the_same_person_twice_in_one_sheet_is_one_row_not_two(db_session,
     assert (await counts(db_session, event.id))["seats"] == 1
 
 
+def _couple_with_names(name: str, partner_name: str, *, row: int = 2) -> TicketRow:
+    return TicketRow(
+        source="TEST", source_row=row, ticket_type="COUPLE", seats=2,
+        buyer=identity("pk944"), partner=identity("zq202"), partner_mode="SELF_CLAIM",
+        phone="9876543210", name=name, partner_name=partner_name,
+    )
+
+
+async def _greetings(db_session) -> dict[str, str]:
+    rows = (await db_session.scalars(select(EmailOutbox))).all()
+    for row in rows:
+        await db_session.refresh(row)
+    return {row.to_email: row.payload.get("name") for row in rows}
+
+
+async def test_each_person_in_a_couple_is_greeted_by_their_own_name(db_session, event):
+    """The partner used to read "Hi <buyer's name>," on an email meant for them."""
+    await ingest_source(
+        db_session, event=event,
+        source=FakeSource([_couple_with_names("Aarav Sharma", "Priya Kapoor")]),
+    )
+    assert await _greetings(db_session) == {
+        "pk944@snu.edu.in": "Aarav Sharma",
+        "zq202@snu.edu.in": "Priya Kapoor",
+    }
+
+
+async def test_nobody_is_greeted_by_a_name_that_is_not_theirs(db_session, event):
+    """A packed cell the initials could not untangle, and a partner with no
+    name on the sheet, both get a plain "Hi," rather than somebody else's."""
+    await ingest_source(
+        db_session, event=event,
+        source=FakeSource([_couple_with_names("Kittu & Priya", "")]),
+    )
+    assert await _greetings(db_session) == {
+        "pk944@snu.edu.in": "",
+        "zq202@snu.edu.in": "",
+    }
+
+
+async def test_a_re_ingest_corrects_the_greeting_on_mail_not_yet_sent(db_session, event):
+    """The 418 queued emails were written with the old names. Re-running the
+    corrected sheet fixes the ones still waiting and leaves sent ones alone."""
+    await ingest_source(
+        db_session, event=event, source=FakeSource([_couple_with_names("Aarav Sharma", "")])
+    )
+    buyer_mail = await db_session.scalar(
+        select(EmailOutbox).where(EmailOutbox.to_email == "pk944@snu.edu.in")
+    )
+    buyer_mail.status = "SENT"  # this one already went: history, not ours to edit
+    await db_session.commit()
+
+    again = await ingest_source(
+        db_session, event=event,
+        source=FakeSource([_couple_with_names("Aarav S.", "Priya Kapoor")]),
+    )
+
+    assert again.orders_updated == 1
+    assert await _greetings(db_session) == {
+        "pk944@snu.edu.in": "Aarav Sharma",
+        "zq202@snu.edu.in": "Priya Kapoor",
+    }
+
+
 async def test_a_demo_mint_queues_no_mail(db_session, event):
     """`scripts/demo_ticket.py` mints through this same path, but a demo seat
     must never ride along in the one-time send to every real attendee."""

@@ -59,3 +59,37 @@ def test_a_packed_cell_keeps_only_strict_netids():
     # A four-letter or four-digit fragment is dropped, never trimmed to fit.
     assert split_packed("abcd123 & pk944") == ["pk944"]
     assert split_packed("ab1234 / zq202") == ["zq202"]
+
+
+# ── who is who in a couple's name cell ───────────────────────────────────────
+from app.services.ingestion.normalise import looks_packed, split_couple_names  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("cell", "buyer", "partner", "expected"),
+    [
+        # Initials agree with the NetIDs, in order.
+        ("Aarav Sharma & Priya Kapoor", "as101", "pk202", ("Aarav Sharma", "Priya Kapoor")),
+        ("Aarav Sharma / Priya Kapoor", "as101", "pk202", ("Aarav Sharma", "Priya Kapoor")),
+        ("Aarav Sharma and Priya Kapoor", "as101", "pk202", ("Aarav Sharma", "Priya Kapoor")),
+        # The cell lists the partner first: the initials put them right.
+        ("Priya Kapoor & Aarav Sharma", "as101", "pk202", ("Aarav Sharma", "Priya Kapoor")),
+        # Same initial on both: nothing proves who is who, so no guess.
+        ("Aarav & Anya", "zz101", "ab222", None),
+        ("Aarav & Bina", "zz101", "ab222", None),
+        # A nickname that matches neither NetID.
+        ("Kittu & Priya", "as101", "pk202", None),
+        # Not packed at all.
+        ("Aarav Sharma", "as101", "pk202", None),
+        ("Aarav & Priya & Isha", "as101", "pk202", None),
+    ],
+)
+def test_a_packed_name_is_split_only_when_the_initials_prove_it(cell, buyer, partner, expected):
+    assert split_couple_names(cell, buyer, partner) == expected
+
+
+def test_a_packed_name_is_recognised_so_nobody_is_greeted_as_two_people():
+    assert looks_packed("Aarav & Priya")
+    assert looks_packed("Aarav / Priya")
+    assert not looks_packed("Aarav Sharma")
+    assert not looks_packed("Anand Chandra")  # "and" inside a word is not a join

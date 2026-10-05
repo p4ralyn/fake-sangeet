@@ -81,6 +81,47 @@ def split_packed(raw: str) -> list[str]:
     return [p for p in parts if NETID_RE.match(p)]
 
 
+# How two people end up in one name cell: "Aarav & Priya", "Aarav / Priya",
+# "Aarav and Priya". `and` only as a whole word -- "Anand" is one person.
+NAME_JOIN_RE = re.compile(r"\s*(?:&|/|,|\band\b)\s*", re.IGNORECASE)
+
+
+def _name_parts(cell: str) -> list[str]:
+    return [part.strip() for part in NAME_JOIN_RE.split(cell or "") if part.strip()]
+
+
+def looks_packed(name: str) -> bool:
+    """True when a name cell holds more than one person."""
+    return len(_name_parts(name)) > 1
+
+
+def split_couple_names(
+    cell: str, buyer_net_id: str | None, partner_net_id: str | None
+) -> tuple[str, str] | None:
+    """`(buyer's name, partner's name)` from a cell holding both, or None.
+
+    Early Bird packs a Duo into one NAME cell, and nothing says which name is
+    whose. A NetID starts with its owner's first initial, so the initials can
+    settle it -- and only the initials: when both names share an initial, or a
+    nickname matches neither NetID, this returns None and the caller greets
+    nobody by name. Position alone would have greeted one couple in the real
+    sheet by each other's names.
+    """
+    parts = _name_parts(cell)
+    if len(parts) != 2 or not buyer_net_id or not partner_net_id:
+        return None
+    first, second = parts
+    a, b = first[0].lower(), second[0].lower()
+    buyer_initial, partner_initial = buyer_net_id[0], partner_net_id[0]
+    if a == b or buyer_initial == partner_initial:
+        return None
+    if (a, b) == (buyer_initial, partner_initial):
+        return first, second
+    if (a, b) == (partner_initial, buyer_initial):
+        return second, first
+    return None
+
+
 @dataclass
 class Identity:
     net_id: str | None
@@ -194,6 +235,9 @@ class TicketRow:
     partner_mode: str                # SELF_CLAIM | PROXY
     phone: str = ""
     name: str = ""
+    #: The second person's name, where the sheet says it. Only ever used to
+    #: greet them; empty means "Hi," rather than somebody else's name.
+    partner_name: str = ""
     problems: list[str] = field(default_factory=list)
 
     @property
