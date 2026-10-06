@@ -164,6 +164,41 @@
   background: var(--paper);
 }
 
+/* The tutorial, from every screen. Paper pill with a marigold "?" disc. */
+.helpLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 40px;
+  padding: 0.2rem 0.85rem 0.2rem 0.3rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.helpLink:hover {
+  color: var(--ink);
+  background: var(--marigold);
+}
+
+.helpGlyph {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: var(--marigold);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1;
+  padding-top: 2px;
+}
+
 .signOut {
   color: var(--paper);
   min-height: 44px;
@@ -253,5 +288,17 @@
 
   .signOut {
     padding-inline: 0.4rem;
+  }
+}
+
+/* Smallest phones: the "?" alone, so the header row still fits. The link
+   keeps its accessible name from aria-label. */
+@media (max-width: 400px) {
+  .helpText {
+    display: none;
+  }
+
+  .helpLink {
+    padding: 0.2rem;
   }
 }

@@ -84,8 +84,19 @@ export function AppShell() {
             <p className={styles.tagline}>band baaja no baarat</p>
           </div>
 
-          {user && (
-            <div className={styles.identity}>
+          <div className={styles.identity}>
+            {location.pathname !== "/tutorial" && (
+              // For anybody, signed in or not, on every screen: the answers to
+              // "how do I get my pass / take a break / give it away".
+              <Link className={styles.helpLink} to="/tutorial" aria-label="Tutorial: how it works">
+                <span className={styles.helpGlyph} aria-hidden="true">
+                  ?
+                </span>
+                <span className={styles.helpText}>Tutorial</span>
+              </Link>
+            )}
+            {user && (
+              <>
               <span className={styles.who}>
                 {user.avatar_url ? (
                   <img
@@ -130,8 +141,9 @@ export function AppShell() {
               <Button variant="quiet" className={styles.signOut} onClick={() => void signOut()}>
                 Sign out
               </Button>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </FilmStrip>
       </header>
       <main className={wantsWideColumn ? styles.mainWide : styles.mainNarrow}>

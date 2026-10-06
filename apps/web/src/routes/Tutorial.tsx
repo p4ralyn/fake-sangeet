@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { ButtonLink, DisplayTitle, Notice, Paper, Sparkle, Stamp } from "../components";
 import styles from "./Tutorial.module.css";
 
@@ -61,6 +62,13 @@ function Section({
 }
 
 export function Tutorial() {
+  // A link like /tutorial#home arrives through the router, which does not
+  // scroll to the fragment the way a full page load would.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash]);
+
   return (
     <div className={styles.page}>
       <header className={styles.head}>

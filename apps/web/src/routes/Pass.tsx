@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { Link } from "react-router-dom";
 import {
   Button,
   DisplayTitle,
@@ -264,7 +265,9 @@ export function Pass() {
           <p className={styles.addToHomeTitle}>Add to home screen</p>
           <p>
             On your phone, open your browser&rsquo;s menu and choose &ldquo;Add to home screen&rdquo; so your
-            pass is one tap away at the door.
+            pass is one tap away at the door.{" "}
+            <Link to="/tutorial#home">Step-by-step for iPhone and Android</Link>, and how the door,
+            your one break and transfers work.
           </p>
         </div>
       </Paper>
