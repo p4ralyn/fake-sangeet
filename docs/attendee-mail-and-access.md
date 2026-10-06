@@ -55,6 +55,9 @@ https://fakesangeet.live/pass
 Sign in with your SNU account. Anyone can open that link, but only you can see
 your pass.
 
+New to this? How the pass, the door and transfers work:
+https://fakesangeet.live/tutorial
+
 Fake Sangeet — band baaja no baarat
 15 October, UAC Terrace, 6pm
 
@@ -85,6 +88,9 @@ https://fakesangeet.live/pass
 
 Sign in with your SNU account. Anyone can open that link, but only you can see
 your pass.
+
+New to this? How the pass, the door and transfers work:
+https://fakesangeet.live/tutorial
 
 Fake Sangeet — band baaja no baarat
 15 October, UAC Terrace, 6pm
@@ -159,6 +165,10 @@ emails and its uploaded photo too.
 ---
 
 ## How an attendee gets to their pass
+
+The attendee-facing version of everything below is the public page
+**https://fakesangeet.live/tutorial** (no sign-in), which the ticket-ready
+email links to with a "Read the tutorial" button.
 
 ### 1. Open the link and sign in
 

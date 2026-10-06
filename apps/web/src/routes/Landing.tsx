@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button, DisplayTitle, Paper, Plaque, Reel, Sparkle } from "../components";
 import { EVENT_DATE_LABEL, EVENT_NAME_FALLBACK, EVENT_VENUE } from "../lib/event";
 import { homeFor, isOpsStaff } from "../lib/home";
@@ -108,6 +108,10 @@ export function Landing() {
           </>
         )}
       </div>
+
+      <Link className={styles.howLink} to="/tutorial">
+        How it works — your pass, the door, transfers
+      </Link>
     </section>
   );
 }

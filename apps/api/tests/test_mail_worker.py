@@ -201,6 +201,23 @@ def test_the_ticket_mail_asks_them_to_finish_by_13_october(payload):
         assert "Before the night" not in body
 
 
+@pytest.mark.parametrize("payload", [{"name": "Aarav"}, {"name": "Isha", "claim_code": "x"}])
+def test_the_first_email_has_a_big_button_to_the_tutorial(payload):
+    """The tutorial is public and is where the first email sends people who
+    want to know how the pass, the door and transfers work."""
+    message = render(TEMPLATE_TICKET_READY, payload)
+    html = message.html_body or ""
+    assert "Read the tutorial</a>" in html
+    assert 'href="http://localhost:8000/tutorial"' in html
+    assert "/tutorial" in message.text_body
+
+
+def test_the_id_emails_do_not_carry_the_tutorial_button():
+    """One clear action each; the tutorial belongs to the first email."""
+    html = render(TEMPLATE_ID_REVIEWED, {"outcome": "APPROVED"}).html_body or ""
+    assert "Read the tutorial" not in html
+
+
 def test_an_unknown_template_raises_rather_than_silently_skipping():
     with pytest.raises(UnknownTemplate):
         render("no_such_template", {})

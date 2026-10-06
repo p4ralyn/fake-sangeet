@@ -120,6 +120,8 @@ def _layout(
     panel_label: str = "",
     panel_text: str = "",
     after_panel: tuple[str, ...] = (),
+    second_label: str = "",
+    second_url: str = "",
 ) -> str:
     """Every HTML email, one shape: the reel as a header band, one heading,
     the words, at most one tinted panel, one button, the footer.
@@ -143,6 +145,16 @@ def _layout(
         f'<p style="margin:0 0 16px;">{_escape(line)}</p>' for line in after_panel if line
     )
     url = _escape(button_url)
+    # A second, equally big button -- paper on ink rather than scarlet, so the
+    # first stays the main action.
+    second = (
+        f"""<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;"><tr>
+<td style="background:{PAPER};border:2px solid {INK};border-radius:8px;">
+<a href="{_escape(second_url)}" target="_blank" style="display:inline-block;padding:13px 26px;font-family:{SANS};font-size:16px;font-weight:bold;color:{INK};text-decoration:none;">{_escape(second_label)}</a>
+</td></tr></table>"""
+        if second_url
+        else ""
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -185,6 +197,7 @@ def _layout(
 <td style="background:{SCARLET};border:2px solid {INK};border-radius:8px;">
 <a href="{url}" target="_blank" style="display:inline-block;padding:13px 26px;font-family:{SANS};font-size:16px;font-weight:bold;color:{PAPER};text-decoration:none;">{_escape(button_label)}</a>
 </td></tr></table>
+{second}
 <p style="margin:0 0 18px;font-size:12px;line-height:1.5;color:{MUTED};">Button not working? Paste this into your browser:<br>
 <a href="{url}" style="color:{SCARLET};word-break:break-all;">{url}</a></p>
 </td></tr>
@@ -254,6 +267,9 @@ do. Your pass appears once it has been checked.
 Sign in with your SNU account. Anyone can open that link, but only you can see
 your pass.
 
+New to this? How the pass, the door and transfers work:
+{_site_url("/tutorial")}
+
 {_footer_text()}"""
 
     subject = (
@@ -279,6 +295,8 @@ your pass.
         ),
         button_label="Sign in and upload your ID",
         button_url=url,
+        second_label="Read the tutorial",
+        second_url=_site_url("/tutorial"),
     )
     return RenderedEmail(subject=subject, text_body=text, html_body=html)
 

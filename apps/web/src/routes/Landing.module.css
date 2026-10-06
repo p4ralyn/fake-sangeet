@@ -136,3 +136,22 @@
     rotate: 1.2deg;
   }
 }
+
+/* The way into /tutorial. On the ochre ground, so ink, not scarlet. */
+.howLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.3rem 1rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--line);
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.howLink:hover {
+  background: var(--marigold);
+  color: var(--ink);
+}

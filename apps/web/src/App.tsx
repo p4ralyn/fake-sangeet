@@ -7,6 +7,7 @@ import { Tonight } from "./routes/ops/Tonight";
 import { Gate } from "./routes/Gate";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
+import { Tutorial } from "./routes/Tutorial";
 import { ParticipantRoute } from "./routes/ParticipantRoute";
 import { Pass } from "./routes/Pass";
 import { RequireRole } from "./routes/RequireRole";
@@ -53,6 +54,9 @@ export function App() {
 
       <Route element={<AppShell />}>
         <Route index element={<Landing />} />
+        {/* Public on purpose: the "ticket ready" email links here, and somebody
+            who has not signed in yet is exactly who needs it. */}
+        <Route path="tutorial" element={<Tutorial />} />
 
         <Route
           path="verify"
