@@ -20,7 +20,11 @@ from typing import Any
 from pydantic import BaseModel
 
 from app.core.settings import get_settings
-from app.services.mailer.outbox import TEMPLATE_ID_REVIEWED, TEMPLATE_TICKET_READY
+from app.services.mailer.outbox import (
+    TEMPLATE_ID_REVIEWED,
+    TEMPLATE_PASS_RECEIVED,
+    TEMPLATE_TICKET_READY,
+)
 
 
 class RenderedEmail(BaseModel):
@@ -367,9 +371,87 @@ def _id_reviewed(payload: dict[str, Any]) -> RenderedEmail:
     return RenderedEmail(subject=subject, text_body=text, html_body=html)
 
 
+def _pass_received(payload: dict[str, Any]) -> RenderedEmail:
+    """A pass just landed on somebody's account because another holder sent it.
+
+    They did not buy it and may not be expecting mail from us, so it says what
+    happened before it asks for anything. The recipient's name is not known
+    -- only a NetID was typed -- so it greets nobody by name, and it does not
+    name the sender either. Like every other email: a link, never the pass.
+    """
+    partner_seat = payload.get("kind") == "partner_seat"
+    url = _sign_in_url()
+    if partner_seat:
+        subject = "Your partner sent you a Fake Sangeet pass — one step left"
+        heading = "Your partner sent you a pass"
+        lead = (
+            "The second seat on a couple ticket for Fake Sangeet has just been sent to "
+            "your SNU account."
+        )
+    else:
+        subject = "A Fake Sangeet pass has been passed on to you — one step left"
+        heading = "A pass has been passed on to you"
+        lead = "Someone has just transferred their Fake Sangeet pass to your SNU account."
+
+    ask = (
+        "Sign in and upload a photo of your student ID — that is the only thing left to "
+        "do. Your QR appears once it has been checked."
+    )
+    soon = "Please do it soon, so there is time to check your ID before the event."
+    rule = (
+        "This pass has already been transferred once, so it can't be passed on again."
+    )
+    bundle = (
+        "It's a couple ticket, and the second pass came with it, locked. Send it to your "
+        "partner from your pass page before 3pm on 15 October."
+        if payload.get("brings_partner_seat")
+        else ""
+    )
+
+    paragraphs = [line for line in (lead, ask, bundle) if line]
+    body = "\n\n".join(paragraphs)
+    text = f"""Hi,
+
+{body}
+
+{soon}
+
+{url}
+
+Sign in with your SNU account. Anyone can open that link, but only you can see
+your pass. {rule}
+
+How the pass and the door work:
+{_site_url("/tutorial")}
+
+{_footer_text()}"""
+    html = _layout(
+        subject=subject,
+        preheader=lead,
+        heading=heading,
+        paragraphs=["Hi,", *paragraphs],
+        panel_label="Before the door",
+        panel_text=soon,
+        after_panel=(
+            "Sign in with your SNU account. Anyone can open the link, but only you can "
+            "see your pass.",
+            rule,
+        ),
+        button_label="Sign in and upload your ID",
+        button_url=url,
+        second_label="Read the tutorial",
+        second_url=_site_url("/tutorial"),
+    )
+    return RenderedEmail(subject=subject, text_body=text, html_body=html)
+
+
 #: Registry, not an if/else chain. A new template is a function plus one entry,
 #: and `render` can tell "unknown" from "not implemented yet".
-RENDERERS = {TEMPLATE_TICKET_READY: _ticket_ready, TEMPLATE_ID_REVIEWED: _id_reviewed}
+RENDERERS = {
+    TEMPLATE_TICKET_READY: _ticket_ready,
+    TEMPLATE_ID_REVIEWED: _id_reviewed,
+    TEMPLATE_PASS_RECEIVED: _pass_received,
+}
 
 
 def render(template: str, payload: dict[str, Any]) -> RenderedEmail:

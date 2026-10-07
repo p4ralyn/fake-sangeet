@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.models import EmailOutbox, EmailStatus
 from app.services.mailer.outbox import (
     TEMPLATE_ID_REVIEWED,
+    TEMPLATE_PASS_RECEIVED,
     TEMPLATE_TICKET_READY,
     QueuedEmail,
     queue_email,
@@ -138,6 +139,8 @@ def test_a_refused_mail_points_to_the_desk_not_to_another_upload():
         (TEMPLATE_ID_REVIEWED, {"name": "Aarav", "outcome": "APPROVED"}),
         (TEMPLATE_ID_REVIEWED, {"name": "Aarav", "outcome": "RETRY_REQUIRED"}),
         (TEMPLATE_ID_REVIEWED, {"name": "Aarav", "outcome": "REJECTED"}),
+        (TEMPLATE_PASS_RECEIVED, {"kind": "transfer"}),
+        (TEMPLATE_PASS_RECEIVED, {"kind": "partner_seat"}),
     ],
 )
 def test_every_email_signs_off_from_the_core_with_someone_to_contact(template, payload):
@@ -167,6 +170,10 @@ def test_every_email_signs_off_from_the_core_with_someone_to_contact(template, p
          "We need a clearer photo", "Send a new photo", "/verify"),
         (TEMPLATE_ID_REVIEWED, {"outcome": "REJECTED"}, "Your ID wasn",
          "Open Fake Sangeet", "/"),
+        (TEMPLATE_PASS_RECEIVED, {"kind": "transfer"}, "A pass has been passed on to you",
+         "Sign in and upload your ID", "/pass"),
+        (TEMPLATE_PASS_RECEIVED, {"kind": "partner_seat"}, "Your partner sent you a pass",
+         "Sign in and upload your ID", "/pass"),
     ],
 )
 def test_every_email_is_a_branded_html_page_with_one_clear_button(
@@ -216,6 +223,27 @@ def test_the_id_emails_do_not_carry_the_tutorial_button():
     """One clear action each; the tutorial belongs to the first email."""
     html = render(TEMPLATE_ID_REVIEWED, {"outcome": "APPROVED"}).html_body or ""
     assert "Read the tutorial" not in html
+
+
+@pytest.mark.parametrize("kind", ["transfer", "partner_seat"])
+def test_the_pass_received_mail_explains_itself_and_links_rather_than_attaches(kind):
+    """The recipient did not buy this and may not expect us, so it says what
+    happened; it names nobody, because only a NetID was typed; and like every
+    other email it is a link to the pass, never the pass."""
+    message = render(TEMPLATE_PASS_RECEIVED, {"kind": kind})
+    for body in (message.text_body, message.html_body or ""):
+        assert "your SNU account" in body
+        assert "can't be passed on again" in body
+        assert "/pass" in body
+        assert "token" not in body.lower() and "<img" not in body
+    assert message.text_body.startswith("Hi,\n")
+    assert "came with it" not in message.text_body
+
+
+def test_a_transferred_couple_says_the_second_pass_came_with_it():
+    message = render(TEMPLATE_PASS_RECEIVED, {"kind": "transfer", "brings_partner_seat": True})
+    assert "the second pass came with it" in message.text_body
+    assert "3pm on 15 October" in message.text_body
 
 
 def test_an_unknown_template_raises_rather_than_silently_skipping():

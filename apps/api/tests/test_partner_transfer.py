@@ -25,6 +25,7 @@ from sqlalchemy import select
 
 from app.models import (
     AuditLog,
+    EmailOutbox,
     Event,
     Order,
     PartnerMode,
@@ -32,6 +33,7 @@ from app.models import (
     TicketStatus,
     User,
 )
+from app.services.mailer.outbox import TEMPLATE_PASS_RECEIVED
 from app.services.passes.issue import issue_pass
 from app.services.passes.transfer import (
     TransferRefused,
@@ -315,3 +317,33 @@ async def test_a_refused_partner_send_is_a_409_with_a_reason(client, committed_c
     )
     assert response.status_code == 409
     assert "NetID" in response.json()["error"]["message"]
+
+
+# ── telling the partner ──────────────────────────────────────────────────────
+async def _received(db_session) -> list[EmailOutbox]:
+    return list(
+        await db_session.scalars(
+            select(EmailOutbox).where(EmailOutbox.template == TEMPLATE_PASS_RECEIVED)
+        )
+    )
+
+
+async def test_sending_the_seat_emails_the_partner(db_session, event, buyer, couple):
+    await transfer_partner_seat(db_session, event=event, holder=buyer, to_net_id=PARTNER)
+
+    mail = await _received(db_session)
+    assert [m.to_email for m in mail] == [f"{PARTNER}@snu.edu.in"]
+    assert mail[0].payload["kind"] == "partner_seat"
+
+
+async def test_a_couple_transfer_tells_the_new_holder_the_second_pass_came_too(
+    db_session, event, buyer, couple
+):
+    first, _ = couple
+    await transfer_ticket(
+        db_session, event=event, holder=buyer, ticket=first, to_net_id=NEW_HOLDER
+    )
+
+    mail = await _received(db_session)
+    assert [m.to_email for m in mail] == [f"{NEW_HOLDER}@snu.edu.in"]
+    assert mail[0].payload == {"kind": "transfer", "brings_partner_seat": True}

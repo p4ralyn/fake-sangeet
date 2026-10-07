@@ -19,6 +19,8 @@ from app.models import EmailOutbox, EmailStatus
 TEMPLATE_TICKET_READY = "ticket_ready"
 #: "Your ID was checked": approved, send a clearer photo, or not accepted.
 TEMPLATE_ID_REVIEWED = "id_reviewed"
+#: "Someone sent you a pass": a transfer, or a couple's partner seat.
+TEMPLATE_PASS_RECEIVED = "pass_received"  # noqa: S105 -- a template name, not a password
 
 
 class QueuedEmail(BaseModel):

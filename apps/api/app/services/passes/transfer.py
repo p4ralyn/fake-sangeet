@@ -29,7 +29,10 @@ What a transfer must do, all in one transaction:
 * supersede the old registration, keeping it as history rather than deleting
   somebody's verification record;
 * put the ticket back to PURCHASED so the new holder is asked for an ID;
-* write an audit row naming both sides.
+* write an audit row naming both sides;
+* queue a "someone sent you a pass" email to the new holder, so they learn it
+  from us and not only from whoever sent it. Same transaction: a transfer that
+  rolls back mails nobody.
 """
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -39,6 +42,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import hash_pii
+from app.core.settings import get_settings
 from app.models import (
     MAX_TRANSFERS_PER_TICKET,
     TICKET_LIVE_STATUSES,
@@ -53,6 +57,11 @@ from app.models import (
 )
 from app.services.audit import write_audit
 from app.services.identity.netid import is_net_id
+from app.services.mailer.outbox import TEMPLATE_PASS_RECEIVED, QueuedEmail, queue_email
+
+#: `pass_received` payload kinds: the holder's own pass, or a couple's partner seat.
+KIND_TRANSFER = "transfer"
+KIND_PARTNER_SEAT = "partner_seat"
 
 #: Minutes before `events.starts_at` that transfer stops. Overridable per event
 #: via `events.config.transfer.closes_before_minutes`; three hours is the
@@ -163,6 +172,46 @@ async def _hand_over(db: AsyncSession, *, ticket: Ticket, recipient: str, now: d
     return issued is not None
 
 
+async def tell_the_recipient(
+    db: AsyncSession,
+    *,
+    event_id: UUID,
+    ticket: Ticket,
+    kind: str,
+    brings_partner_seat: bool = False,
+) -> bool:
+    """Queue the "someone sent you a pass" email to `ticket`'s new holder.
+
+    Keyed on the ticket ref, which is safe because a ticket moves once, ever:
+    a second call for the same transfer (the backfill script) queues nothing.
+    Like every other email it carries a link, never the pass.
+    """
+    domain = get_settings().google_allowed_domain
+    return await queue_email(
+        db,
+        event_id=event_id,
+        message=QueuedEmail(
+            to_email=f"{ticket.bound_net_id}@{domain}",
+            template=TEMPLATE_PASS_RECEIVED,
+            idempotency_key=f"{TEMPLATE_PASS_RECEIVED}:{ticket.ticket_ref}",
+            payload={"kind": kind, "brings_partner_seat": brings_partner_seat},
+        ),
+    )
+
+
+async def has_unsent_partner_seat(db: AsyncSession, *, event_id: UUID, order_id: UUID) -> bool:
+    found = await db.scalar(
+        select(Ticket.id)
+        .where(
+            Ticket.event_id == event_id,
+            Ticket.status.in_(TICKET_LIVE_STATUSES),
+            unsent_partner_seat(order_ids=[order_id]),
+        )
+        .limit(1)
+    )
+    return found is not None
+
+
 async def transfer_ticket(
     db: AsyncSession,
     *,
@@ -215,6 +264,15 @@ async def transfer_ticket(
             "pass_revoked": revoked,
             "transfer_count": ticket.transfer_count,
         },
+    )
+    await tell_the_recipient(
+        db,
+        event_id=event.id,
+        ticket=ticket,
+        kind=KIND_TRANSFER,
+        brings_partner_seat=await has_unsent_partner_seat(
+            db, event_id=event.id, order_id=ticket.order_id
+        ),
     )
     return TransferResult(ticket_ref=ticket.ticket_ref, to_net_id=recipient)
 
@@ -300,4 +358,5 @@ async def transfer_partner_seat(
         before={"held_by": hash_pii(holder.net_id or "")},
         after={"net_id": hash_pii(recipient), "transfer_count": seat.transfer_count},
     )
+    await tell_the_recipient(db, event_id=event.id, ticket=seat, kind=KIND_PARTNER_SEAT)
     return TransferResult(ticket_ref=seat.ticket_ref, to_net_id=recipient)

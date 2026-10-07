@@ -21,7 +21,11 @@ import sys
 
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
-from app.services.mailer.outbox import TEMPLATE_ID_REVIEWED, TEMPLATE_TICKET_READY
+from app.services.mailer.outbox import (
+    TEMPLATE_ID_REVIEWED,
+    TEMPLATE_PASS_RECEIVED,
+    TEMPLATE_TICKET_READY,
+)
 from app.services.mailer.provider import EmailMessage, get_mailer
 from app.services.mailer.templates import render
 
@@ -41,6 +45,13 @@ SAMPLES = [
         {"name": "Aarav Sharma", "outcome": "REJECTED",
          "note": "This is not an SNU student ID."},
     ),
+    ("pass transferred to you", TEMPLATE_PASS_RECEIVED, {"kind": "transfer"}),
+    (
+        "pass transferred to you, couple",
+        TEMPLATE_PASS_RECEIVED,
+        {"kind": "transfer", "brings_partner_seat": True},
+    ),
+    ("partner seat sent to you", TEMPLATE_PASS_RECEIVED, {"kind": "partner_seat"}),
 ]
 
 

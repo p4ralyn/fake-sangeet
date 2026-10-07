@@ -20,6 +20,7 @@ from sqlalchemy import select, text
 
 from app.models import (
     AuditLog,
+    EmailOutbox,
     Event,
     Order,
     Pass,
@@ -29,6 +30,7 @@ from app.models import (
     TicketStatus,
     User,
 )
+from app.services.mailer.outbox import TEMPLATE_PASS_RECEIVED
 from app.services.passes.issue import issue_pass
 from app.services.passes.transfer import (
     TransferRefused,
@@ -586,3 +588,32 @@ async def test_the_second_transfer_is_refused_over_http(client, committed_ticket
 
     assert response.status_code == 409
     assert "only be transferred once" in response.json()["error"]["message"]
+
+
+# ── telling the new holder ───────────────────────────────────────────────────
+async def _received(db_session) -> list[EmailOutbox]:
+    return list(
+        await db_session.scalars(
+            select(EmailOutbox).where(EmailOutbox.template == TEMPLATE_PASS_RECEIVED)
+        )
+    )
+
+
+async def test_a_transfer_emails_the_new_holder_once(db_session, event, holder, ticket):
+    """The recipient learns from us, not only from whoever sent it."""
+    await transfer_ticket(
+        db_session, event=event, holder=holder, ticket=ticket, to_net_id=RECIPIENT
+    )
+
+    mail = await _received(db_session)
+    assert [m.to_email for m in mail] == [f"{RECIPIENT}@snu.edu.in"]
+    assert mail[0].payload == {"kind": "transfer", "brings_partner_seat": False}
+    assert mail[0].idempotency_key == f"{TEMPLATE_PASS_RECEIVED}:{ticket.ticket_ref}"
+
+
+async def test_a_refused_transfer_emails_nobody(db_session, event, holder, ticket):
+    with pytest.raises(TransferRefused):
+        await transfer_ticket(
+            db_session, event=event, holder=holder, ticket=ticket, to_net_id=HOLDER
+        )
+    assert await _received(db_session) == []
