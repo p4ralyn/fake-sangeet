@@ -6,13 +6,15 @@ whether a row is mintable, and never counts a seat. That is the whole point —
 when the organiser moves off a workbook and onto the Sheets API, a new subclass
 lands here and `app/services/ingestion/service.py` does not change a line.
 
-Two concrete sources today, both reading the client's `.xlsx` files through
+Three concrete sources today, all reading the client's `.xlsx` files through
 `normalise.py`:
 
 * `EarlyBirdSource`  — the hand-kept INFERNO / SNUPHORIA workbook. Identity is a
   NetID column, and Duo rows pack two NetIDs into one cell.
 * `Phase1Source`     — the Google Form responses export. Identity is an email
   column, with a separate partner-email column.
+* `Phase2Source`     — the same Form, one phase later. Only its hand-checked
+  `final tickets` tab is a ticket; the raw responses tab beside it is not.
 
 `identity_is_email` is the difference that matters downstream. A bare NetID in
 the Early Bird NetID column is the documented shape, not a defect; the same
@@ -206,9 +208,12 @@ class Phase1Source(XlsxTicketSource):
         "phone": "Phone Number",
     }
 
+    def _target(self) -> str:
+        """The one tab that holds tickets: the Form's own export is the first."""
+        return sheet_targets(str(self.path))[0][1]
+
     def _parse(self) -> list[TicketRow]:
-        sheets = sheet_targets(str(self.path))
-        rows = read_rows(str(self.path), sheets[0][1])
+        rows = read_rows(str(self.path), self._target())
         if not rows:
             return []
         header = rows[0]
@@ -260,6 +265,26 @@ class Phase1Source(XlsxTicketSource):
         )
 
 
+class Phase2Source(Phase1Source):
+    """`FAKE SANGEET_ PHASE 2 (Responses).xlsx` — same Form, different tab.
+
+    The workbook's FIRST tab is the raw Form export, refunds and unpaid rows
+    included; the organisers copied the paid ones into `final tickets` by hand
+    (client, 7 Oct 2026). Reading the first tab, as Phase 1 does, would mint
+    every refunded buyer. So this reads `final tickets` by name and refuses a
+    workbook without it rather than falling back to anything.
+    """
+
+    source_key: ClassVar[str] = "PHASE2"
+    TICKET_SHEET: ClassVar[str] = "final tickets"
+
+    def _target(self) -> str:
+        for name, target in sheet_targets(str(self.path)):
+            if name.strip().lower() == self.TICKET_SHEET:
+                return target
+        raise ValueError(f"{self.path.name}: no '{self.TICKET_SHEET}' tab found.")
+
+
 def source_for_path(path: str | Path) -> XlsxTicketSource:
     """Pick the adapter by what the workbook actually contains.
 
@@ -284,4 +309,6 @@ def source_for_path(path: str | Path) -> XlsxTicketSource:
 
     if names & EarlyBirdSource.TICKET_SHEETS:
         return EarlyBirdSource(target)
+    if Phase2Source.TICKET_SHEET in {name.strip().lower() for name in names}:
+        return Phase2Source(target)
     return Phase1Source(target)
