@@ -7,10 +7,11 @@ and nobody owns that seat — so the pass screen shows it LOCKED, with one way
 out: send it to the partner, who signs in as themselves and is checked like
 everybody else.
 
-The rules this file pins down (client, 1 Oct 2026):
+The rules this file pins down (client, 1 Oct 2026, amended 9 Oct 2026):
   * only a PROXY holder has a partner seat to send, and it can be sent once;
-  * the partner who receives it cannot pass it on — the send IS that seat's
-    one transfer;
+  * the partner who receives it CAN pass it on, once — the send is the seat
+    reaching its first owner, not its transfer; every ticket is freehold, the
+    second person's included (9 Oct; replaced "can never pass it on");
   * a holder who transfers their OWN ticket while the seat is unsent takes the
     seat along, and the new holder can still send it: moving with the bundle is
     not the seat's transfer;
@@ -106,22 +107,32 @@ async def test_a_proxy_buyer_sends_the_partner_seat_and_keeps_their_own(
     assert result.ticket_ref == second.ticket_ref
     assert second.bound_net_id == PARTNER
     assert second.status is TicketStatus.PURCHASED  # the partner's own ID check
-    assert second.transfer_count == 1  # the send is that seat's one transfer
+    assert second.transfer_count == 0  # freehold: the send is not its transfer
     # The buyer's own seat has not moved and still has its transfer to spend.
     assert first.bound_net_id == BUYER
     assert first.transfer_count == 0
 
 
-async def test_the_partner_who_receives_it_cannot_pass_it_on(
+async def test_the_partner_who_receives_it_can_pass_it_on_once(
     db_session, event, buyer, couple
 ):
+    """Freehold (9 Oct 2026): the seat's one transfer is the partner's to use,
+    and after that it is spent like anybody else's."""
     _, second = couple
     await transfer_partner_seat(db_session, event=event, holder=buyer, to_net_id=PARTNER)
     partner = await _user(db_session, PARTNER)
 
+    await transfer_ticket(
+        db_session, event=event, holder=partner, ticket=second, to_net_id=SOMEONE
+    )
+    await db_session.refresh(second)
+    assert second.bound_net_id == SOMEONE
+    assert second.transfer_count == 1
+
+    someone = await _user(db_session, SOMEONE)
     with pytest.raises(TransferRefused) as refused:
         await transfer_ticket(
-            db_session, event=event, holder=partner, ticket=second, to_net_id=SOMEONE
+            db_session, event=event, holder=someone, ticket=second, to_net_id=NEW_HOLDER
         )
     assert "only be transferred once" in str(refused.value)
 
@@ -225,7 +236,7 @@ async def test_your_own_transfer_takes_the_unsent_seat_and_it_stays_sendable(
     await db_session.refresh(second)
     assert result.ticket_ref == second.ticket_ref
     assert second.bound_net_id == PARTNER
-    assert second.transfer_count == 1
+    assert second.transfer_count == 0
 
 
 async def test_the_previous_holder_has_nothing_left_to_send(db_session, event, buyer, couple):
@@ -299,8 +310,9 @@ async def test_sending_over_http_leaves_one_pass_each(client, committed_couple):
     seat = theirs["tickets"][0]
     assert seat["seat_index"] == 2 and seat["locked"] is False
     assert seat["state"] == "ID_PENDING"  # their own ID check comes first
-    # Received from a partner transfer: it can never move again.
-    assert theirs["transfer"]["transfers_used"] == theirs["transfer"]["max_transfers"]
+    # Freehold (9 Oct 2026): the partner still has the seat's one transfer.
+    assert theirs["transfer"]["transfers_used"] == 0
+    assert theirs["transfer"]["max_transfers"] == 1
     assert theirs["partner_transfer"] is None
 
 

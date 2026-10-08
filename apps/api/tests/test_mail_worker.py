@@ -233,7 +233,11 @@ def test_the_pass_received_mail_explains_itself_and_links_rather_than_attaches(k
     message = render(TEMPLATE_PASS_RECEIVED, {"kind": kind})
     for body in (message.text_body, message.html_body or ""):
         assert "your SNU account" in body
-        assert "can't be passed on again" in body
+        if kind == "transfer":
+            assert "can't be passed on again" in body
+        else:  # a sent partner seat is freehold (9 Oct 2026)
+            assert "you can pass it on once" in body
+            assert "can't be passed on again" not in body
         assert "/pass" in body
         assert "token" not in body.lower() and "<img" not in body
     assert message.text_body.startswith("Hi,\n")

@@ -138,9 +138,16 @@ async def _refuse_unless_free(db: AsyncSession, *, event_id: UUID, recipient: st
         raise TransferRefused("That person already has a ticket.")
 
 
-async def _hand_over(db: AsyncSession, *, ticket: Ticket, recipient: str, now: datetime) -> bool:
-    """Bind `ticket` to `recipient` and spend its one transfer. Returns whether
-    a pass existed (and is now dead).
+async def _hand_over(
+    db: AsyncSession, *, ticket: Ticket, recipient: str, now: datetime, spend_transfer: bool = True
+) -> bool:
+    """Bind `ticket` to `recipient`, spending its one transfer unless told not
+    to. Returns whether a pass existed (and is now dead).
+
+    A PROXY partner seat being sent to the partner is the one hand-over that
+    does not spend it: that is the seat reaching its first owner, not changing
+    owners, and the client's rule is that every ticket -- the second person's
+    included -- is freehold (9 Oct 2026).
 
     Bumping the serial is what makes every QR already on the old holder's
     phone stop working, immediately and without needing them to cooperate.
@@ -166,7 +173,8 @@ async def _hand_over(db: AsyncSession, *, ticket: Ticket, recipient: str, now: d
     ticket.bound_net_id = recipient
     ticket.user_id = None
     ticket.bound_at = now
-    ticket.transfer_count += 1
+    if spend_transfer:
+        ticket.transfer_count += 1
     ticket.status = TicketStatus.PURCHASED
     await db.flush()
     return issued is not None
@@ -306,9 +314,11 @@ async def transfer_partner_seat(
     an order where they hold the bound one — never named by the client. The
     row is locked so two quick taps cannot send one seat to two people.
 
-    The send spends the seat's one transfer, so the partner who receives it
-    can never pass it on (client decision, 1 Oct 2026). Their ID is checked
-    like anybody else's before the seat has a QR.
+    The send does NOT spend the seat's one transfer: the seat is reaching its
+    first owner, and every ticket is freehold, the second person's included
+    (client, 9 Oct 2026; it replaced the 1 Oct rule that the partner could
+    never pass it on). So the partner may pass it on once, like anybody else.
+    Their ID is checked like anybody else's before the seat has a QR.
     """
     if not is_open(event):
         raise TransferRefused(
@@ -344,7 +354,9 @@ async def transfer_partner_seat(
         raise TransferRefused("This pass has already been sent once.")
     await _refuse_unless_free(db, event_id=event.id, recipient=recipient)
 
-    await _hand_over(db, ticket=seat, recipient=recipient, now=datetime.now(UTC))
+    await _hand_over(
+        db, ticket=seat, recipient=recipient, now=datetime.now(UTC), spend_transfer=False
+    )
 
     await write_audit(
         db,

@@ -398,8 +398,13 @@ def _pass_received(payload: dict[str, Any]) -> RenderedEmail:
         "do. Your QR appears once it has been checked."
     )
     soon = "Please do it soon, so there is time to check your ID before the event."
+    # A sent partner seat is reaching its first owner and keeps its one
+    # transfer (freehold, 9 Oct 2026); a passed-on pass has spent it.
     rule = (
-        "This pass has already been transferred once, so it can't be passed on again."
+        "It's yours: if you can't make it, you can pass it on once from your pass page "
+        "before 3pm on 15 October."
+        if partner_seat
+        else "This pass has already been transferred once, so it can't be passed on again."
     )
     bundle = (
         "It's a couple ticket, and the second pass came with it, locked. Send it to your "

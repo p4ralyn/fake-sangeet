@@ -154,7 +154,8 @@ export function Tutorial() {
             QR. Below it, under{" "}
             <strong>&ldquo;Bought an extra ticket for your partner? Transfer it to them
             now&rdquo;</strong>, type their NetID and confirm. They then sign in and upload their
-            own ID to get their QR. A partner pass that hasn&rsquo;t been sent by{" "}
+            own ID to get their QR. From then on it&rsquo;s fully theirs, so they can pass it on once
+            like any other pass. A partner pass that hasn&rsquo;t been sent by{" "}
             <strong>3pm on 15 October</strong> stays locked.
           </li>
         </ul>

@@ -119,8 +119,9 @@ export function TransferPanel({
           </h2>
           <p className={styles.note}>
             They sign in with their own SNU account and upload their own ID to get the QR.
-            <strong> Once it&rsquo;s theirs, it can&rsquo;t be passed on again.</strong>{" "}
-            Transfers close at {formatDeadline(transferWindow.closes_at)}.
+            <strong> Once it&rsquo;s theirs, it&rsquo;s theirs</strong> &mdash; they can pass
+            it on once if they can&rsquo;t make it. Transfers close at{" "}
+            {formatDeadline(transferWindow.closes_at)}.
           </p>
         </>
       ) : (
