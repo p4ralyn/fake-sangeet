@@ -21,6 +21,8 @@ TEMPLATE_TICKET_READY = "ticket_ready"
 TEMPLATE_ID_REVIEWED = "id_reviewed"
 #: "Someone sent you a pass": a transfer, or a couple's partner seat.
 TEMPLATE_PASS_RECEIVED = "pass_received"  # noqa: S105 -- a template name, not a password
+#: One-off notice to every holder: transfers need your own approved ID first.
+TEMPLATE_TRANSFER_RULES = "transfer_rules"
 
 
 class QueuedEmail(BaseModel):

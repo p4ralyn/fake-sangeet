@@ -14,6 +14,7 @@ from app.services.mailer.outbox import (
     TEMPLATE_ID_REVIEWED,
     TEMPLATE_PASS_RECEIVED,
     TEMPLATE_TICKET_READY,
+    TEMPLATE_TRANSFER_RULES,
     QueuedEmail,
     queue_email,
 )
@@ -141,6 +142,7 @@ def test_a_refused_mail_points_to_the_desk_not_to_another_upload():
         (TEMPLATE_ID_REVIEWED, {"name": "Aarav", "outcome": "REJECTED"}),
         (TEMPLATE_PASS_RECEIVED, {"kind": "transfer"}),
         (TEMPLATE_PASS_RECEIVED, {"kind": "partner_seat"}),
+        (TEMPLATE_TRANSFER_RULES, {"name": "Aarav"}),
     ],
 )
 def test_every_email_signs_off_from_the_core_with_someone_to_contact(template, payload):
@@ -217,6 +219,23 @@ def test_the_first_email_has_a_big_button_to_the_tutorial(payload):
     assert "Read the tutorial</a>" in html
     assert 'href="http://localhost:8000/tutorial"' in html
     assert "/tutorial" in message.text_body
+
+
+@pytest.mark.parametrize("payload", [{"name": "Aarav"}, {}])
+def test_the_transfer_rules_notice_states_the_rule_and_buttons_to_the_tutorial(payload):
+    """10 Oct 2026 notice to every holder. The rule it states is the one
+    transfer.py enforces; everything else is the tutorial's job."""
+    message = render(TEMPLATE_TRANSFER_RULES, payload)
+    html = message.html_body or ""
+    for body in (message.text_body, html):
+        assert "own student ID has been checked and approved" in body
+        assert "3pm on 15 October" in body
+        assert "passed on once" in body
+    assert "Read the tutorial</a>" in html
+    assert 'href="http://localhost:8000/tutorial"' in html
+    assert "/tutorial" in message.text_body
+    assert message.text_body.startswith("Hi Aarav,\n" if payload else "Hi,\n")
+    assert "<img" not in html
 
 
 def test_the_id_emails_do_not_carry_the_tutorial_button():

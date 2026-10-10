@@ -73,6 +73,18 @@ class TransferRefused(Exception):
     """A real reason this transfer cannot happen, in the holder's words."""
 
 
+#: A holder may pass anything on only once their own ID is approved (client,
+#: 10 Oct 2026). Until then the pass page sends them to /verify anyway; this
+#: makes the server agree rather than trusting the screen.
+ID_APPROVED_STATUSES: frozenset[TicketStatus] = frozenset(
+    {TicketStatus.VERIFIED, TicketStatus.PASS_ISSUED}
+)
+NOT_APPROVED_YET = (
+    "You can pass a ticket on only after your own ID has been checked and approved. "
+    "Upload your student ID first."
+)
+
+
 class TransferConfig(BaseModel):
     closes_before_minutes: int = Field(
         default=DEFAULT_CLOSES_BEFORE_MINUTES, ge=0, le=60 * 24 * 7
@@ -243,6 +255,8 @@ async def transfer_ticket(
     recipient = _recipient(to_net_id, holder=holder)
     if ticket.status not in TICKET_LIVE_STATUSES:
         raise TransferRefused("This ticket can’t be transferred.")
+    if ticket.status not in ID_APPROVED_STATUSES:
+        raise TransferRefused(NOT_APPROVED_YET)
     # One transfer, ever. Refused here so the holder reads a sentence; the
     # CHECK on `tickets.transfer_count` is what actually guarantees it.
     if ticket.transfer_count >= MAX_TRANSFERS_PER_TICKET:
@@ -325,6 +339,19 @@ async def transfer_partner_seat(
             "Transfers closed three hours before the event. This pass can no longer be sent."
         )
     recipient = _recipient(to_net_id, holder=holder)
+
+    own = await db.scalar(
+        select(Ticket)
+        .where(
+            Ticket.event_id == event.id,
+            Ticket.status.in_(TICKET_LIVE_STATUSES),
+            held_by(holder),
+        )
+        .order_by(Ticket.seq_in_order)
+        .limit(1)
+    )
+    if own is not None and own.status not in ID_APPROVED_STATUSES:
+        raise TransferRefused(NOT_APPROVED_YET)
 
     my_orders = (
         select(Ticket.order_id)

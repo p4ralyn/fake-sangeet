@@ -24,6 +24,7 @@ from app.services.mailer.outbox import (
     TEMPLATE_ID_REVIEWED,
     TEMPLATE_PASS_RECEIVED,
     TEMPLATE_TICKET_READY,
+    TEMPLATE_TRANSFER_RULES,
 )
 
 
@@ -450,12 +451,68 @@ How the pass and the door work:
     return RenderedEmail(subject=subject, text_body=text, html_body=html)
 
 
+def _transfer_rules(payload: dict[str, Any]) -> RenderedEmail:
+    """A notice to every holder (10 Oct 2026): passing a ticket on needs your own
+    approved ID first. Every rule in it is one the server enforces
+    (`app/services/passes/transfer.py`); the rest lives in the tutorial, which
+    the button opens."""
+    name = str(payload.get("name") or "").strip()
+    greeting = f"Hi {name}," if name else "Hi,"
+    subject = "Fake Sangeet — before you pass your ticket on"
+    lead = (
+        "A quick note on giving your ticket to someone else. You can only pass it on "
+        "once you've signed in with your own SNU account and your own student ID has "
+        "been checked and approved."
+    )
+    after = (
+        "Until then, the option to pass it on won't appear. The person you send it to "
+        "then signs in with their own account and has their own ID approved before "
+        "their QR appears."
+    )
+    deadline = "3pm on 15 October, three hours before doors. A ticket can be passed on once."
+    rest = (
+        "Everything else — couple tickets, sending your partner their pass, the door "
+        "and your one break — is in the tutorial."
+    )
+    tutorial = _site_url("/tutorial")
+    text = f"""{greeting}
+
+{lead}
+
+{after}
+
+Transfers close at {deadline}
+
+{rest}
+
+{tutorial}
+
+Your pass: {_sign_in_url()}
+
+{_footer_text()}"""
+    html = _layout(
+        subject=subject,
+        preheader=lead,
+        heading="Before you pass your ticket on",
+        paragraphs=[greeting, lead, after],
+        panel_label="Transfers close",
+        panel_text=deadline,
+        after_panel=(rest,),
+        button_label="Read the tutorial",
+        button_url=tutorial,
+        second_label="Open your pass",
+        second_url=_sign_in_url(),
+    )
+    return RenderedEmail(subject=subject, text_body=text, html_body=html)
+
+
 #: Registry, not an if/else chain. A new template is a function plus one entry,
 #: and `render` can tell "unknown" from "not implemented yet".
 RENDERERS = {
     TEMPLATE_TICKET_READY: _ticket_ready,
     TEMPLATE_ID_REVIEWED: _id_reviewed,
     TEMPLATE_PASS_RECEIVED: _pass_received,
+    TEMPLATE_TRANSFER_RULES: _transfer_rules,
 }
 
 

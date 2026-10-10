@@ -231,6 +231,11 @@ export function Tutorial() {
         <h3 className={styles.subTitle}>The rules</h3>
         <ul className={styles.bullets}>
           <li>
+            <strong>Your own ID comes first.</strong> You can pass a ticket on &mdash; your
+            own, or your partner&rsquo;s locked one &mdash; only after you&rsquo;ve signed in
+            with your own SNU account and your own student ID has been approved.
+          </li>
+          <li>
             <strong>A pass can be transferred once, ever.</strong> The person you send it to
             can&rsquo;t pass it on again.
           </li>

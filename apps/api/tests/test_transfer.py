@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 
 from app.models import (
     AuditLog,
@@ -524,6 +524,9 @@ async def test_a_ticket_can_only_be_transferred_once(db_session, event, holder, 
     assert ticket.transfer_count == 1
 
     recipient = await _user(db_session, RECIPIENT)
+    # Their own ID approved, so the approval rule is not what refuses them.
+    ticket.status = TicketStatus.PASS_ISSUED
+    await db_session.flush()
     with pytest.raises(TransferRefused) as refused:
         await transfer_ticket(
             db_session, event=event, holder=recipient, ticket=ticket, to_net_id=THIRD
@@ -574,12 +577,18 @@ async def test_the_pass_view_reports_the_transfer_budget(client, committed_ticke
     assert after["transfer"]["max_transfers"] == 1
 
 
-async def test_the_second_transfer_is_refused_over_http(client, committed_ticket):
+async def test_the_second_transfer_is_refused_over_http(client, db_session, committed_ticket):
     headers = await login(client, HOLDER)
     await client.post(
         "/api/v1/me/pass/transfer", headers=headers, json={"to_net_id": RECIPIENT}
     )
     client.cookies.clear()
+    # The new holder's ID is approved, so only the once-ever rule stands in the way.
+    await db_session.execute(
+        update(Ticket).where(Ticket.ticket_ref == committed_ticket.ticket_ref)
+        .values(status=TicketStatus.PASS_ISSUED)
+    )
+    await db_session.commit()
 
     theirs = await login(client, RECIPIENT)
     response = await client.post(
@@ -588,6 +597,29 @@ async def test_the_second_transfer_is_refused_over_http(client, committed_ticket
 
     assert response.status_code == 409
     assert "only be transferred once" in response.json()["error"]["message"]
+
+
+# ── only after your own ID is approved ───────────────────────────────────────
+@pytest.mark.parametrize(
+    "status", [TicketStatus.PURCHASED, TicketStatus.MANUAL_REVIEW, TicketStatus.RETRY_REQUIRED]
+)
+async def test_you_cannot_pass_it_on_before_your_own_id_is_approved(
+    db_session, event, holder, ticket, status
+):
+    """Client rule, 10 Oct 2026. The pass page already sends an unapproved
+    holder to /verify; this is the server agreeing with the screen."""
+    ticket.status = status
+    await db_session.flush()
+
+    with pytest.raises(TransferRefused) as refused:
+        await transfer_ticket(
+            db_session, event=event, holder=holder, ticket=ticket, to_net_id=RECIPIENT
+        )
+    assert "after your own ID has been checked and approved" in str(refused.value)
+    await db_session.refresh(ticket)
+    assert ticket.bound_net_id == HOLDER
+    assert ticket.transfer_count == 0
+    assert await _received(db_session) == []
 
 
 # ── telling the new holder ───────────────────────────────────────────────────

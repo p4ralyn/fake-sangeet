@@ -25,6 +25,7 @@ from app.services.mailer.outbox import (
     TEMPLATE_ID_REVIEWED,
     TEMPLATE_PASS_RECEIVED,
     TEMPLATE_TICKET_READY,
+    TEMPLATE_TRANSFER_RULES,
 )
 from app.services.mailer.provider import EmailMessage, get_mailer
 from app.services.mailer.templates import render
@@ -52,6 +53,7 @@ SAMPLES = [
         {"kind": "transfer", "brings_partner_seat": True},
     ),
     ("partner seat sent to you", TEMPLATE_PASS_RECEIVED, {"kind": "partner_seat"}),
+    ("before you pass your ticket on", TEMPLATE_TRANSFER_RULES, {"name": "Aarav Sharma"}),
 ]
 
 

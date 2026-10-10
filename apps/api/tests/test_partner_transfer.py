@@ -121,6 +121,9 @@ async def test_the_partner_who_receives_it_can_pass_it_on_once(
     _, second = couple
     await transfer_partner_seat(db_session, event=event, holder=buyer, to_net_id=PARTNER)
     partner = await _user(db_session, PARTNER)
+    # The partner's own ID approved: passing on needs that first (10 Oct 2026).
+    second.status = TicketStatus.PASS_ISSUED
+    await db_session.flush()
 
     await transfer_ticket(
         db_session, event=event, holder=partner, ticket=second, to_net_id=SOMEONE
@@ -130,6 +133,8 @@ async def test_the_partner_who_receives_it_can_pass_it_on_once(
     assert second.transfer_count == 1
 
     someone = await _user(db_session, SOMEONE)
+    second.status = TicketStatus.PASS_ISSUED  # approved too: only the cap refuses now
+    await db_session.flush()
     with pytest.raises(TransferRefused) as refused:
         await transfer_ticket(
             db_session, event=event, holder=someone, ticket=second, to_net_id=NEW_HOLDER
@@ -228,6 +233,8 @@ async def test_your_own_transfer_takes_the_unsent_seat_and_it_stays_sendable(
     first, second = couple
     await transfer_ticket(db_session, event=event, holder=buyer, ticket=first, to_net_id=NEW_HOLDER)
     new_holder = await _user(db_session, NEW_HOLDER)
+    first.status = TicketStatus.PASS_ISSUED  # the new holder's own ID approved
+    await db_session.flush()
 
     result = await transfer_partner_seat(
         db_session, event=event, holder=new_holder, to_net_id=PARTNER
@@ -329,6 +336,35 @@ async def test_a_refused_partner_send_is_a_409_with_a_reason(client, committed_c
     )
     assert response.status_code == 409
     assert "NetID" in response.json()["error"]["message"]
+
+
+# ── only after your own ID is approved ───────────────────────────────────────
+async def test_the_partner_seat_cannot_be_sent_before_your_own_id_is_approved(
+    db_session, event, buyer, couple
+):
+    first, second = couple
+    first.status = TicketStatus.PURCHASED
+    await db_session.flush()
+
+    with pytest.raises(TransferRefused) as refused:
+        await transfer_partner_seat(db_session, event=event, holder=buyer, to_net_id=PARTNER)
+    assert "after your own ID has been checked and approved" in str(refused.value)
+    await db_session.refresh(second)
+    assert second.bound_net_id is None
+
+
+async def test_a_new_holder_must_be_approved_before_sending_the_seat_on(
+    db_session, event, buyer, couple
+):
+    first, _ = couple
+    await transfer_ticket(db_session, event=event, holder=buyer, ticket=first, to_net_id=NEW_HOLDER)
+    new_holder = await _user(db_session, NEW_HOLDER)
+
+    with pytest.raises(TransferRefused) as refused:
+        await transfer_partner_seat(
+            db_session, event=event, holder=new_holder, to_net_id=PARTNER
+        )
+    assert "after your own ID has been checked and approved" in str(refused.value)
 
 
 # ── telling the partner ──────────────────────────────────────────────────────
