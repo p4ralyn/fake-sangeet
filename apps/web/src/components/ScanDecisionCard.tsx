@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ScanAction, SecurityScanResponse } from "../lib/types";
 import { Button } from "./Button/Button";
+import { GuestTag } from "./GuestTag/GuestTag";
 import { Stamp, type StampTone } from "./Stamp/Stamp";
 import styles from "./ScanDecisionCard.module.css";
 
@@ -81,6 +82,7 @@ export function ScanDecisionCard({ response, busy, onConfirm, onDismiss, onExpir
 
       <div className={styles.identity}>
         <h1 className={styles.name}>{response.participant_name ?? "Name not on file"}</h1>
+        {response.guest_tag && <GuestTag tag={response.guest_tag} size="lg" className={styles.side} />}
         <div className={styles.facts}>
           <Stamp tone={look.tone} glyph={look.glyph} className={styles.state}>
             {STATE_LABELS[response.state]}

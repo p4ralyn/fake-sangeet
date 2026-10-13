@@ -5,6 +5,7 @@ export { EmptyState } from "./EmptyState/EmptyState";
 export { Checkbox, Field } from "./Field/Field";
 export { FilmStrip } from "./FilmStrip/FilmStrip";
 export { Garland } from "./Garland/Garland";
+export { GuestTag } from "./GuestTag/GuestTag";
 export { Loading, ReelSpinner } from "./Loading/Loading";
 export { MandalaCorner } from "./MandalaCorner";
 export { Notice, type NoticeTone } from "./Notice/Notice";

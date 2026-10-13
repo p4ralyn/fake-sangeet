@@ -91,6 +91,7 @@ async def test_the_pass_endpoint_returns_a_token_and_a_short_code(client, issued
     assert ticket["qr_token"].startswith("UG1.")
     assert ticket["state"] == "ISSUED"
     assert ticket["seat_index"] == 1
+    assert ticket["guest_tag"] == "BAARATI"  # every seat sold so far (14 Oct 2026)
 
 
 async def test_the_token_this_endpoint_mints_actually_scans(client, db_session, staff, issued):

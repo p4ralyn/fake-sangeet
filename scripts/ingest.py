@@ -2,7 +2,12 @@
 """Ingest one or more ticket workbooks into the single event.
 
     docker compose run --rm -v ~/Downloads/ticketingestion:/data api \
-        python /srv/scripts/ingest.py /data/*.xlsx
+        python /srv/scripts/ingest.py --guest-tag BAARATI /data/*.xlsx
+
+`--guest-tag` is required and stamps every ticket the run mints: BAARATI for
+the sheets sold so far, GHARWALE for the gharwale sheet (client, 14 Oct 2026).
+It is fixed once minted -- nothing edits it -- so a run without it is refused
+rather than guessed.
 
 Safe to re-run: the row hash makes every row idempotent, so a second pass over
 a corrected workbook mints only the rows that were not mintable before.
@@ -19,7 +24,7 @@ from sqlalchemy import select
 
 from app.core.logging import configure_logging
 from app.db.session import session_factory
-from app.models import Event, EventInventory, Order
+from app.models import Event, EventInventory, GuestTag, Order
 from app.services.ingestion.service import (
     IngestReport,
     ingest_source,
@@ -34,6 +39,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("workbooks", nargs="+", type=Path)
     parser.add_argument("--event-slug", default="dryrun")
+    parser.add_argument(
+        "--guest-tag",
+        required=True,
+        choices=[tag.value for tag in GuestTag],
+        help="which side every ticket minted by this run is on",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -124,6 +135,8 @@ async def main(argv: list[str]) -> int:
             f"event {event.slug}: {inventory.seats_committed}/{inventory.seats_total} "
             "seats committed before ingest"
         )
+        guest_tag = GuestTag(args.guest_tag)
+        print(f"every ticket minted by this run is tagged {guest_tag.value}")
 
         halted = False
         for path in args.workbooks:
@@ -132,7 +145,9 @@ async def main(argv: list[str]) -> int:
             if args.dry_run:
                 report = await dry_run(session, event, source)
             else:
-                report = await ingest_source(session, event=event, source=source)
+                report = await ingest_source(
+                    session, event=event, source=source, guest_tag=guest_tag
+                )
             print(render(report))
             halted = halted or report.halted
 

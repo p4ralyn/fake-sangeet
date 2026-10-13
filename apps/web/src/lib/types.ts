@@ -92,6 +92,13 @@ export type TicketState =
   | "CHECKED_OUT"
   | "REVOKED";
 
+/**
+ * Which side of the (mock) wedding a seat is on (client, 14 Oct 2026). Fixed at
+ * minting -- no screen edits it -- and it follows the seat through a transfer.
+ * Source of truth: `app.models.ticketing.GuestTag`.
+ */
+export type GuestTag = "BAARATI" | "GHARWALE";
+
 export interface PassTicket {
   /** Empty string until a pass is issued. */
   short_code: string;
@@ -109,6 +116,7 @@ export interface PassTicket {
   seat_index: number;
   seats: number;
   state: TicketState;
+  guest_tag: GuestTag;
   /**
    * A PROXY couple's partner seat nobody has been given yet. Never carries a
    * QR — nobody's ID stands behind it. The screen draws a lock and the way to
@@ -191,6 +199,9 @@ export interface SecurityScanResponse {
    * double-tap constantly. */
   duplicate: boolean;
   participant_name: string | null;
+  /** Baarati or gharwale -- the one client addition to §11.5 (14 Oct 2026),
+   * shown on the decision card and every result screen. */
+  guest_tag: GuestTag | null;
   /** A 90-second signed URL, present only on ACTION_REQUIRED, null until M4
    * ships ID capture. Render a placeholder, never a broken <img>. */
   id_image_url: string | null;
@@ -319,9 +330,19 @@ export interface Queues {
   mail_dead: number;
 }
 
+/** One side of the wedding: tickets held and who is in. Counts only. */
+export interface TagCount {
+  tag: GuestTag;
+  tickets: number;
+  inside: number;
+  on_break: number;
+}
+
 export interface OpsSummary {
   occupancy: Occupancy;
   seats: Seats;
+  /** Baarati then gharwale, always both, even at zero. */
+  by_tag: TagCount[];
   queues: Queues;
   scans_recent: number;
   scans_window_minutes: number;

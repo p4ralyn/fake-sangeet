@@ -1,0 +1,46 @@
+/* A solid ribbon rather than a stamp: the stamp already means "what state is
+   this in", and a guest's side is not a state -- it never changes. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.25em 0.75em 0.2em;
+  border: var(--line);
+  border-radius: 999px;
+  box-shadow: var(--lift-sm);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.glyph {
+  font-size: 1.15em;
+  line-height: 1;
+}
+
+/* Baarati: the procession's marigold, ink on top. */
+.BAARATI {
+  background: var(--marigold);
+  color: var(--ink);
+}
+
+/* Gharwale: the home side, scarlet with paper text. */
+.GHARWALE {
+  background: var(--scarlet);
+  color: var(--paper);
+}
+
+.sm {
+  font-size: var(--text-xs);
+}
+
+.md {
+  font-size: var(--text-sm);
+}
+
+.lg {
+  font-size: var(--text-lg);
+  border: var(--line-thick);
+}

@@ -9,7 +9,7 @@ import { confirmScan, presentScan } from "../lib/scanApi";
 import { getDeviceId, getGateLabel, setGateLabel } from "../lib/scanDevice";
 import { useQrScanner } from "../lib/qrScanner";
 import { useSession } from "../lib/session";
-import type { ScanAction, SecurityScanResponse } from "../lib/types";
+import type { GuestTag, ScanAction, SecurityScanResponse } from "../lib/types";
 import { useWakeLock } from "../lib/wakeLock";
 import styles from "./Scan.module.css";
 
@@ -32,7 +32,14 @@ import styles from "./Scan.module.css";
 type ScreenState =
   | { kind: "scanning" }
   | { kind: "decision"; response: SecurityScanResponse }
-  | { kind: "result"; tone: ResultTone; verdict: string; name: string | null; detail: string | null };
+  | {
+      kind: "result";
+      tone: ResultTone;
+      verdict: string;
+      name: string | null;
+      tag?: GuestTag | null;
+      detail: string | null;
+    };
 
 /**
  * Headline per error code. The server's own message becomes the detail line,
@@ -211,6 +218,7 @@ export function Scan() {
                 tone: "refused",
                 verdict: "Decision expired",
                 name: screen.response.participant_name,
+                tag: screen.response.guest_tag,
                 detail: "Nothing was recorded. Scan them again.",
               })
             }
@@ -224,6 +232,7 @@ export function Scan() {
             tone={screen.tone}
             verdict={screen.verdict}
             name={screen.name}
+            tag={screen.tag}
             detail={screen.detail}
             onDismiss={backToScanning}
           />
@@ -245,6 +254,9 @@ function resultForDone(response: SecurityScanResponse, chosen?: ScanAction): Scr
         ? DONE_VERDICTS[action]
         : "Done",
     name: response.participant_name,
+    // On every admitting result -- check-in, break, back in, and the departed
+    // screen after a check-out -- the volunteer sees which side they are on.
+    tag: response.guest_tag,
     detail: response.duplicate ? "This scan was already recorded. Nothing changed." : null,
   };
 }

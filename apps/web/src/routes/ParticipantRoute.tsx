@@ -18,10 +18,11 @@ export interface ParticipantRouteProps {
  *
  * Two redirects, both of which exist because the alternative is a dead end:
  *
- *  - **Ops staff never see these screens.** An OWNER or ADMIN holds no ticket
- *    in that capacity, so the pass screen would say "no pass on this account"
- *    and the ID upload would have nothing to attach a photo to. They go to
- *    their dashboard instead.
+ *  - **Ops staff who hold no ticket never see these screens.** An OWNER or
+ *    ADMIN holds no ticket in that capacity, so the pass screen would say "no
+ *    pass on this account" and the ID upload would have nothing to attach a
+ *    photo to. They go to their dashboard instead. One who DOES hold a ticket
+ *    walks these screens like any attendee.
  *  - **The ID check comes before the pass.** The QR is the thing that opens a
  *    gate, and nobody should reach it before a human has something to check
  *    them against. The server already refuses to mint a token early; this
@@ -40,7 +41,15 @@ export function ParticipantRoute({ requireIdCheck = false, children }: Participa
   }
 
   if (isOpsStaff(roles)) {
-    return <Navigate to={homeFor(roles)} replace />;
+    // Only a staff member who holds nothing is redirected. One who does hold a
+    // ticket (the owner took one over on 14 Oct 2026) is an attendee too, and
+    // the dead end this redirect exists to avoid is not a dead end for them.
+    if (personStatus.kind === "loading") {
+      return <Loading>Loading&hellip;</Loading>;
+    }
+    if (personStatus.kind === "none") {
+      return <Navigate to={homeFor(roles)} replace />;
+    }
   }
 
   if (requireIdCheck) {

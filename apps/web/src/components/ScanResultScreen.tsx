@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import type { GuestTag as GuestTagValue } from "../lib/types";
+import { GuestTag } from "./GuestTag/GuestTag";
 import styles from "./ScanResultScreen.module.css";
 
 /**
@@ -36,12 +38,14 @@ export interface ScanResultScreenProps {
   /** The headline, in the operator's language: "Checked in", "Do not admit". */
   verdict: string;
   name: string | null;
+  /** Baarati or gharwale, when the scan resolved to a person (14 Oct 2026). */
+  tag?: GuestTagValue | null;
   /** What to do next, when there is anything to do. */
   detail: string | null;
   onDismiss: () => void;
 }
 
-export function ScanResultScreen({ tone, verdict, name, detail, onDismiss }: ScanResultScreenProps) {
+export function ScanResultScreen({ tone, verdict, name, tag, detail, onDismiss }: ScanResultScreenProps) {
   const selfClearing = tone !== "refused";
 
   useEffect(() => {
@@ -66,6 +70,7 @@ export function ScanResultScreen({ tone, verdict, name, detail, onDismiss }: Sca
       </p>
       <h1 className={styles.verdict}>{verdict}</h1>
       {name && <p className={styles.name}>{name}</p>}
+      {tag && <GuestTag tag={tag} size="lg" className={styles.side} />}
       {detail && <p className={styles.detail}>{detail}</p>}
       <p className={styles.hint}>{selfClearing ? "Clearing…" : "Tap to scan the next person"}</p>
     </section>

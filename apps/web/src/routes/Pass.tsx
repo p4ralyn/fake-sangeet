@@ -6,6 +6,7 @@ import {
   DisplayTitle,
   EmptyState,
   FilmStrip,
+  GuestTag,
   Loading,
   Notice,
   Paper,
@@ -62,6 +63,7 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
               </span>
             )}
           </p>
+          <GuestTag tag={ticket.guest_tag} size="sm" className={styles.side} />
         </div>
 
         <div className={cx(styles.qrWrap, animate && styles.qrResolving)}>

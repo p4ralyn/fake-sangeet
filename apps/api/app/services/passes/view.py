@@ -92,6 +92,7 @@ async def my_pass_view(db: AsyncSession, *, event: Event, user: User) -> MyPassR
                     seat_index=ticket.seq_in_order,
                     seats=order.quantity,
                     state=view_state(ticket.status, None),
+                    guest_tag=ticket.guest_tag,
                     locked=True,
                 )
             )
@@ -138,6 +139,7 @@ async def my_pass_view(db: AsyncSession, *, event: Event, user: User) -> MyPassR
                 seat_index=ticket.seq_in_order,
                 seats=order.quantity,
                 state=view_state(ticket.status, issued.current_state if issued else None),
+                guest_tag=ticket.guest_tag,
             )
         )
     return MyPassResponse(

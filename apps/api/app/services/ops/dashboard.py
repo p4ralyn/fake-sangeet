@@ -19,15 +19,18 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
+    TICKET_LIVE_STATUSES,
     VERIFY_OPEN_OUTCOMES,
     EmailOutbox,
     EmailStatus,
     EventInventory,
+    GuestTag,
     IngestionError,
     Pass,
     PassState,
     Scan,
     ScanResult,
+    Ticket,
     Verification,
 )
 from app.schemas.ops import (
@@ -37,6 +40,7 @@ from app.schemas.ops import (
     OpsSummary,
     Queues,
     Seats,
+    TagCount,
 )
 
 #: How far back "recent" looks on the Tonight panel. Long enough to survive a
@@ -65,6 +69,39 @@ async def seats(db: AsyncSession, *, event_id: UUID) -> Seats:
     if inventory is None:
         return Seats(committed=0, total=0)
     return Seats(committed=inventory.seats_committed, total=inventory.seats_total)
+
+
+async def by_tag(db: AsyncSession, *, event_id: UUID) -> list[TagCount]:
+    """Live tickets and who is in, per side. Every tag appears, even at zero,
+    so the panel's layout does not shift when the first gharwale arrives."""
+    tickets = dict(
+        (
+            await db.execute(
+                select(Ticket.guest_tag, func.count())
+                .where(Ticket.event_id == event_id, Ticket.status.in_(TICKET_LIVE_STATUSES))
+                .group_by(Ticket.guest_tag)
+            )
+        ).all()
+    )
+    rows = await db.execute(
+        select(Ticket.guest_tag, Pass.current_state, func.count())
+        .join(Ticket, Ticket.id == Pass.ticket_id)
+        .where(
+            Pass.event_id == event_id,
+            Pass.current_state.in_([PassState.INSIDE, PassState.ON_BREAK]),
+        )
+        .group_by(Ticket.guest_tag, Pass.current_state)
+    )
+    present = {(tag, state): total for tag, state, total in rows.all()}
+    return [
+        TagCount(
+            tag=tag,
+            tickets=tickets.get(tag, 0),
+            inside=present.get((tag, PassState.INSIDE), 0),
+            on_break=present.get((tag, PassState.ON_BREAK), 0),
+        )
+        for tag in GuestTag
+    ]
 
 
 async def _count(db: AsyncSession, model, *where) -> int:
@@ -116,6 +153,7 @@ async def summary(db: AsyncSession, *, event_id: UUID) -> OpsSummary:
     return OpsSummary(
         occupancy=await occupancy(db, event_id=event_id),
         seats=await seats(db, event_id=event_id),
+        by_tag=await by_tag(db, event_id=event_id),
         queues=await queues(db, event_id=event_id),
         scans_recent=await _count(
             db, Scan, Scan.event_id == event_id, Scan.occurred_at >= since

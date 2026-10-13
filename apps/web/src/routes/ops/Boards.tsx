@@ -1,5 +1,5 @@
 import { DisplayTitle, Stat, StatGrid } from "../../components";
-import type { OpsSummary } from "../../lib/types";
+import type { OpsSummary, TagCount } from "../../lib/types";
 import styles from "./Panels.module.css";
 
 /**
@@ -35,9 +35,28 @@ export function InTheRoom({ data, heading }: { data: OpsSummary; heading: string
         <Stat value={occupancy.not_arrived} label="Not arrived" />
         <Stat value={occupancy.departed} label="Left" />
       </StatGrid>
+      {data.by_tag.length > 0 && (
+        // Baarati and gharwale (14 Oct 2026). Counts only, so it is safe on
+        // the gate screen too; both sides always drawn, even at zero.
+        <StatGrid>
+          {data.by_tag.map((side) => (
+            <Stat
+              key={side.tag}
+              value={side.inside}
+              label={`${SIDE_LABEL[side.tag]} inside`}
+              hint={`of ${side.tickets} · ${side.on_break} on a break`}
+            />
+          ))}
+        </StatGrid>
+      )}
     </section>
   );
 }
+
+const SIDE_LABEL: Record<TagCount["tag"], string> = {
+  BAARATI: "Baarati",
+  GHARWALE: "Gharwale",
+};
 
 /** Is the gate alive, and is it turning people away. */
 export function TheDoor({ data }: { data: OpsSummary }) {

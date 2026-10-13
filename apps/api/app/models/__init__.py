@@ -25,6 +25,7 @@ from app.models.ingestion import (
 from app.models.ticketing import (
     MAX_TRANSFERS_PER_TICKET,
     TICKET_LIVE_STATUSES,
+    GuestTag,
     Order,
     PartnerMode,
     Ticket,
@@ -45,7 +46,7 @@ __all__ = [
     "VERIFY_OPEN_OUTCOMES",
     "MAX_TRANSFERS_PER_TICKET",
     "AuditLog", "EmailOutbox", "EmailStatus", "Event", "EventInventory", "EventStaff",
-    "FunnelEvent", "Gate", "IdImage", "IngestionError", "InventoryLedger",
+    "FunnelEvent", "Gate", "GuestTag", "IdImage", "IngestionError", "InventoryLedger",
     "LedgerReason", "Order", "PartnerMode", "Pass", "PassState", "Registration",
     "Scan", "ScanAction", "ScanResult", "StaffRole", "Ticket", "TicketSource",
     "TicketStatus", "User", "Verification", "VerifyOutcome",

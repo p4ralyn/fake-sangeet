@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button, FilmStrip, Garland, MandalaCorner, Plaque } from "../components";
 import { isGateStaff, isOpsStaff } from "../lib/home";
+import { usePersonStatus } from "../lib/personStatus";
 import { useSession } from "../lib/session";
 import styles from "./AppShell.module.css";
 
@@ -55,6 +56,11 @@ export function AppShell() {
   // for the wrong person would be untidy rather than unsafe.
   const isStaff = isOpsStaff(roles);
   const isGate = isGateStaff(roles);
+  // An ops staff member who also holds a ticket (14 Oct 2026) needs a way to
+  // their own pass; everybody else lands there already.
+  const personStatus = usePersonStatus();
+  const staffHoldsTicket =
+    isStaff && (personStatus.kind === "has_pass" || personStatus.kind === "needs_id");
 
   return (
     <>
@@ -127,6 +133,11 @@ export function AppShell() {
                 // otherwise carry two links to overlapping places.
                 <Link className={styles.staffLink} to="/gate">
                   Gate
+                </Link>
+              )}
+              {staffHoldsTicket && (
+                <Link className={styles.staffLink} to="/pass">
+                  Your pass
                 </Link>
               )}
               {isStaff && !isStaffArea && (

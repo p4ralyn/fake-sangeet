@@ -48,6 +48,19 @@ class PartnerMode(StrEnum):
     PROXY = "PROXY"
 
 
+class GuestTag(StrEnum):
+    """Which side of the (mock) wedding a seat is on (client, 14 Oct 2026).
+
+    Fixed, not customisable: a Postgres enum, set when the ticket is minted and
+    never edited from any screen. It belongs to the SEAT, so a transfer keeps
+    it. Every ticket sold through the sheets is BAARATI; GHARWALE comes only
+    from the gharwale sheet, ingested with `ingest.py --guest-tag GHARWALE`.
+    """
+
+    BAARATI = "BAARATI"
+    GHARWALE = "GHARWALE"
+
+
 # The ONE source of truth for "this ticket no longer occupies an identity".
 # `tickets_one_per_identity` (below) and role resolution both derive from it,
 # so the index predicate and the PARTICIPANT gate can never drift apart.
@@ -86,6 +99,7 @@ TRANSFER_COUNT_CHECK = (
 
 ticket_status_enum = ENUM(TicketStatus, name="ticket_status", create_type=False)
 partner_mode_enum = ENUM(PartnerMode, name="partner_mode", create_type=False)
+guest_tag_enum = ENUM(GuestTag, name="guest_tag", create_type=False)
 
 
 class Order(UUIDPk, EventScoped, Base):
@@ -176,6 +190,12 @@ class Ticket(UUIDPk, EventScoped, Timestamps, Base):
     #: actually stops a second transfer; the service refuses first so the
     #: person gets a sentence rather than a constraint violation.
     transfer_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    #: Baarati or gharwale. No server default: the migration backfilled every
+    #: existing seat as BAARATI, and from then on whoever mints a ticket says
+    #: which it is (ingest takes it from `--guest-tag`).
+    guest_tag: Mapped[GuestTag] = mapped_column(
+        guest_tag_enum, nullable=False, default=GuestTag.BAARATI
+    )
     bound_net_id: Mapped[str | None] = mapped_column(CITEXT)
     bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_reason: Mapped[str | None] = mapped_column(Text)

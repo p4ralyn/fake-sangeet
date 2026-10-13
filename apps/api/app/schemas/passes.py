@@ -15,7 +15,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from app.models.access import PassState
-from app.models.ticketing import MAX_TRANSFERS_PER_TICKET, TicketStatus
+from app.models.ticketing import MAX_TRANSFERS_PER_TICKET, GuestTag, TicketStatus
 
 
 class TicketViewState(StrEnum):
@@ -107,6 +107,9 @@ class PassTicket(BaseModel):
     seat_index: int
     seats: int
     state: TicketViewState
+    #: Baarati or gharwale -- which side of the wedding this seat is on. Fixed
+    #: at minting; nothing on any screen changes it.
+    guest_tag: GuestTag
     #: A PROXY couple's partner seat that has not been sent to anybody. It is
     #: never served a QR — nobody's ID stands behind it — and the screen draws
     #: a lock and the way to send it instead.

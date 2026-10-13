@@ -109,3 +109,7 @@
   font-size: var(--text-sm);
   font-weight: 700;
 }
+
+.side {
+  margin-block: var(--space-2);
+}

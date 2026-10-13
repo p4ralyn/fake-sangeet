@@ -45,6 +45,7 @@ from app.models import (
     EmailOutbox,
     EmailStatus,
     Event,
+    GuestTag,
     IngestionError,
     LedgerReason,
     Order,
@@ -284,7 +285,7 @@ async def row_verdict(
 
 
 def _mint_tickets(
-    *, event_id: UUID, order: Order, row: TicketRow, external_id: str
+    *, event_id: UUID, order: Order, row: TicketRow, external_id: str, guest_tag: GuestTag
 ) -> list[Ticket]:
     """One ticket per seat. A COUPLE mints two, counted separately, always.
 
@@ -309,6 +310,7 @@ def _mint_tickets(
         status=TicketStatus.PURCHASED,
         ticket_type=row.ticket_type,
         partner_mode=mode if row.seats > 1 else None,
+        guest_tag=guest_tag,
         bound_net_id=row.buyer.net_id,
         bound_at=now,
     )
@@ -326,6 +328,7 @@ def _mint_tickets(
         ticket_type=row.ticket_type,
         partner_mode=mode,
         claim_code=generate_claim_code() if self_claim else None,
+        guest_tag=guest_tag,
         bound_net_id=row.partner.net_id if self_claim and row.partner else None,
         bound_at=now if self_claim and row.partner else None,
     )
@@ -428,11 +431,16 @@ async def ingest_source(
     source: TicketSource,
     actor_user_id: UUID | None = None,
     queue_mail: bool = True,
+    guest_tag: GuestTag = GuestTag.BAARATI,
 ) -> IngestReport:
     """Run one source to completion. Commits per row; never raises on bad data.
 
     The only exceptions that escape are programming errors and a dead database.
     Everything the sheet can do to us lands in `ingestion_errors`.
+
+    `guest_tag` stamps every ticket this run mints. It defaults to BAARATI for
+    the scripts and tests that mint baaratis; `scripts/ingest.py` makes the
+    operator choose it explicitly.
     """
     report = IngestReport(source_key=source.source_key)
     # Snapshot the id: a rollback on the row below expires every loaded ORM
@@ -518,7 +526,8 @@ async def ingest_source(
             await db.flush()
 
             tickets = _mint_tickets(
-                event_id=event_id, order=order, row=row, external_id=external_id
+                event_id=event_id, order=order, row=row, external_id=external_id,
+                guest_tag=guest_tag,
             )
             db.add_all(tickets)
             await db.flush()

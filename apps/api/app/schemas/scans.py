@@ -6,8 +6,10 @@ appears in the narrow one, and nothing fails. Here a field only reaches a
 SECURITY volunteer if someone typed it into `SecurityScanResponse`.
 
 `SecurityScanResponse` carries exactly LLD-v1 §11.5: name, ID photo URL, state,
-break count, legal actions, decision token. No NetID, no department, no ticket
-reference, no pass id, no history.
+break count, legal actions, decision token -- plus one client addition, the
+baarati/gharwale tag (14 Oct 2026), which tells the volunteer which side of the
+wedding a guest is on. No NetID, no department, no ticket reference, no pass
+id, no history.
 """
 from datetime import datetime
 from typing import Literal
@@ -16,6 +18,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.models.access import PassState, ScanAction
+from app.models.ticketing import GuestTag
 from app.services.access.scans import ScanOutcome
 
 
@@ -39,6 +42,7 @@ class SecurityScanResponse(BaseModel):
     status: Literal["DONE", "ACTION_REQUIRED"]
     duplicate: bool
     participant_name: str | None
+    guest_tag: GuestTag | None
     id_image_url: str | None
     state: PassState
     breaks_used: int
@@ -54,6 +58,7 @@ class SecurityScanResponse(BaseModel):
             status=outcome.status,
             duplicate=outcome.duplicate,
             participant_name=outcome.participant_name,
+            guest_tag=outcome.guest_tag,
             id_image_url=outcome.id_image_url,
             state=outcome.state,
             breaks_used=outcome.breaks_used,

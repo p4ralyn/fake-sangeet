@@ -27,7 +27,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ErrorCode
 from app.core.settings import get_settings
-from app.models import Event, Gate, Order, Pass, PassState, Scan, ScanAction, ScanResult, Ticket
+from app.models import (
+    Event,
+    Gate,
+    GuestTag,
+    Order,
+    Pass,
+    PassState,
+    Scan,
+    ScanAction,
+    ScanResult,
+    Ticket,
+)
 from app.models.user import User
 from app.models.verification import IdImage, Registration, Verification, VerifyOutcome
 from app.services.access.decisions import (
@@ -99,6 +110,8 @@ class ScanOutcome(BaseModel):
     breaks_used: int
     max_breaks: int
     participant_name: str | None = None
+    #: Baarati or gharwale, shown to the volunteer at the door (14 Oct 2026).
+    guest_tag: GuestTag | None = None
     id_image_url: str | None = None
     legal_actions: list[ScanAction] = []
     decision_token: str | None = None
@@ -172,6 +185,11 @@ async def _participant_name(db: AsyncSession, ticket_id: UUID) -> str | None:
     if row is None:
         return None
     return row[0] or row[1]
+
+
+async def _guest_tag(db: AsyncSession, ticket_id: UUID) -> GuestTag | None:
+    """Which side of the wedding this seat is on. Fixed at minting."""
+    return await db.scalar(select(Ticket.guest_tag).where(Ticket.id == ticket_id))
 
 
 async def _validate_gate(db: AsyncSession, event_id: UUID, gate_id: UUID | None) -> None:
@@ -274,6 +292,7 @@ async def _outcome_from_scan(
         breaks_used=pass_.breaks_used,
         max_breaks=max_breaks,
         participant_name=await _participant_name(db, pass_.ticket_id),
+        guest_tag=await _guest_tag(db, pass_.ticket_id),
         legal_actions=list(
             legal_actions(
                 pass_.current_state, breaks_used=pass_.breaks_used, max_breaks=max_breaks
@@ -374,7 +393,13 @@ async def _commit_transition(
 
 
 def _applied_outcome(
-    pass_: Pass, transition: Transition, scan: Scan, *, max_breaks: int, name: str | None
+    pass_: Pass,
+    transition: Transition,
+    scan: Scan,
+    *,
+    max_breaks: int,
+    name: str | None,
+    tag: GuestTag | None,
 ) -> ScanOutcome:
     return ScanOutcome(
         status="DONE",
@@ -386,6 +411,7 @@ def _applied_outcome(
         breaks_used=transition.breaks_used,
         max_breaks=max_breaks,
         participant_name=name,
+        guest_tag=tag,
         legal_actions=list(
             legal_actions(
                 transition.to_state, breaks_used=transition.breaks_used, max_breaks=max_breaks
@@ -492,6 +518,7 @@ async def present_token(
         )
 
     name = await _participant_name(db, pass_.ticket_id)
+    tag = await _guest_tag(db, pass_.ticket_id)
     chosen = auto_action(actions)
     if chosen is None:
         decision_token, ttl = await issue_decision(
@@ -527,6 +554,7 @@ async def present_token(
             breaks_used=pass_.breaks_used,
             max_breaks=max_breaks,
             participant_name=name,
+            guest_tag=tag,
             legal_actions=list(actions),
             decision_token=decision_token,
             decision_expires_in=ttl,
@@ -574,7 +602,9 @@ async def present_token(
     scan = await _commit_transition(
         db, pass_=pass_, transition=transition, context=context, token_hash=token_hash, now=now
     )
-    return _applied_outcome(pass_, transition, scan, max_breaks=max_breaks, name=name)
+    return _applied_outcome(
+        pass_, transition, scan, max_breaks=max_breaks, name=name, tag=tag
+    )
 
 
 async def confirm_decision(
@@ -661,9 +691,12 @@ async def confirm_decision(
         raise _error(code, exc.message) from exc
 
     name = await _participant_name(db, pass_.ticket_id)
+    tag = await _guest_tag(db, pass_.ticket_id)
     scan = await _commit_transition(
         db, pass_=pass_, transition=transition, context=context,
         token_hash=record.token_hash, now=now,
     )
     await remember_outcome(redis, decision_token, scan.id)
-    return _applied_outcome(pass_, transition, scan, max_breaks=max_breaks, name=name)
+    return _applied_outcome(
+        pass_, transition, scan, max_breaks=max_breaks, name=name, tag=tag
+    )

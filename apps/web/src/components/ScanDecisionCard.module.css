@@ -164,3 +164,10 @@
     align-self: end;
   }
 }
+
+/* Baarati or gharwale, right under the name: the second thing a volunteer
+   reads after the face. */
+.side {
+  align-self: flex-start;
+  margin-block: var(--space-1) var(--space-2);
+}
