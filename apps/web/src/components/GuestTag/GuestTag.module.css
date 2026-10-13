@@ -1,5 +1,5 @@
 /* A solid ribbon rather than a stamp: the stamp already means "what state is
-   this in", and a guest's side is not a state -- it never changes. */
+   this in", and the guest tag is not a state -- it never changes. */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -24,12 +24,6 @@
 .BAARATI {
   background: var(--marigold);
   color: var(--ink);
-}
-
-/* Gharwale: the home side, scarlet with paper text. */
-.GHARWALE {
-  background: var(--scarlet);
-  color: var(--paper);
 }
 
 .sm {

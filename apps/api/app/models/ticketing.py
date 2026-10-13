@@ -49,16 +49,14 @@ class PartnerMode(StrEnum):
 
 
 class GuestTag(StrEnum):
-    """Which side of the (mock) wedding a seat is on (client, 14 Oct 2026).
+    """The tag on every seat (client, 14 Oct 2026): everybody is a baarati.
 
-    Fixed, not customisable: a Postgres enum, set when the ticket is minted and
-    never edited from any screen. It belongs to the SEAT, so a transfer keeps
-    it. Every ticket sold through the sheets is BAARATI; GHARWALE comes only
-    from the gharwale sheet, ingested with `ingest.py --guest-tag GHARWALE`.
+    Fixed, not customisable: a one-value Postgres enum that nothing writes.
+    A GHARWALE value existed for a day and was removed (migration 0009) --
+    the gharwale do not use this system at all; they come and go freely.
     """
 
     BAARATI = "BAARATI"
-    GHARWALE = "GHARWALE"
 
 
 # The ONE source of truth for "this ticket no longer occupies an identity".
@@ -190,11 +188,9 @@ class Ticket(UUIDPk, EventScoped, Timestamps, Base):
     #: actually stops a second transfer; the service refuses first so the
     #: person gets a sentence rather than a constraint violation.
     transfer_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
-    #: Baarati or gharwale. No server default: the migration backfilled every
-    #: existing seat as BAARATI, and from then on whoever mints a ticket says
-    #: which it is (ingest takes it from `--guest-tag`).
+    #: Always BAARATI -- shown at the door and on the pass.
     guest_tag: Mapped[GuestTag] = mapped_column(
-        guest_tag_enum, nullable=False, default=GuestTag.BAARATI
+        guest_tag_enum, nullable=False, default=GuestTag.BAARATI, server_default="BAARATI"
     )
     bound_net_id: Mapped[str | None] = mapped_column(CITEXT)
     bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

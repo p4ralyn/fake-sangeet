@@ -110,7 +110,7 @@ class ScanOutcome(BaseModel):
     breaks_used: int
     max_breaks: int
     participant_name: str | None = None
-    #: Baarati or gharwale, shown to the volunteer at the door (14 Oct 2026).
+    #: The guest tag shown to the volunteer at the door -- always BAARATI.
     guest_tag: GuestTag | None = None
     id_image_url: str | None = None
     legal_actions: list[ScanAction] = []
@@ -188,7 +188,7 @@ async def _participant_name(db: AsyncSession, ticket_id: UUID) -> str | None:
 
 
 async def _guest_tag(db: AsyncSession, ticket_id: UUID) -> GuestTag | None:
-    """Which side of the wedding this seat is on. Fixed at minting."""
+    """The seat's guest tag (always BAARATI). Fixed at minting."""
     return await db.scalar(select(Ticket.guest_tag).where(Ticket.id == ticket_id))
 
 

@@ -584,8 +584,8 @@ SECURITY_FIELDS = {
     "status", "duplicate", "participant_name", "id_image_url", "state",
     "breaks_used", "max_breaks", "legal_actions", "decision_token",
     "decision_expires_in", "action",
-    # The one client addition to §11.5 (14 Oct 2026): which side of the
-    # wedding the guest is on, shown on the confirmation and departed screens.
+    # The one client addition to §11.5 (14 Oct 2026): the guest tag, shown on
+    # the confirmation and departed screens.
     "guest_tag",
 }
 
@@ -633,31 +633,26 @@ async def test_the_scan_row_records_who_scanned_and_where(
     assert row.to_state is PassState.INSIDE
 
 
-# ── baarati / gharwale (14 Oct 2026) ─────────────────────────────────────
+# ── the baarati tag (14 Oct 2026) ────────────────────────────────────────
 
 
 async def test_security_sees_the_guest_tag_on_confirmation_and_departure(
-    client, db_session, scanner_staff, issued_pass, token, no_duplicate_window
+    client, scanner_staff, issued_pass, token, no_duplicate_window
 ):
     """The tag rides on every card a volunteer reads: the decision card, the
     check-in confirmation and the departed screen."""
-    await db_session.execute(
-        text("UPDATE tickets SET guest_tag = 'GHARWALE' WHERE id = :id"),
-        {"id": issued_pass.ticket_id},
-    )
-    await db_session.commit()
     headers = await login(client, SECURITY_NET_ID)
 
     card = (await scan(client, headers, token)).json()
     assert card["status"] == "ACTION_REQUIRED"
-    assert card["guest_tag"] == "GHARWALE"
+    assert card["guest_tag"] == "BAARATI"
 
     admitted = (await confirm(client, headers, card["decision_token"], "CHECK_IN")).json()
     assert admitted["state"] == "INSIDE"
-    assert admitted["guest_tag"] == "GHARWALE"
+    assert admitted["guest_tag"] == "BAARATI"
 
     leaving = (await scan(client, headers, token)).json()
-    assert leaving["guest_tag"] == "GHARWALE"
+    assert leaving["guest_tag"] == "BAARATI"
     departed = (await confirm(client, headers, leaving["decision_token"], "CHECK_OUT")).json()
     assert departed["state"] == "DEPARTED"
-    assert departed["guest_tag"] == "GHARWALE"
+    assert departed["guest_tag"] == "BAARATI"

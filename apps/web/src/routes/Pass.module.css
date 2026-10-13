@@ -309,7 +309,7 @@
   line-height: 1.35;
 }
 
-/* Baarati or gharwale: which side of the wedding this seat is on. */
+/* The guest tag (always Baarati). */
 .side {
   margin-top: var(--space-2);
 }

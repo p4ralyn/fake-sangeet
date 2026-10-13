@@ -7,9 +7,8 @@ SECURITY volunteer if someone typed it into `SecurityScanResponse`.
 
 `SecurityScanResponse` carries exactly LLD-v1 §11.5: name, ID photo URL, state,
 break count, legal actions, decision token -- plus one client addition, the
-baarati/gharwale tag (14 Oct 2026), which tells the volunteer which side of the
-wedding a guest is on. No NetID, no department, no ticket reference, no pass
-id, no history.
+guest tag (14 Oct 2026; every guest is a baarati). No NetID, no department,
+no ticket reference, no pass id, no history.
 """
 from datetime import datetime
 from typing import Literal

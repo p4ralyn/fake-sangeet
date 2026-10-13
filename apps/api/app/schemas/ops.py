@@ -10,8 +10,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.models.ticketing import GuestTag
-
 
 class Occupancy(BaseModel):
     """Who is where, right now. The number an OWNER wants at 18:30."""
@@ -26,16 +24,6 @@ class Occupancy(BaseModel):
 class Seats(BaseModel):
     committed: int
     total: int
-
-
-class TagCount(BaseModel):
-    """One side of the wedding (14 Oct 2026). Counts, never people."""
-
-    tag: GuestTag
-    #: Live tickets on this side.
-    tickets: int = 0
-    inside: int = 0
-    on_break: int = 0
 
 
 class Queues(BaseModel):
@@ -53,8 +41,6 @@ class Queues(BaseModel):
 class OpsSummary(BaseModel):
     occupancy: Occupancy
     seats: Seats
-    #: Baarati and gharwale, always both, in the enum's order.
-    by_tag: list[TagCount] = Field(default_factory=list)
     queues: Queues
     #: Scans in the last window, as a sign of life — a gate that has gone quiet
     #: at 18:20 is either finished or broken, and the difference matters.

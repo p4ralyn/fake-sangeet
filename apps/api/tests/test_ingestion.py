@@ -172,25 +172,16 @@ async def test_couple_with_partner_splits_into_two_self_claim_tickets(db_session
     assert order.quantity == 2 and order.ticket_type == "COUPLE"
 
 
-async def test_tickets_are_baarati_unless_the_run_says_gharwale(db_session, event):
-    """14 Oct 2026: the tag is fixed at minting and stamped by the run, on both
-    seats of a couple alike."""
-    await ingest_source(db_session, event=event, source=FakeSource([single("pk944")]))
+async def test_every_ticket_minted_is_baarati(db_session, event):
+    """14 Oct 2026: everybody is a baarati, both seats of a couple alike."""
     await ingest_source(
         db_session,
         event=event,
-        source=FakeSource([couple("zq202", identity("ms101"), row=3)]),
-        guest_tag=GuestTag.GHARWALE,
+        source=FakeSource([single("pk944"), couple("zq202", identity("ms101"), row=3)]),
     )
 
-    tags = dict(
-        (await db_session.execute(select(Ticket.bound_net_id, Ticket.guest_tag))).all()
-    )
-    assert tags == {
-        "pk944": GuestTag.BAARATI,
-        "zq202": GuestTag.GHARWALE,
-        "ms101": GuestTag.GHARWALE,
-    }
+    tags = set((await db_session.scalars(select(Ticket.guest_tag))).all())
+    assert tags == {GuestTag.BAARATI}
 
 
 async def test_proxy_couple_leaves_the_second_ticket_unbound_and_unclaimable(db_session, event):

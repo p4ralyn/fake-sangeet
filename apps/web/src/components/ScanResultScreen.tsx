@@ -38,7 +38,7 @@ export interface ScanResultScreenProps {
   /** The headline, in the operator's language: "Checked in", "Do not admit". */
   verdict: string;
   name: string | null;
-  /** Baarati or gharwale, when the scan resolved to a person (14 Oct 2026). */
+  /** The guest tag, when the scan resolved to a person (14 Oct 2026). */
   tag?: GuestTagValue | null;
   /** What to do next, when there is anything to do. */
   detail: string | null;

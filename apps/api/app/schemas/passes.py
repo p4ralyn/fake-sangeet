@@ -107,8 +107,7 @@ class PassTicket(BaseModel):
     seat_index: int
     seats: int
     state: TicketViewState
-    #: Baarati or gharwale -- which side of the wedding this seat is on. Fixed
-    #: at minting; nothing on any screen changes it.
+    #: The guest tag, always BAARATI (14 Oct 2026). Nothing changes it.
     guest_tag: GuestTag
     #: A PROXY couple's partner seat that has not been sent to anybody. It is
     #: never served a QR — nobody's ID stands behind it — and the screen draws

@@ -165,8 +165,7 @@
   }
 }
 
-/* Baarati or gharwale, right under the name: the second thing a volunteer
-   reads after the face. */
+/* The guest tag, right under the name. */
 .side {
   align-self: flex-start;
   margin-block: var(--space-1) var(--space-2);

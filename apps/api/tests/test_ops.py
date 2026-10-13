@@ -13,7 +13,6 @@ from app.api.v1.routes import ops as ops_routes
 from app.models import (
     EmailStatus,
     Event,
-    GuestTag,
     Order,
     PassState,
     Ticket,
@@ -74,9 +73,7 @@ async def staff(db_session, event_id):
     await db_session.commit()
 
 
-async def make_pass(
-    db_session, event_id, *, seq: int, state: PassState, tag: GuestTag = GuestTag.BAARATI
-):
+async def make_pass(db_session, event_id, *, seq: int, state: PassState):
     event = await db_session.get(Event, event_id)
     order = Order(
         event_id=event_id,
@@ -93,7 +90,6 @@ async def make_pass(
         ticket_ref=f"FS26-OPS-{seq}",
         status=TicketStatus.PASS_ISSUED,
         bound_net_id=f"op{seq:03d}",
-        guest_tag=tag,
     )
     db_session.add(ticket)
     await db_session.flush()
@@ -117,21 +113,6 @@ async def test_occupancy_counts_every_pass_state(db_session, event_id):
     assert counts.on_break == 1
     assert counts.departed == 1
     assert counts.not_arrived == 1
-
-
-async def test_the_summary_splits_tickets_and_presence_by_guest_tag(db_session, event_id):
-    """14 Oct 2026: both sides always listed, even at zero, and counted
-    separately for tickets held, inside and on a break."""
-    await make_pass(db_session, event_id, seq=1, state=PassState.INSIDE)
-    await make_pass(db_session, event_id, seq=2, state=PassState.NOT_ARRIVED)
-    await make_pass(db_session, event_id, seq=3, state=PassState.ON_BREAK, tag=GuestTag.GHARWALE)
-
-    sides = {row.tag: row for row in await dashboard.by_tag(db_session, event_id=event_id)}
-
-    assert list(sides) == [GuestTag.BAARATI, GuestTag.GHARWALE]
-    assert (sides[GuestTag.BAARATI].tickets, sides[GuestTag.BAARATI].inside) == (2, 1)
-    assert (sides[GuestTag.GHARWALE].tickets, sides[GuestTag.GHARWALE].on_break) == (1, 1)
-    assert sides[GuestTag.GHARWALE].inside == 0
 
 
 async def test_seats_reports_the_real_cap_not_what_is_left_on_sale(db_session, event_id):
