@@ -640,7 +640,7 @@ async def test_a_transfer_emails_the_new_holder_once(db_session, event, holder, 
     mail = await _received(db_session)
     assert [m.to_email for m in mail] == [f"{RECIPIENT}@snu.edu.in"]
     assert mail[0].payload == {"kind": "transfer", "brings_partner_seat": False}
-    assert mail[0].idempotency_key == f"{TEMPLATE_PASS_RECEIVED}:{ticket.ticket_ref}"
+    assert mail[0].idempotency_key == f"{TEMPLATE_PASS_RECEIVED}:{ticket.ticket_ref}:{RECIPIENT}"
 
 
 async def test_a_refused_transfer_emails_nobody(db_session, event, holder, ticket):

@@ -12,9 +12,10 @@ Only recipients who have **not signed in yet** are mailed by default: somebody
 who has already signed in has found their pass, and an email telling them about
 it is noise. `--include-signed-in` mails them too.
 
-Safe to re-run: the email is keyed on the ticket ref, and a ticket moves once,
-ever, so a second run -- or a transfer that already queued its own -- queues
-nothing. Prints ticket refs only, never a NetID. `--dry-run` rolls back.
+Mostly superseded: every transfer since 7 Oct queues its own email. Keyed on
+ticket ref + holder (15 Oct), so re-running for a holder already emailed under
+the old ref-only key WOULD email them again -- check `email_outbox` first.
+Prints ticket refs only, never a NetID. `--dry-run` rolls back.
 """
 import argparse
 import asyncio

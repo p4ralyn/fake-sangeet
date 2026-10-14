@@ -152,7 +152,7 @@ async def test_the_summary_counts_recent_scans_and_refusals(db_session, event_id
 async def test_mail_health_separates_a_queue_from_a_problem(db_session, event_id):
     """A row that has never been tried is a queue, not a problem. Listing it
     as one buries the rows that actually failed."""
-    for key in ("fresh", "retrying", "dead"):
+    for key in ("fresh", "retrying", "dead", "recovered"):
         await queue_email(
             db_session,
             event_id=event_id,
@@ -174,6 +174,14 @@ async def test_mail_health_separates_a_queue_from_a_problem(db_session, event_id
             "WHERE idempotency_key = 'dead'"
         ),
         {"s": EmailStatus.DEAD.value},
+    )
+    # Failed once, then went out: delivered, so not a problem (15 Oct 2026).
+    await db_session.execute(
+        text(
+            "UPDATE email_outbox SET status = :s, attempts = 1, sent_at = now() "
+            "WHERE idempotency_key = 'recovered'"
+        ),
+        {"s": EmailStatus.SENT.value},
     )
     await db_session.flush()
 

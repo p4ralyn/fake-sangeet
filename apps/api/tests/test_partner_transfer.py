@@ -384,6 +384,27 @@ async def test_sending_the_seat_emails_the_partner(db_session, event, buyer, cou
     assert mail[0].payload["kind"] == "partner_seat"
 
 
+async def test_every_new_holder_of_a_seat_is_emailed_not_just_the_first(
+    db_session, event, buyer, couple
+):
+    """15 Oct 2026: a partner seat sent and then passed on reaches two new
+    holders. Keyed on the ticket ref alone, the second email collided with the
+    first and was silently dropped -- four people never heard."""
+    _, second = couple
+    await transfer_partner_seat(db_session, event=event, holder=buyer, to_net_id=PARTNER)
+    partner = await _user(db_session, PARTNER)
+    second.status = TicketStatus.PASS_ISSUED  # the partner's own ID approved
+    await db_session.flush()
+    await transfer_ticket(
+        db_session, event=event, holder=partner, ticket=second, to_net_id=SOMEONE
+    )
+
+    mail = await _received(db_session)
+    assert sorted(m.to_email for m in mail) == sorted(
+        [f"{PARTNER}@snu.edu.in", f"{SOMEONE}@snu.edu.in"]
+    )
+
+
 async def test_a_couple_transfer_tells_the_new_holder_the_second_pass_came_too(
     db_session, event, buyer, couple
 ):

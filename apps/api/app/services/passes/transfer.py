@@ -202,9 +202,12 @@ async def tell_the_recipient(
 ) -> bool:
     """Queue the "someone sent you a pass" email to `ticket`'s new holder.
 
-    Keyed on the ticket ref, which is safe because a ticket moves once, ever:
-    a second call for the same transfer (the backfill script) queues nothing.
-    Like every other email it carries a link, never the pass.
+    Keyed on the ticket ref AND the new holder. The ref alone was wrong: a
+    seat can legitimately reach a second new holder (a partner seat sent and
+    then passed on, a reversed transfer re-made), and the second email
+    collided with the first one's key and was silently dropped -- four people
+    found out on event day (15 Oct 2026). A repeat call for the same holder
+    still queues nothing. Like every other email: a link, never the pass.
     """
     domain = get_settings().google_allowed_domain
     return await queue_email(
@@ -213,7 +216,7 @@ async def tell_the_recipient(
         message=QueuedEmail(
             to_email=f"{ticket.bound_net_id}@{domain}",
             template=TEMPLATE_PASS_RECEIVED,
-            idempotency_key=f"{TEMPLATE_PASS_RECEIVED}:{ticket.ticket_ref}",
+            idempotency_key=f"{TEMPLATE_PASS_RECEIVED}:{ticket.ticket_ref}:{ticket.bound_net_id}",
             payload={"kind": kind, "brings_partner_seat": brings_partner_seat},
         ),
     )

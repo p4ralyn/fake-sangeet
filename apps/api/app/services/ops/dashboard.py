@@ -135,8 +135,10 @@ async def summary(db: AsyncSession, *, event_id: UUID) -> OpsSummary:
 async def mail_health(db: AsyncSession, *, event_id: UUID, limit: int = 50) -> MailHealth:
     """Outbox counts, plus the rows that need a person.
 
-    "Problems" is dead rows and rows that have failed at least once — a row
-    sitting in QUEUED having never been tried is not a problem, it is a queue.
+    "Problems" is dead rows and rows that have failed at least once and are
+    still not sent -- a row sitting in QUEUED having never been tried is not a
+    problem, it is a queue, and a row that failed once and then went out is
+    not one either (it was listed as "will try again" until 15 Oct 2026).
     """
     rows = await db.execute(
         select(EmailOutbox.status, func.count())
@@ -151,7 +153,10 @@ async def mail_health(db: AsyncSession, *, event_id: UUID, limit: int = 50) -> M
             .where(
                 EmailOutbox.event_id == event_id,
                 (EmailOutbox.status == EmailStatus.DEAD.value)
-                | (EmailOutbox.attempts > 0),
+                | (
+                    (EmailOutbox.attempts > 0)
+                    & (EmailOutbox.status != EmailStatus.SENT.value)
+                ),
             )
             .order_by(EmailOutbox.attempts.desc(), EmailOutbox.next_attempt_at)
             .limit(limit)
