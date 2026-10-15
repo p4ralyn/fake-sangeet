@@ -90,10 +90,18 @@
   border-radius: var(--radius);
 }
 
+/* Drawn at 2x and shown at 232px so it stays crisp. Every property after
+   `height` keeps a forced dark mode from touching it: a recoloured QR does
+   not scan. */
 .qr {
   width: 100%;
   max-width: 232px;
   height: auto;
+  background: #ffffff;
+  color-scheme: only light;
+  forced-color-adjust: none;
+  filter: none;
+  image-rendering: pixelated;
 }
 
 .qrPending {
@@ -200,7 +208,7 @@
   animation: advance 1100ms var(--ease-out) both;
 }
 
-.qrResolving > svg,
+.qrResolving > canvas,
 .qrResolving > p {
   animation: project 800ms var(--ease-out) 550ms both;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { Link } from "react-router-dom";
 import {
   Button,
@@ -79,12 +79,16 @@ function PassCard({ ticket, animate }: { ticket: PassTicket; animate: boolean })
               <p className={styles.lockedText}>Locked until you send it to your partner</p>
             </div>
           ) : ticket.qr_token ? (
-            <QRCodeSVG
+            // Pure black on pure white, drawn to a canvas. Forced dark modes
+            // (Chrome's "darken websites", Samsung Internet, Smart Invert)
+            // recolour an inline SVG — maroon-on-cream came out pink and
+            // would not scan at the door. Pixels on a canvas are left alone.
+            <QRCodeCanvas
               className={styles.qr}
               value={ticket.qr_token}
-              size={232}
-              bgColor="#FFF3DC"
-              fgColor="#4A0A14"
+              size={464}
+              bgColor="#FFFFFF"
+              fgColor="#000000"
               level="M"
               includeMargin
             />

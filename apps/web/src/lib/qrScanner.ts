@@ -180,12 +180,12 @@ export function useQrScanner({ videoRef, onDecode, active }: QrScannerOptions): 
           detector = null;
         }
       }
-      let jsQr: typeof import("jsqr").default | null = null;
-      if (!detector) {
-        // Loaded only when it is the decoder actually in use, so Android
-        // Chrome never pays for a decoder it will not run.
-        jsQr = (await import("jsqr")).default;
-      }
+      // Always loaded: with a native detector it is the second attempt on a
+      // frame the detector missed. An attendee whose phone forced the pass
+      // into dark mode shows an inverted, low-contrast code that the native
+      // detector on some phones will not read and jsQR inverted will.
+      const jsQr: typeof import("jsqr").default = (await import("jsqr")).default;
+      let frameCount = 0;
       if (cancelled) {
         return;
       }
@@ -201,7 +201,11 @@ export function useQrScanner({ videoRef, onDecode, active }: QrScannerOptions): 
           if (detector) {
             const found = await detector.detect(element);
             value = found[0]?.rawValue ?? null;
-          } else if (jsQr) {
+          }
+          // Without a detector, every frame; with one, every other missed
+          // frame, so the fallback costs a phone at most half its decode time.
+          frameCount += 1;
+          if (!value && (!detector || frameCount % 2 === 0)) {
             value = decodeWithCanvas(element, canvasRef, jsQr);
           }
         } catch {
@@ -259,8 +263,8 @@ function decodeWithCanvas(
   }
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
   const frame = context.getImageData(0, 0, canvas.width, canvas.height);
-  // `dontInvert` — a pass QR is always dark-on-light on a phone screen, and
-  // attempting inversion doubles the work for every failed frame.
-  const found = jsQr(frame.data, frame.width, frame.height, { inversionAttempts: "dontInvert" });
+  // `attemptBoth` — a pass QR is drawn dark-on-light, but a phone in forced
+  // dark mode can show it inverted, and that attendee is standing at the door.
+  const found = jsQr(frame.data, frame.width, frame.height, { inversionAttempts: "attemptBoth" });
   return found?.data ?? null;
 }
