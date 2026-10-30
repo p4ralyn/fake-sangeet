@@ -37,3 +37,4 @@ architecture-review-*.html
 # un-track the favicon and the event wordmark, which breaks the site rather
 # than tidying the repo.
 /apps/web/logo/
+CLAUDE.md
