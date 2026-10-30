@@ -1,5 +1,7 @@
 # Fake Sangeet — ticketing and gate access
 
+[![tests](https://github.com/p4ralyn/fake-sangeet/actions/workflows/tests.yml/badge.svg)](https://github.com/p4ralyn/fake-sangeet/actions/workflows/tests.yml)
+
 Ticketing and door control for **Fake Sangeet — "Band Baaja No Baarat"**, a mock
 Indian wedding run by Inferno (dance society) and Snuphoria (music society) at
 Shiv Nadar University on 15 October 2026. It took 629 sold seats from three
@@ -117,4 +119,12 @@ format. `docs/design/` covers the frontend, the API contract and the ingestion
 audit.
 
 Student data has been removed from the code and history. NetIDs in tests and
-`.env.example` are made up, apart from the owner's (`pk944`).
+`.env.example` are made up. The one real NetID is the owner's (`pk944`), in
+some tests and as the contact in the emails.
+
+Some deploy docs mention the old server; its IP (`203.0.113.10`, a documentation
+address) and GCP project ID (`my-gcp-project`) are placeholders.
+
+## License
+
+MIT. See `LICENSE`.
